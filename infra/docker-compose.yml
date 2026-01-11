@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: donakawa
+      POSTGRES_PASSWORD: umc_9th
+      POSTGRES_DB: donakawa
+      TZ: Asia/Seoul
+    ports:
+      - "5432:5432"
+    volumes:
+      - donakawa_db:/var/lib/postgresql/data
+volumes:
+  donakawa_db:

@@ -1,0 +1,13 @@
+{
+  "entryFile": "src/index.ts",
+  "controllerPathGlobs": ["src/**/controller/*.controller.ts"],
+  "spec": {
+    "outputDirectory": "dist",
+    "specVersion": 3,
+    "basePath": "/"
+  },
+  "routes": {
+    "routesDir": "src/tsoa",
+    "middleware": "express"
+  }
+}
