@@ -1,0 +1,14 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7.0
+    container_name: donakawa-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - donakawa_redis_data:/data
+volumes:
+  donakawa_redis_data:

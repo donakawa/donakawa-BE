@@ -4,7 +4,7 @@ import { WishlistService } from "../service/wishlist.service";
 
 @Route("/wishlist")
 @Tags("Wishlist")
-export class HistoriesController {
+export class WishlistController {
   private readonly wishlistService: WishlistService =
     container.wishlist.service;
 }

@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16
+    container_name: donakawa-postgres
     environment:
       POSTGRES_USER: donakawa
       POSTGRES_PASSWORD: umc_9th

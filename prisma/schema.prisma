@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -14,57 +15,60 @@ datasource db {
 
 model User {
   id        BigInt    @id @default(autoincrement())
-  email     String    @db.VarChar(100) @unique
+  email     String    @unique @db.VarChar(100)
   password  String?   @db.VarChar(100)
   nickname  String    @db.VarChar(10)
-  createdAt DateTime  @db.Timestamp() @default(now()) @map("created_at")
-  updatedAt DateTime? @db.Timestamp() @updatedAt  @map("updated_at")
-  deletedAt DateTime? @db.Timestamp() @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp()
 
-  targetBudget TargetBudget[]
-  oauth Oauth[]
-  wishItemFolder WishItemFolder[]
-  addedItemAuto AddedItemAuto[]
+  targetBudget    TargetBudget[]
+  oauth           Oauth[]
+  wishItemFolder  WishItemFolder[]
+  addedItemAuto   AddedItemAuto[]
   addedItemManual AddedItemManual[]
-  aiChatHeader  AiChatHeader[]
+  aiChatHeader    AiChatHeader[]
 
   @@map("user")
 }
+
 enum OauthProvider {
   GOOGLE
   KAKAO
 }
+
 model Oauth {
-  id        BigInt    @id @default(autoincrement())
-  userId    BigInt    @map("user_id")
-  user      User      @relation(fields: [userId], references:[id])
-  uid       String    @db.VarChar(200)
-  provider  OauthProvider
+  id       BigInt        @id @default(autoincrement())
+  userId   BigInt        @map("user_id")
+  user     User          @relation(fields: [userId], references: [id])
+  uid      String        @db.VarChar(200)
+  provider OauthProvider
 
   @@map("oauth")
 }
 
 model TargetBudget {
-  id        BigInt    @id @default(autoincrement())
-  userId    BigInt    @map("user_id")
-  user      User      @relation(fields: [userId], references:[id])
-  monthlyIncome Int?   @map("monthly_income")
-  incomeDate  DateTime?  @map("income_date")
-  fixedExpense Int?      @map("fixed_expense")
-  monthlySaving Int?   @map("monthly_saving")
-  recommendSaving Int? @map("recommend_saving")
-  spendStrategy Int?   @map("spend_strategy")
-  shoppingBudget  Int? @map("shopping_budget")
+  id              BigInt    @id @default(autoincrement())
+  userId          BigInt    @map("user_id")
+  user            User      @relation(fields: [userId], references: [id])
+  monthlyIncome   Int?      @map("monthly_income")
+  incomeDate      DateTime? @map("income_date")
+  fixedExpense    Int?      @map("fixed_expense")
+  monthlySaving   Int?      @map("monthly_saving")
+  recommendSaving Int?      @map("recommend_saving")
+  spendStrategy   Int?      @map("spend_strategy")
+  shoppingBudget  Int?      @map("shopping_budget")
+
   @@map("target_budget")
 }
 
 model WishItemFolder {
-  id        BigInt    @id @default(autoincrement())
-  userId    BigInt    @map("user_id")
-  user      User      @relation(fields: [userId], references:[id])
-  name      String    @db.VarChar(50)
+  id     BigInt @id @default(autoincrement())
+  userId BigInt @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+  name   String @db.VarChar(50)
 
-  addedItemAuto AddedItemAuto[]
+  addedItemAuto   AddedItemAuto[]
   addedItemManual AddedItemManual[]
 
   @@map("wish_item_folder")
@@ -77,28 +81,28 @@ enum AddedItemStatus {
 }
 
 model AddedItemAuto {
-  id        BigInt    @id @default(autoincrement())
-  folderId  BigInt    @map("folder_id")
-  wishItemFolder WishItemFolder @relation(fields: [folderId], references: [id])
-  productId BigInt    @map("product_id")
-  product   Product   @relation(fields:[productId], references: [id])
-  userId    BigInt    @map("user_id")
-  user      User      @relation(fields: [userId], references:[id])
-  status    AddedItemStatus @default(WISHLISTED)
-  reason    String    @db.Text() @default("")
-  createdAt DateTime  @db.Timestamp() @default(now())
-  updatedAt DateTime? @db.Timestamp() @updatedAt
+  id             BigInt          @id @default(autoincrement())
+  folderId       BigInt          @map("folder_id")
+  wishItemFolder WishItemFolder  @relation(fields: [folderId], references: [id])
+  productId      BigInt          @map("product_id")
+  product        Product         @relation(fields: [productId], references: [id])
+  userId         BigInt          @map("user_id")
+  user           User            @relation(fields: [userId], references: [id])
+  status         AddedItemStatus @default(WISHLISTED)
+  reason         String          @default("") @db.Text()
+  createdAt      DateTime        @default(now()) @db.Timestamp()
+  updatedAt      DateTime?       @updatedAt @db.Timestamp()
 
-  purchasedHistory  PurchasedHistory[]
-  review Review[]
+  purchasedHistory PurchasedHistory[]
+  review           Review[]
 
   @@map("added_item_auto")
 }
 
 model StorePlatform {
-  id        BigInt    @id @default(autoincrement())
-  name      String    @db.VarChar(50) @unique
-  urlDomain String    @db.VarChar(100) @unique @map("url_domain")
+  id        BigInt @id @default(autoincrement())
+  name      String @unique @db.VarChar(50)
+  urlDomain String @unique @map("url_domain") @db.VarChar(100)
 
   product Product[]
 
@@ -106,13 +110,13 @@ model StorePlatform {
 }
 
 model Product {
-  id        BigInt    @id @default(autoincrement())
-  storePlatformId BigInt  @map("store_platform_id")
-  storePlatform StorePlatform @relation(fields: [storePlatformId], references: [id])
-  name      String    @db.VarChar(300)
-  price     Int
-  productUrl String   @db.VarChar(500) @unique
-  updatedAt DateTime? @db.Timestamp() @default(now()) @updatedAt
+  id              BigInt        @id @default(autoincrement())
+  storePlatformId BigInt        @map("store_platform_id")
+  storePlatform   StorePlatform @relation(fields: [storePlatformId], references: [id])
+  name            String        @db.VarChar(300)
+  price           Int
+  productUrl      String        @unique @db.VarChar(500)
+  updatedAt       DateTime?     @default(now()) @updatedAt @db.Timestamp()
 
   addedItemAuto AddedItemAuto[]
 
@@ -127,48 +131,47 @@ enum PurchasedAt {
 }
 
 model PurchasedHistory {
-  id        BigInt    @id @default(autoincrement())
-  autoItemId  BigInt? @map("auto_item_id")
-  addedItemAuto AddedItemAuto? @relation(fields: [autoItemId], references: [id])
-  manualItemId  BigInt?  @map("manual_item_id")
+  id              BigInt           @id @default(autoincrement())
+  autoItemId      BigInt?          @map("auto_item_id")
+  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id])
+  manualItemId    BigInt?          @map("manual_item_id")
   addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id])
-  purchasedDate DateTime  @map("purchased_date")
-  purchasedAt   PurchasedAt
+  purchasedDate   DateTime         @map("purchased_date")
+  purchasedAt     PurchasedAt
 
   @@map("purchased_history")
 }
 
-
 model AddedItemManual {
-  id        BigInt    @id @default(autoincrement())
-  folderId  BigInt    @map("folder_id")
-  wishItemFolder WishItemFolder @relation(fields: [folderId], references: [id]) 
-  userId    BigInt    @map("user_id")
-  user      User      @relation(fields: [userId], references:[id])
-  name      String    @db.VarChar(50)
-  price     Int
-  brand     String    @db.VarChar(50)
-  reason    String    @db.VarChar(50)
-  status    AddedItemStatus @default(WISHLISTED)
-  createdAt DateTime  @db.Timestamp() @default(now()) @map("created_at")
-  updatedAt DateTime? @db.Timestamp() @updatedAt @map("updated_at")
+  id             BigInt          @id @default(autoincrement())
+  folderId       BigInt          @map("folder_id")
+  wishItemFolder WishItemFolder  @relation(fields: [folderId], references: [id])
+  userId         BigInt          @map("user_id")
+  user           User            @relation(fields: [userId], references: [id])
+  name           String          @db.VarChar(50)
+  price          Int
+  brand          String          @db.VarChar(50)
+  reason         String          @db.VarChar(50)
+  status         AddedItemStatus @default(WISHLISTED)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt      DateTime?       @updatedAt @map("updated_at") @db.Timestamp()
 
   purchasedHistory PurchasedHistory[]
-  review  Review[]
+  review           Review[]
 
   @@map("added_item_manual")
 }
 
 model Review {
-  id        BigInt    @id @default(autoincrement())
-  autoItemId  BigInt? @map("auto_item_id")
-  addedItemAuto AddedItemAuto? @relation(fields: [autoItemId], references: [id])
-  manualItemId  BigInt?  @map("manual_item_id")
+  id              BigInt           @id @default(autoincrement())
+  autoItemId      BigInt?          @map("auto_item_id")
+  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id])
+  manualItemId    BigInt?          @map("manual_item_id")
   addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id])
-  satisfaction  Float?
-  frequency     Int?
-  createdAt     DateTime  @db.Timestamp() @default(now()) @map("created_at")
-  updatedAt DateTime? @db.Timestamp() @updatedAt @map("updated_at")
+  satisfaction    Float?
+  frequency       Int?
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt       DateTime?        @updatedAt @map("updated_at") @db.Timestamp()
 
   @@map("review")
 }
@@ -181,10 +184,10 @@ enum Sender {
 model AiChatHeader {
   id        BigInt    @id @default(autoincrement())
   userId    BigInt    @map("user_id")
-  user      User      @relation(fields: [userId], references:[id])
+  user      User      @relation(fields: [userId], references: [id])
   title     String    @db.VarChar(100)
-  createdAt     DateTime  @db.Timestamp() @default(now()) @map("created_at")
-  updatedAt DateTime? @db.Timestamp() @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
 
   aiChatMessage AiChatMessage[]
 
@@ -192,12 +195,12 @@ model AiChatHeader {
 }
 
 model AiChatMessage {
-  id        BigInt    @id @default(autoincrement())
-  headerId  BigInt    @map("header_id")
+  id           BigInt       @id @default(autoincrement())
+  headerId     BigInt       @map("header_id")
   aiChatHeader AiChatHeader @relation(fields: [headerId], references: [id])
-  sender    Sender
-  content   String    @db.Text()
-  createdAt     DateTime  @db.Timestamp() @default(now()) @map("created_at")
+  sender       Sender
+  content      String       @db.Text()
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamp()
 
   aiChatSelection AiChatSelection[]
 
@@ -205,10 +208,10 @@ model AiChatMessage {
 }
 
 model AiChatSelection {
-  id        BigInt    @id @default(autoincrement())
-  messageId BigInt    @map("message_id")
-  aiChatMessage AiChatMessage @relation(fields:[messageId], references: [id])
-  content   String    @db.Text()
+  id            BigInt        @id @default(autoincrement())
+  messageId     BigInt        @map("message_id")
+  aiChatMessage AiChatMessage @relation(fields: [messageId], references: [id])
+  content       String        @db.Text()
 
   @@map("ai_chat_seleciton")
 }
