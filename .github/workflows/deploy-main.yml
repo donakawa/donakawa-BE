@@ -49,7 +49,7 @@ jobs:
           scp -r ./[!.]* private:/opt/app/donakawa
       - name: Install dependencies
         run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa --omit=dev'
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa'
       - name: Prisma generation
         run: |
           ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" &&cd /opt/app/donakawa&&npx prisma generate'
