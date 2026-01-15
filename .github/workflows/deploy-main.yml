@@ -49,10 +49,10 @@ jobs:
           scp -r ./[!.]* private:/opt/app/donakawa
       - name: Install dependencies
         run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa'
-      - name: Install dependencies
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa --omit=dev'
+      - name: Prisma generation
         run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npx prisma generate --prefix /opt/app/donakawa'
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npx prisma generate'
       - name: Build codes
         run: |
           ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm run build --prefix /opt/app/donakawa'
