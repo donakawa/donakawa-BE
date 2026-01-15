@@ -39,7 +39,7 @@ module.exports = {
 
       // 환경변수(추가로 오버라이드 가능)
       env: {
-        NODE_ENV: "development",
+        NODE_ENV: "dev",
       },
       env_production: {
         NODE_ENV: "production",

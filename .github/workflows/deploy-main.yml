@@ -50,10 +50,16 @@ jobs:
 
       - name: Install dependencies
         run: |
+          NODE_BIN="$HOME/.nvm/versions/node/v24.*/bin"
+          NPM=$(ls -1 $NODE_BIN/npm | head -n 1)
           ssh private 'npm ci --prefix /opt/app/donakawa'
       - name: Build codes
         run: |
+          NODE_BIN="$HOME/.nvm/versions/node/v24.*/bin"
+          NPM=$(ls -1 $NODE_BIN/npm | head -n 1)
           ssh private 'npm build --prefix /opt/app/donakawa'
       - name: Reload PM2 service
         run: |
+          NODE_BIN="$HOME/.nvm/versions/node/v24.*/bin"
+          NPM=$(ls -1 $NODE_BIN/npm | head -n 1)
           ssh private 'cd /apt/app/donakawa && pm2 reload ecosystem.config.js -- env production'
