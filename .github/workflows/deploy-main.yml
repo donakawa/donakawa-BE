@@ -47,19 +47,17 @@ jobs:
           ssh private 'sudo mkdir -p /opt/app/donakawa'
           ssh private 'sudo chown ubuntu:ubuntu /opt/app/donakawa'
           scp -r ./[!.]* private:/opt/app/donakawa
-
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
       - name: Install dependencies
         run: |
-          NODE_BIN="$HOME/.nvm/versions/node/v24.*/bin"
-          NPM=$(ls -1 $NODE_BIN/npm | head -n 1)
           ssh private 'npm ci --prefix /opt/app/donakawa'
       - name: Build codes
         run: |
-          NODE_BIN="$HOME/.nvm/versions/node/v24.*/bin"
-          NPM=$(ls -1 $NODE_BIN/npm | head -n 1)
           ssh private 'npm build --prefix /opt/app/donakawa'
       - name: Reload PM2 service
         run: |
-          NODE_BIN="$HOME/.nvm/versions/node/v24.*/bin"
-          NPM=$(ls -1 $NODE_BIN/npm | head -n 1)
           ssh private 'cd /apt/app/donakawa && pm2 reload ecosystem.config.js -- env production'
