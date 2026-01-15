@@ -1,0 +1,59 @@
+name: deploy-main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "$EC2_BASTION_SSH_KEY" > ~/.ssh/id_rsa_bastion
+          echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa_bastion
+
+          cat >>~/.ssh/config <<END
+          Host bastion
+            HostName $EC2_BASTION_HOST
+            User $EC2_BASTION_USER
+            IdentityFile ~/.ssh/id_rsa_bastion
+            StrictHostKeyChecking no
+          Host private
+            HostName $EC2_HOST
+            User $EC2_USER
+            IdentityFile ~/.ssh/id_rsa
+            ProxyJump bastion
+            StrictHostKeyChecking no
+          END
+        env:
+          EC2_BASTION_USER: ubuntu
+          EC2_BASTION_HOST: ${{ secrets.EC2_BASTION_HOST }}
+          EC2_BASTION_SSH_KEY: ${{ secrets.EC2_BASTION_SSH_KEY }}
+          EC2_USER: ubuntu
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Copy Workspace
+        run: |
+          ssh private 'sudo mkdir -p /opt/app/donakawa'
+          ssh private 'sudo chown ubuntu:ubuntu /opt/app/donakawa'
+          scp -r ./[!.]* private:/opt/app/donakawa
+
+      - name: Install dependencies
+        run: |
+          ssh private 'npm ci --prefix /opt/app/donakawa'
+      - name: Build codes
+        run: |
+          ssh private 'npm build --prefix /opt/app/donakawa'
+      - name: Reload PM2 service
+        run: |
+          ssh private 'cd /apt/app/donakawa && pm2 reload ecosystem.config.js -- env production'

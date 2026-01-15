@@ -1,0 +1,49 @@
+module.exports = {
+  apps: [
+    {
+      name: "myapp-api",
+
+      // ✅ 프로젝트 루트 (여기 기준으로 dist/.env 찾음)
+      cwd: "/opt/app/donakawa",
+
+      // ✅ 운영은 빌드 결과물 실행
+      script: "dist/index.js",
+
+      // ✅ 멀티코어 무중단 클러스터
+      instances: "max",
+      exec_mode: "cluster",
+
+      // ✅ 기본 안정성 옵션
+      autorestart: true,
+      max_restarts: 10,
+      min_uptime: "30s",
+      kill_timeout: 5000,
+
+      // ✅ 메모리 제한 넘으면 재시작
+      max_memory_restart: "700M",
+
+      // ✅ 운영에서는 watch 끄기
+      watch: false,
+
+      // ✅ 로그
+      merge_logs: true,
+      time: true,
+
+      // ✅ .env 자동 로드 (코드에서 dotenv/config 안 써도 됨)
+      // - .env 파일은 /srv/myapp/.env 에 있어야 함
+      env_file: ".env",
+
+      // ✅ Node 옵션
+      // - source map 기반으로 stack trace 보기 좋게
+      node_args: "--enable-source-maps",
+
+      // 환경변수(추가로 오버라이드 가능)
+      env: {
+        NODE_ENV: "development",
+      },
+      env_production: {
+        NODE_ENV: "production",
+      },
+    },
+  ],
+};
