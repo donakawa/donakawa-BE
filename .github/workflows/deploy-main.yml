@@ -52,7 +52,7 @@ jobs:
           ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa'
       - name: Build codes
         run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm build --prefix /opt/app/donakawa'
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm run build --prefix /opt/app/donakawa'
       - name: Reload PM2 service
         run: |
           ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && cd /apt/app/donakawa && pm2 reload ecosystem.config.js -- env production'
