@@ -57,6 +57,7 @@ async function bootstrap() {
       return false;
     return true;
   }
+  app.get("/health", (req, res) => res.status(200).send("OK"));
   app.use(
     (
       err: AppError | ValidateError,
