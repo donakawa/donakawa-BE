@@ -115,7 +115,7 @@ model Product {
   storePlatform   StorePlatform @relation(fields: [storePlatformId], references: [id])
   name            String        @db.VarChar(300)
   price           Int
-  productUrl      String        @unique @db.VarChar(500)
+  productId       String        @unique @db.VarChar(500)
   updatedAt       DateTime?     @default(now()) @updatedAt @db.Timestamp()
 
   addedItemAuto AddedItemAuto[]
