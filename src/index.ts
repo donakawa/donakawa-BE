@@ -80,6 +80,7 @@ async function bootstrap() {
           data: err.data,
         });
       }
+      console.error(err);
     }
   );
 
