@@ -95,7 +95,7 @@ jobs:
           ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa/current --omit=dev'
       - name: Prisma generation
         run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" &&cd /opt/app/donakawa/incoming&&npx prisma generate'
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" &&cd /opt/app/donakawa/current&&npx prisma generate'
       - name: Reload PM2 service
         run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && cd /opt/app/donakawa/incoming && pm2 startOrReload ecosystem.config.js --env production&&pm2 save'
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && cd /opt/app/donakawa/current&& pm2 startOrReload ecosystem.config.js --env production&&pm2 save'
