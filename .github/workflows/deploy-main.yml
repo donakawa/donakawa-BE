@@ -74,7 +74,7 @@ jobs:
 
       - name: Copy artifact to Server
         run: |
-          ssh private 'sudo mkdir -p /opt/app/donakawa/incoming'
+          ssh private 'sudo mkdir -p /opt/app/donakawa/incoming&&sudo chown -R ubuntu:ubuntu /opt/app/donakawa'
           cd artifact
           rsync -az --delete \
             --exclude ".git" \
