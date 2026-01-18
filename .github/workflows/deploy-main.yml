@@ -69,6 +69,81 @@ jobs:
           EC2_BASTION_SSH_KEY: ${{ secrets.EC2_BASTION_SSH_KEY }}
           EC2_USER: ubuntu
           EC2_HOST_A: ${{ secrets.EC2_HOST_A }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Copy artifact to Server
+        run: |
+          ssh private 'sudo mkdir -p /opt/app/donakawa/incoming&&sudo chown -R ubuntu:ubuntu /opt/app/donakawa'
+          cd artifact
+          rsync -az --delete \
+            --exclude ".git" \
+            --exclude "node_modules" \
+            --exclude ".env" \
+            ./dist ./prisma ./package.json ./package-lock.json ecosystem.config.js \
+            private:/opt/app/donakawa/incoming/
+      - name: Switch Environment
+        run: |
+          ssh private '
+            set -e
+            cd /opt/app/donakawa
+            rm -rf current
+            mv incoming current
+          '
+      - name: Install dependencies
+        run: |
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa/current --omit=dev'
+      - name: Prisma generation
+        run: |
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" &&cd /opt/app/donakawa/current&&npx prisma generate'
+      - name: Create environment variables
+        run: |
+          ssh private "cat > /opt/app/donakawa/current/.env <<'EOF'
+          ${{ secrets.EC2_DOT_ENV }}
+          EOF"
+          ssh private "cat > /opt/app/donakawa/current/id_rsa_db.pem <<'EOF'
+          ${{ secrets.EC2_DB_SSL_CERT }}
+          EOF"
+        env:
+          EC2_DOT_ENV: ${{ secrets.EC2_DOT_ENV }}
+          EC2_DB_SSL_CERT: ${{ secrets.EC2_DB_SSL_CERT }}
+      - name: Reload PM2 service
+        run: |
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && cd /opt/app/donakawa/current&& pm2 startOrReload ecosystem.config.js --env production&&pm2 save'
+  deploy-B:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-artifact
+          path: artifact
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "$EC2_BASTION_SSH_KEY" > ~/.ssh/id_rsa_bastion
+          echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa_bastion
+          cat >>~/.ssh/config <<END
+          Host bastion
+            HostName $EC2_BASTION_HOST
+            User $EC2_BASTION_USER
+            IdentityFile ~/.ssh/id_rsa_bastion
+            StrictHostKeyChecking no
+          Host private
+            HostName $EC2_HOST_B
+            User $EC2_USER
+            IdentityFile ~/.ssh/id_rsa
+            ProxyJump bastion
+            StrictHostKeyChecking no
+          END
+        env:
+          EC2_BASTION_USER: ubuntu
+          EC2_BASTION_HOST: ${{ secrets.EC2_BASTION_HOST }}
+          EC2_BASTION_SSH_KEY: ${{ secrets.EC2_BASTION_SSH_KEY }}
+          EC2_USER: ubuntu
           EC2_HOST_B: ${{ secrets.EC2_HOST_B }}
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
