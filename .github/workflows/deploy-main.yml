@@ -80,7 +80,7 @@ jobs:
             --exclude ".git" \
             --exclude "node_modules" \
             --exclude ".env" \
-            ./dist ./package.json ./package-lock.json ecosystem.config.js \
+            ./dist ./prisma ./package.json ./package-lock.json ecosystem.config.js \
             private:/opt/app/donakawa/incoming/
       - name: Switch Environment
         run: |
