@@ -7,11 +7,40 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Pack artifact
+        run: |
+          mkdir -p artifact
+          cp -r dist artifact/dist
+          cp package.json package-lock.json artifact/
+          if [ -f ecosystem.config.js ]; then cp ecosystem.config.js artifact/; fi
+          if [ -d prisma ]; then cp -r prisma artifact/prisma; fi
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-artifact
+          path: artifact
+  deploy-A:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-artifact
+          path: artifact
 
       - name: Configure SSH
         run: |
@@ -20,7 +49,6 @@ jobs:
           echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa_bastion
-
           cat >>~/.ssh/config <<END
           Host bastion
             HostName $EC2_BASTION_HOST
@@ -28,7 +56,7 @@ jobs:
             IdentityFile ~/.ssh/id_rsa_bastion
             StrictHostKeyChecking no
           Host private
-            HostName $EC2_HOST
+            HostName $EC2_HOST_A
             User $EC2_USER
             IdentityFile ~/.ssh/id_rsa
             ProxyJump bastion
@@ -39,23 +67,33 @@ jobs:
           EC2_BASTION_HOST: ${{ secrets.EC2_BASTION_HOST }}
           EC2_BASTION_SSH_KEY: ${{ secrets.EC2_BASTION_SSH_KEY }}
           EC2_USER: ubuntu
-          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_HOST_A: ${{ secrets.EC2_HOST_A }}
+          EC2_HOST_B: ${{ secrets.EC2_HOST_B }}
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Copy Workspace
+      - name: Copy artifact to Server
         run: |
-          ssh private 'sudo mkdir -p /opt/app/donakawa'
-          ssh private 'sudo chown ubuntu:ubuntu /opt/app/donakawa'
-          scp -r ./[!.]* private:/opt/app/donakawa
+          ssh private 'sudo mkdir -p /opt/app/donakawa/incoming'
+          rsync -az --delete \
+            --exclude ".git" \
+            --exclude "node_modules" \
+            --exclude ".env" \
+            ./dist ./package.json ./package-lock.json ecosystem.config.js \
+            private:/opt/app/donakawa/incoming/
+      - name: Switch Environment
+        run: |
+          ssh private '
+            set -e
+            cd /opt/app/donakawa
+            rm -rf current
+            mv incoming current
+          '
       - name: Install dependencies
         run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa'
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa/current --omit=dev'
       - name: Prisma generation
         run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" &&cd /opt/app/donakawa&&npx prisma generate'
-      - name: Build codes
-        run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm run build --prefix /opt/app/donakawa'
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" &&cd /opt/app/donakawa/incoming&&npx prisma generate'
       - name: Reload PM2 service
         run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && cd /opt/app/donakawa && pm2 reload ecosystem.config.js -- env production'
+          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && cd /opt/app/donakawa/incoming && pm2 startOrReload ecosystem.config.js --env production&&pm2 save'
