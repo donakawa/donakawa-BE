@@ -96,6 +96,17 @@ jobs:
       - name: Prisma generation
         run: |
           ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" &&cd /opt/app/donakawa/current&&npx prisma generate'
+      - name: Create environment variables
+        run: |
+          ssh private "cat > /opt/app/donakawa/current/.env <<'EOF'
+          ${{ secrets.EC2_DOT_ENV }}
+          EOF"
+          ssh private "cat > /opt/app/donakawa/current/id_rsa_db.pem <<'EOF'
+          ${{ secrets.EC2_DB_SSL_CERT }}
+          EOF"
+        env:
+          EC2_DOT_ENV: ${{ secrets.EC2_DOT_ENV }}
+          EC2_DB_SSL_CERT: ${{ secrets.EC2_DB_SSL_CERT }}
       - name: Reload PM2 service
         run: |
           ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && cd /opt/app/donakawa/current&& pm2 startOrReload ecosystem.config.js --env production&&pm2 save'
