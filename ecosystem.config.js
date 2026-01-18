@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "myapp-api",
+      name: "donakawa-api",
 
       // ✅ 프로젝트 루트 (여기 기준으로 dist/.env 찾음)
       cwd: "/opt/app/donakawa",
