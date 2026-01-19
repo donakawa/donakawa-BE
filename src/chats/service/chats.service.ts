@@ -1,3 +1,4 @@
+import type { Response } from "express";
 import { ChatsRepository } from "../repository/chats.repository";
 import {
   CreateChatResponse,
@@ -9,11 +10,13 @@ import {
 import { QUESTIONS } from "../constants/questions";
 import { SelectOptionRequest } from "../dto/request/chats.request.dto";
 import { GptService } from "./gpt.service";
+import { RedisService } from "./redis.service";
 
 export class ChatsService {
   constructor(
     private readonly chatsRepository: ChatsRepository,
     private readonly gptService: GptService,
+    private readonly redisService: RedisService,
   ) {}
 
   async createChat(
@@ -87,7 +90,11 @@ export class ChatsService {
     return QUESTIONS.find((q) => q.step === nextStep)!;
   }
 
-  // 버튼 선택 저장 + GPT 판단
+  async deleteChat(chatId: number): Promise<{ message: string }> {
+    await this.chatsRepository.softDeleteChat(chatId);
+    return { message: "채팅방이 삭제되었습니다." };
+  }
+
   async saveSelection(
     chatId: number,
     body: SelectOptionRequest,
@@ -101,51 +108,54 @@ export class ChatsService {
     const option = question.options.find((o) => o.id === body.selectedOptionId);
     if (!option) throw new Error("Invalid option");
 
-    // USER 메시지 저장
     await this.chatsRepository.createMessage(
       Number(chat.id),
       "USER",
       option.label,
     );
 
-    // 질문이 남아 있으면 종료
     if (body.step < QUESTIONS.length) {
       return { isFinished: false };
     }
-
-    // 모든 답변 수집
-    const answers = [
-      ...chat.aiChatMessage
-        .filter((m) => m.sender === "USER")
-        .map((m) => m.content),
-      option.label,
-    ];
-
-    // GPT 호출
-    const gptResult = await this.gptService.getDecision({
-      item: {
-        name: "검은색 슬랙스",
-        price: 89000,
-      },
-      user: {
-        budgetLeft: 195500,
-        daysUntilBudgetReset: 10,
-      },
-      answers,
-    });
-
-    // AI 메시지 저장
-    await this.chatsRepository.createMessage(
-      Number(chat.id),
-      "AI",
-      gptResult.message,
-    );
-
     return { isFinished: true };
   }
 
-  async deleteChat(chatId: number): Promise<{ message: string }> {
-    await this.chatsRepository.softDeleteChat(chatId);
-    return { message: "채팅방이 삭제되었습니다." };
+  // SSE 스트리밍 처리
+
+  async streamFinish(chatId: number, res: Response): Promise<void> {
+    const chat = await this.chatsRepository.findChatDetail(chatId);
+    if (!chat) throw new Error("Chat not found");
+
+    const answers = chat.aiChatMessage
+      .filter((m) => m.sender === "USER")
+      .map((m) => m.content);
+
+    const { decision, stream } = await this.gptService.streamDecision({
+      item: { name: "검은색 슬랙스", price: 89000 },
+      user: { budgetLeft: 195500, daysUntilBudgetReset: 10 },
+      answers,
+    });
+
+    // decision 이벤트
+    await this.redisService.saveDecision(chatId, decision);
+    res.write(`event: decision\ndata:${decision}\n\n`);
+
+    let fullMessage = "";
+
+    // message 스트리밍
+    for await (const chunk of stream) {
+      fullMessage += chunk;
+      res.write(`event: message\ndata:${chunk}\n\n`);
+    }
+
+    // DB 저장
+    await this.chatsRepository.createMessage(
+      Number(chat.id),
+      "AI",
+      fullMessage,
+    );
+
+    res.write(`event: done\ndata: end\n\n`);
+    res.end();
   }
 }

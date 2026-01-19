@@ -1,4 +1,6 @@
-import { Body, Delete, Get, Path, Post, Route, Tags } from "tsoa";
+import { Body, Delete, Get, Path, Post, Route, Tags, Res } from "tsoa";
+import type { Response as ExpressResponse } from "express";
+
 import { container } from "../../container";
 import { ChatsService } from "../service/chats.service";
 import {
@@ -39,5 +41,17 @@ export class ChatsController {
   @Delete("/{id}")
   async deleteChat(@Path() id: number) {
     return this.chatsService.deleteChat(id);
+  }
+
+  @Get("/{id}/result/stream")
+  async finishStream(
+    @Path() id: number,
+    @Res() res: ExpressResponse,
+  ): Promise<void> {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    await this.chatsService.streamFinish(id, res);
   }
 }

@@ -1,35 +1,89 @@
-interface GptDecisionInput {
-  item: {
-    name: string;
-    price: number;
-  };
-  user: {
-    budgetLeft: number;
-    daysUntilBudgetReset: number;
-  };
-  answers: string[];
-}
+import OpenAI from "openai";
+import { QUESTIONS } from "../constants/questions";
 
-interface GptDecisionResult {
-  decision: "구매 추천" | "구매 보류";
-  message: string;
+export type DecisionType = "구매 추천" | "구매 보류";
+
+export interface GptStreamResult {
+  decision: DecisionType;
+  stream: AsyncGenerator<string>;
 }
 
 export class GptService {
-  async getDecision(input: GptDecisionInput): Promise<GptDecisionResult> {
-    // 나중에 OpenAI API로 교체
-    const canAfford = input.user.budgetLeft >= input.item.price;
+  private client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
 
-    if (canAfford) {
-      return {
-        decision: "구매 추천",
-        message: `현재 예산 내에서 구매 가능하며, 선택하신 답변을 보면 만족도가 높을 것으로 보입니다.`,
-      };
+  async streamDecision(input: {
+    item: { name: string; price: number };
+    user: { budgetLeft: number; daysUntilBudgetReset: number };
+    answers: string[];
+  }): Promise<GptStreamResult> {
+    const qaText = QUESTIONS.map((q, index) => {
+      const answer = input.answers[index] ?? "응답 없음";
+      return `Q${q.step}. ${q.question}\nA${q.step}. ${answer}`;
+    }).join("\n\n");
+
+    /** 1️⃣ decision 먼저 GPT에게 요청 */
+    const decisionResponse = await this.client.responses.create({
+      model: "gpt-4.1-mini",
+      input: `
+        너는 소비 결정을 도와주는 AI야.
+
+        아래 정보를 종합해서
+        "구매 추천" 또는 "구매 보류" 중 하나를 판단해.
+
+        [상품 정보]
+        - 가격: ${input.item.price}원
+
+        [예산 정보]
+        - 현재 남은 예산: ${input.user.budgetLeft}원
+        - 예산 갱신까지 남은 기간: ${input.user.daysUntilBudgetReset}일
+
+        [질문과 답변]
+        ${qaText}
+
+        반드시 아래 JSON 형식으로만 답해:
+        {
+          "decision": "구매 추천 | 구매 보류"
+        }
+        `,
+    });
+
+    const decision = JSON.parse(decisionResponse.output_text)
+      .decision as DecisionType;
+
+    /** message 스트리밍 */
+    const stream = await this.client.responses.stream({
+      model: "gpt-4.1-mini",
+      input: `
+        결론은 "${decision}"이야.
+
+        아래 정보만을 근거로,
+        한 단락으로 자연스럽게 설명해줘.
+
+        - 현재 남은 예산: ${input.user.budgetLeft}원
+        - 상품 가격: ${input.item.price}원
+        - 예산 갱신까지 남은 기간: ${input.user.daysUntilBudgetReset}일
+
+        ❗주의사항
+        - 질문/답변 내용은 언급하지 마
+        - “~라고 답했고” 같은 표현 금지
+        - 숫자는 반드시 그대로 사용
+        - 설명만 작성하고 결론 문장은 반복하지 마
+        `,
+    });
+
+    async function* messageStream() {
+      for await (const event of stream) {
+        if (event.type === "response.output_text.delta") {
+          yield event.delta;
+        }
+      }
     }
 
     return {
-      decision: "구매 보류",
-      message: `현재 만족도는 높을 수 있으나, 남은 예산이 부족해 이번 달 구매는 부담이 될 수 있습니다.`,
+      decision,
+      stream: messageStream(),
     };
   }
 }

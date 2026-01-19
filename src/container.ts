@@ -12,6 +12,7 @@ import { WishlistService } from "./wishlist/service/wishlist.service";
 import { ChatsRepository } from "./chats/repository/chats.repository";
 import { ChatsService } from "./chats/service/chats.service";
 import { GptService } from "./chats/service/gpt.service";
+import { RedisService } from "./chats/service/redis.service";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 
@@ -52,7 +53,12 @@ const wishlist = {
 // Chats 도메인
 const chatsRepository = new ChatsRepository(prisma);
 const gptService = new GptService();
-const chatsService = new ChatsService(chatsRepository, gptService);
+const redisService = new RedisService();
+const chatsService = new ChatsService(
+  chatsRepository,
+  gptService,
+  redisService,
+);
 const chats = {
   service: chatsService,
   repository: chatsRepository,
