@@ -43,11 +43,6 @@ export interface FinishResponse {
   isFinished: boolean;
 }
 
-// export interface FinishChatResponse {
-//   decision: "구매 추천" | "구매 보류";
-//   message: string;
-// }
-
 export interface DeleteResponse {
   message: string;
 }

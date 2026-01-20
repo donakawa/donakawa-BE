@@ -207,7 +207,7 @@ model AiChatMessage {
   headerId     BigInt       @map("header_id")
   aiChatHeader AiChatHeader @relation(fields: [headerId], references: [id], onDelete: Cascade)
   
-  sender       Sender?
+  sender       Sender
   content      String       @db.Text()
   createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamp()
 
