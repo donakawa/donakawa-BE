@@ -3,11 +3,12 @@ import { PrismaClient } from "@prisma/client";
 export class ChatsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  createChat(userId: number, title: string) {
+  createChat(userId: number, title: string, addedItemAutoId: number) {
     return this.prisma.aiChatHeader.create({
       data: {
         userId,
         title,
+        addedItemAutoId,
       },
     });
   }
@@ -19,12 +20,32 @@ export class ChatsRepository {
     });
   }
 
+  findAddedItem(addedItemAutoId: number) {
+    return this.prisma.addedItemAuto.findUnique({
+      where: { id: BigInt(addedItemAutoId) },
+      include: {
+        product: true,
+      },
+    });
+  }
+
   findChatDetail(chatId: number) {
     return this.prisma.aiChatHeader.findUnique({
       where: { id: BigInt(chatId) },
       include: {
-        aiChatMessage: true,
-        aiChatSelection: true,
+        user: {
+          include: {
+            targetBudget: true,
+          },
+        },
+        addedItemAuto: {
+          include: {
+            product: true,
+          },
+        },
+        aiChatMessage: {
+          orderBy: { createdAt: "asc" },
+        },
         aiChatResult: true,
       },
     });
@@ -56,10 +77,7 @@ export class ChatsRepository {
     });
   }
 
-  async createChatResult(input: {
-    headerId: number;
-    decision: "BUY" | "HOLD";
-  }) {
+  createChatResult(input: { headerId: number; decision: string }) {
     return this.prisma.aiChatResult.create({
       data: {
         headerId: BigInt(input.headerId),

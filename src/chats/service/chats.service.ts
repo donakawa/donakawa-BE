@@ -10,22 +10,27 @@ import {
 import { QUESTIONS } from "../constants/questions";
 import { SelectOptionRequest } from "../dto/request/chats.request.dto";
 import { GptService } from "./gpt.service";
-import { RedisService } from "./redis.service";
 
 export class ChatsService {
   constructor(
     private readonly chatsRepository: ChatsRepository,
     private readonly gptService: GptService,
-    private readonly redisService: RedisService,
   ) {}
 
   async createChat(
     userId: number,
-    wishItemId: number,
+    addedItemAutoId: number,
   ): Promise<CreateChatResponse> {
+    const addedItem = await this.chatsRepository.findAddedItem(addedItemAutoId);
+
+    if (!addedItem) {
+      throw new Error("Added item not found");
+    }
+
     const chat = await this.chatsRepository.createChat(
       userId,
-      `WishItem #${wishItemId}`,
+      addedItem.product.name,
+      addedItemAutoId,
     );
 
     return {
@@ -40,7 +45,7 @@ export class ChatsService {
 
     return chats.map((chat) => ({
       id: Number(chat.id),
-      wishItemName: chat.title,
+      title: chat.title,
       createdAt: chat.createdAt.toISOString(),
     }));
   }
@@ -51,20 +56,22 @@ export class ChatsService {
 
     const userMessages = chat.aiChatMessage.filter((m) => m.sender === "USER");
 
-    const aiMessage = chat.aiChatMessage.find((m) => m.sender === "AI");
+    const aiResult = chat.aiChatResult;
+
+    const product = chat.addedItemAuto.product;
 
     return {
       id: Number(chat.id),
       wishItem: {
-        id: 12,
-        name: "검은색 슬랙스",
-        price: 89000,
+        id: Number(product.id),
+        name: product.name,
+        price: product.price,
       },
       answers: userMessages.map((m, i) => ({
         step: i + 1,
         selectedOption: m.content,
       })),
-      result: aiMessage ? aiMessage.content : null,
+      result: aiResult ? aiResult.decision : null,
       currentStep: userMessages.length + 1,
     };
   }
@@ -119,7 +126,7 @@ export class ChatsService {
     return { isFinished: true };
   }
 
-  async gptChat(chatId: number): Promise<GptResultResponse> {
+  async resultChat(chatId: number): Promise<GptResultResponse> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
     if (!chat) throw new Error("Chat not found");
 
@@ -127,16 +134,25 @@ export class ChatsService {
       .filter((m) => m.sender === "USER")
       .map((m) => m.content);
 
+    const product = chat.addedItemAuto.product;
+    const budget = chat.user.targetBudget.at(-1);
+
     const { decision, message } = await this.gptService.finishDecision({
-      item: { name: "검은색 슬랙스", price: 89000 },
-      user: { budgetLeft: 195500, daysUntilBudgetReset: 10 },
+      item: {
+        name: product.name,
+        price: product.price,
+      },
+      user: {
+        budgetLeft: budget?.shoppingBudget ?? 0,
+        daysUntilBudgetReset: 10,
+      },
       answers,
     });
 
     /** 결과 테이블에 저장 */
     await this.chatsRepository.createChatResult({
       headerId: Number(chat.id),
-      decision: decision === "구매 추천" ? "BUY" : "HOLD",
+      decision,
     });
 
     return {

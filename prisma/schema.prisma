@@ -95,6 +95,7 @@ model AddedItemAuto {
 
   purchasedHistory PurchasedHistory[]
   review           Review[]
+  aiChatHeaders   AiChatHeader[]
 
   @@map("added_item_auto")
 }
@@ -181,22 +182,22 @@ enum Sender {
   USER
 }
 
-enum PurchaseDecision {
-  BUY
-  HOLD
-}
-
 model AiChatHeader {
-  id        BigInt    @id @default(autoincrement())
-  userId    BigInt    @map("user_id")
-  user      User      @relation(fields: [userId], references: [id])
-  title     String    @db.VarChar(100)
+  id              BigInt        @id @default(autoincrement())
 
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
+  userId          BigInt        @map("user_id")
+  user            User          @relation(fields: [userId], references: [id])
+
+  addedItemAutoId BigInt        @map("added_item_auto_id")
+  addedItemAuto   AddedItemAuto @relation(fields: [addedItemAutoId], references: [id])
+
+  title String
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime?     @map("updated_at")
 
   aiChatMessage   AiChatMessage[]
-  aiChatSelection AiChatSelection[]
+  aiChatSelection AiChatSelection[] @relation("HeaderSelections")
   aiChatResult    AiChatResult?
 
   @@map("ai_chat_header")
@@ -215,12 +216,13 @@ model AiChatMessage {
 }
 
 model AiChatSelection {
-  id        BigInt       @id @default(autoincrement())
-  headerId  BigInt       @map("header_id")
-  header    AiChatHeader @relation(fields: [headerId], references: [id], onDelete: Cascade)
+  id        BigInt @id @default(autoincrement())
 
-  step      Int         
-  content   String       @db.Text()
+  headerId  BigInt @map("header_id")
+  header    AiChatHeader @relation("HeaderSelections", fields: [headerId], references: [id], onDelete: Cascade)
+
+  step      Int
+  content   String
 
   @@unique([headerId, step])
   @@map("ai_chat_selection")
@@ -231,7 +233,7 @@ model AiChatResult {
   headerId  BigInt           @unique @map("header_id")
   header    AiChatHeader     @relation(fields: [headerId], references: [id], onDelete: Cascade)
 
-  decision  PurchaseDecision
+  decision  String
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamp()
 
   @@map("ai_chat_result")

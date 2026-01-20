@@ -42,7 +42,7 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "id": {"dataType":"double","required":true},
-            "wishItemName": {"dataType":"string","required":true},
+            "title": {"dataType":"string","required":true},
             "createdAt": {"dataType":"string","required":true},
         },
         "additionalProperties": false,

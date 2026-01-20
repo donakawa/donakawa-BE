@@ -75,6 +75,6 @@ export class ChatsController {
    */
   @Get("/{id}/result")
   async resultChat(@Path() id: number) {
-    return this.chatsService.gptChat(id);
+    return this.chatsService.resultChat(id);
   }
 }

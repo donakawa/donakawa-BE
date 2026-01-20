@@ -6,7 +6,7 @@ export interface CreateChatResponse {
 
 export interface ChatListResponse {
   id: number;
-  wishItemName: string;
+  title: string;
   createdAt: string;
 }
 
