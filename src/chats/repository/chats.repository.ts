@@ -23,11 +23,9 @@ export class ChatsRepository {
     return this.prisma.aiChatHeader.findUnique({
       where: { id: BigInt(chatId) },
       include: {
-        aiChatMessage: {
-          include: {
-            aiChatSelection: true,
-          },
-        },
+        aiChatMessage: true,
+        aiChatSelection: true,
+        aiChatResult: true,
       },
     });
   }
@@ -42,20 +40,30 @@ export class ChatsRepository {
     });
   }
 
-  createSelection(messageId: number, content: string) {
+  createSelection(input: { headerId: number; step: number; content: string }) {
     return this.prisma.aiChatSelection.create({
       data: {
-        messageId,
-        content,
+        headerId: BigInt(input.headerId),
+        step: input.step,
+        content: input.content,
       },
     });
   }
 
-  softDeleteChat(chatId: number) {
-    return this.prisma.aiChatHeader.update({
+  deleteChat(chatId: number) {
+    return this.prisma.aiChatHeader.delete({
       where: { id: BigInt(chatId) },
+    });
+  }
+
+  async createChatResult(input: {
+    headerId: number;
+    decision: "BUY" | "HOLD";
+  }) {
+    return this.prisma.aiChatResult.create({
       data: {
-        title: "[DELETED]",
+        headerId: BigInt(input.headerId),
+        decision: input.decision,
       },
     });
   }

@@ -1,4 +1,3 @@
-import type { Response } from "express";
 import { ChatsRepository } from "../repository/chats.repository";
 import {
   CreateChatResponse,
@@ -6,6 +5,7 @@ import {
   ChatListResponse,
   FinishResponse,
   QuestionResponse,
+  GptResultResponse,
 } from "../dto/response/chats.response.dto";
 import { QUESTIONS } from "../constants/questions";
 import { SelectOptionRequest } from "../dto/request/chats.request.dto";
@@ -41,7 +41,6 @@ export class ChatsService {
     return chats.map((chat) => ({
       id: Number(chat.id),
       wishItemName: chat.title,
-      status: chat.title === "[DELETED]" ? "DELETED" : "IN_PROGRESS",
       createdAt: chat.createdAt.toISOString(),
     }));
   }
@@ -91,7 +90,7 @@ export class ChatsService {
   }
 
   async deleteChat(chatId: number): Promise<{ message: string }> {
-    await this.chatsRepository.softDeleteChat(chatId);
+    await this.chatsRepository.deleteChat(chatId);
     return { message: "채팅방이 삭제되었습니다." };
   }
 
@@ -120,9 +119,7 @@ export class ChatsService {
     return { isFinished: true };
   }
 
-  // SSE 스트리밍 처리
-
-  async streamFinish(chatId: number, res: Response): Promise<void> {
+  async gptChat(chatId: number): Promise<GptResultResponse> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
     if (!chat) throw new Error("Chat not found");
 
@@ -130,32 +127,21 @@ export class ChatsService {
       .filter((m) => m.sender === "USER")
       .map((m) => m.content);
 
-    const { decision, stream } = await this.gptService.streamDecision({
+    const { decision, message } = await this.gptService.finishDecision({
       item: { name: "검은색 슬랙스", price: 89000 },
       user: { budgetLeft: 195500, daysUntilBudgetReset: 10 },
       answers,
     });
 
-    // decision 이벤트
-    await this.redisService.saveDecision(chatId, decision);
-    res.write(`event: decision\ndata:${decision}\n\n`);
+    /** 결과 테이블에 저장 */
+    await this.chatsRepository.createChatResult({
+      headerId: Number(chat.id),
+      decision: decision === "구매 추천" ? "BUY" : "HOLD",
+    });
 
-    let fullMessage = "";
-
-    // message 스트리밍
-    for await (const chunk of stream) {
-      fullMessage += chunk;
-      res.write(`event: message\ndata:${chunk}\n\n`);
-    }
-
-    // DB 저장
-    await this.chatsRepository.createMessage(
-      Number(chat.id),
-      "AI",
-      fullMessage,
-    );
-
-    res.write(`event: done\ndata: end\n\n`);
-    res.end();
+    return {
+      decision,
+      message,
+    };
   }
 }
