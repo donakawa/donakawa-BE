@@ -1,6 +1,7 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString } from "class-validator";
 import { Example } from "tsoa";
 import { EmailVerifyTypeEnum } from "../../enums/send-email.enum";
+import { User } from "@prisma/client";
 
 export class RegisterRequestDto {
   @Example("example@example.com")
@@ -27,6 +28,17 @@ export class SendEmailCodeRequestDto {
   @IsEnum(EmailVerifyTypeEnum)
   @IsNotEmpty()
   type!: EmailVerifyTypeEnum;
+}
+
+export class LoginRequestDto {
+  @Example("example@example.com")
+  @IsEmail()
+  @IsNotEmpty()
+  email!: string;
+  @Example("p@ssword!")
+  @IsString()
+  @IsNotEmpty()
+  password!: string;
 }
 
 

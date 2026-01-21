@@ -20,9 +20,137 @@ import jwt from "jsonwebtoken";
 import { v4 as uuid } from "uuid";
 import nodemailer from "nodemailer";
 import { EmailVerifyTypeEnum } from "../enums/send-email.enum";
+import { LoginRequestDto } from "../dto/request/auth.request.dto";
+import { LoginResult } from "../../types/login-result.type";
+import { LoginResponseDto } from "../dto/response/auth.response.dto";
+
 
 export class AuthService {
-  constructor(private readonly authRepository: AuthRepository) {}
+  constructor(private authRepository: AuthRepository) {}
+
+  // 로그인
+  async authUser(body: LoginRequestDto): Promise<LoginResult> {
+    const user = await this.authRepository.findUserByEmail(body.email);
+    if (!user)
+      throw new NotFoundException("U001", "존재하지 않는 계정 입니다.");
+
+
+    if (!user.password) {
+      throw new UnauthorizedException("U002", "비밀번호로 로그인할 수 없는 계정입니다.");
+    }
+
+    if (!(await compareHash(body.password, user.password)))
+      throw new UnauthorizedException("U002", "잘못된 패스워드 입니다.");
+
+
+    const payload = {
+      id: user.id.toString(),
+      email: user.email,
+      nickname: user.nickname,
+      sid: uuid(),
+    };
+
+    const accessToken = jwt.sign(
+      payload,
+      process.env.ACCESS_TOKEN_SECRET_KEY!,
+      { expiresIn: "1h" }
+    );
+
+    const refreshToken = jwt.sign(
+      payload,
+      process.env.REFRESH_TOKEN_SECRET_KEY!,
+      { expiresIn: "7d" }
+    );
+
+    // 기존 세션 정리
+    const alreadyExistSid = await redis.get(`user:${user.id}:sid`);
+    if (alreadyExistSid) {
+      await redis.del(`user:refreshToken:${alreadyExistSid}`);
+    }
+
+    // 새 세션 저장 (7일)
+    const TTL = 60 * 60 * 24 * 7;
+
+    // TTL = 초 단위
+    await redis.set(`user:${user.id}:sid`, payload.sid, { EX: TTL });
+
+    await redis.set(
+      `user:refreshToken:${payload.sid}`,
+      await hashingString(refreshToken),
+      { EX: TTL }
+    );
+
+
+    return {
+      data: new LoginResponseDto(user),
+      tokens: {
+        accessToken,
+        refreshToken,
+      },
+    };
+  }
+
+  // 토큰 갱신
+  async refreshAccessToken(
+    refreshToken: string
+  ): Promise<{ accessToken: string }> {
+    try {
+      const decoded = jwt.verify(
+        refreshToken,
+        process.env.REFRESH_TOKEN_SECRET_KEY!
+      ) as any;
+
+      // Redis에서 저장된 해시 가져오기
+      const storedHash = await redis.get(`user:refreshToken:${decoded.sid}`);
+      if (!storedHash) {
+        throw new UnauthorizedException("U003", "만료된 세션입니다.");
+      }
+
+      // 토큰 해시 비교
+      if (!(await compareHash(refreshToken, storedHash))) {
+        throw new UnauthorizedException("U004", "유효하지 않은 토큰입니다.");
+      }
+
+      // 새 Access Token 발급
+      const payload = {
+        id: decoded.id,
+        email: decoded.email,
+        nickname: decoded.nickname,
+        sid: decoded.sid,
+      };
+
+      const accessToken = jwt.sign(
+        payload,
+        process.env.ACCESS_TOKEN_SECRET_KEY!,
+        { expiresIn: "1h" }
+      );
+
+      return { accessToken };
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new UnauthorizedException("U005", "리프레시 토큰이 만료되었습니다.");
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new UnauthorizedException("U006", "유효하지 않은 토큰입니다.");
+      }
+      throw error;
+    }
+  }
+
+  // 로그아웃
+  async logout(userId: number, sid: string): Promise<void> {
+    await redis.del(`user:${userId}:sid`);
+    await redis.del(`user:refreshToken:${sid}`);
+  }
+
+  // 전체 세션 로그아웃 (모든 기기)
+  async logoutAllDevices(userId: number): Promise<void> {
+    const sid = await redis.get(`user:${userId}:sid`);
+    if (sid) {
+      await redis.del(`user:${userId}:sid`);
+      await redis.del(`user:refreshToken:${sid}`);
+    }
+  }
 
   // 회원가입
   async createUser(body: RegisterRequestDto): Promise<RegisterResponseDto> {
@@ -60,9 +188,7 @@ export class AuthService {
   private generateEmailCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString(); // 6자리 숫자
   }
-  // ======================
   // 이메일 인증 코드 전송
-  // ======================
 
   async sendEmailVerificationCode(
     email: string,

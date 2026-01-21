@@ -12,14 +12,14 @@ export class JwtCookieUtil {
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
       path: "/",
-      maxAge: 1000 * 60 * 15,
+      maxAge: 1000 * 60 * 60, // 1시간
     });
     res.cookie("refreshToken", tokens.refreshToken, {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
       path: "/",
-      maxAge: 1000 * 60 * 60 * 24 * 14,
+      maxAge: 1000 * 60 * 60 * 24 * 7,
     });
   }
   static clearJwtCookies(res: Response) {
@@ -33,4 +33,14 @@ export class JwtCookieUtil {
     res.clearCookie("accessToken", base);
     res.clearCookie("refreshToken", base);
   }
+   static setAccessTokenCookie(res: Response, accessToken: string) {
+    const isProd = process.env.NODE_ENV === 'production';
+     res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 1000, // 1시간
+     });
+   }
 }
