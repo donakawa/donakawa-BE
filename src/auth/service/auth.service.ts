@@ -34,8 +34,14 @@ export class AuthService {
     if (!user)
       throw new NotFoundException("U001", "존재하지 않는 계정 입니다.");
 
-    if (!(await compareHash(body.password, user.password!)))
+
+    if (!user.password) {
+      throw new UnauthorizedException("U002", "비밀번호로 로그인할 수 없는 계정입니다.");
+    }
+
+    if (!(await compareHash(body.password, user.password)))
       throw new UnauthorizedException("U002", "잘못된 패스워드 입니다.");
+
 
     const payload = {
       id: user.id.toString(),
