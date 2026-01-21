@@ -18,6 +18,45 @@ import type { Request as ExRequest, Response as ExResponse, RequestHandler, Rout
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
 const models: TsoaRoute.Models = {
+    "GoalsResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "monthlyIncome": {"dataType":"double","required":true},
+            "incomeDate": {"dataType":"double"},
+            "fixedExpense": {"dataType":"double"},
+            "monthlySaving": {"dataType":"double"},
+            "recommendSaving": {"dataType":"double"},
+            "spendStrategy": {"dataType":"double","required":true},
+            "shoppingBudget": {"dataType":"double"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_GoalsResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"GoalsResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GoalsRequestDto": {
+        "dataType": "refObject",
+        "properties": {
+            "monthlyIncome": {"dataType":"double","required":true},
+            "incomeDate": {"dataType":"double"},
+            "fixedExpense": {"dataType":"double"},
+            "monthlySaving": {"dataType":"double"},
+            "recommendSaving": {"dataType":"double"},
+            "spendStrategy": {"dataType":"double","required":true},
+            "shoppingBudget": {"dataType":"double"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "HelloResponseDto": {
         "dataType": "refObject",
         "properties": {
@@ -111,6 +150,37 @@ export function RegisterRoutes(app: Router) {
 
 
     
+        const argsGoalsController_createTargetBudget: Record<string, TsoaRoute.ParameterSchema> = {
+                body: {"in":"body","name":"body","required":true,"ref":"GoalsRequestDto"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.post('/goals/budget',
+            ...(fetchMiddlewares<RequestHandler>(GoalsController)),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.createTargetBudget)),
+
+            async function GoalsController_createTargetBudget(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_createTargetBudget, request, response });
+
+                const controller = new GoalsController();
+
+              await templateService.apiHandler({
+                methodName: 'createTargetBudget',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 201,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsAuthController_hello: Record<string, TsoaRoute.ParameterSchema> = {
         };
         app.get('/auth/hello',
