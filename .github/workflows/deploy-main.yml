@@ -21,8 +21,10 @@ jobs:
         run: npm ci
       - name: Generate + Build
         run: npx prisma generate&&npm run build
-      - name: Prune devDependencies (runtime)
-        run: npm prune --omit=dev
+      - name: Prune devDependencies (runtime) + Regenerate
+        run: |
+          npm prune --omit=dev
+          npx prisma generate
       - name: Pack artifact
         run: |
           mkdir -p artifact
