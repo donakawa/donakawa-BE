@@ -25,7 +25,7 @@ jobs:
         run: |
           mkdir -p artifact
           cp -r dist artifact/dist
-          cp package.json package-lock.json artifact/
+          cp package.json package-lock.json prisma.config.js artifact/
           if [ -f ecosystem.config.js ]; then cp ecosystem.config.js artifact/; fi
           if [ -d prisma ]; then cp -r prisma artifact/prisma; fi
       - name: Upload artifact
