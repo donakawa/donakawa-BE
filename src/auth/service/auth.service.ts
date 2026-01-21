@@ -65,13 +65,15 @@ export class AuthService {
     // 새 세션 저장 (7일)
     const TTL = 60 * 60 * 24 * 7;
 
-    await redis.setex(`user:${user.id}:sid`, TTL, payload.sid);
+    // TTL = 초 단위
+    await redis.set(`user:${user.id}:sid`, payload.sid, { EX: TTL });
 
-    await redis.setex(
+    await redis.set(
       `user:refreshToken:${payload.sid}`,
-      TTL,
-      await hashingString(refreshToken)
+      await hashingString(refreshToken),
+      { EX: TTL }
     );
+
 
     return {
       data: new LoginResponseDto(user),
