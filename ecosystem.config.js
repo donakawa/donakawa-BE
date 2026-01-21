@@ -10,8 +10,8 @@ module.exports = {
       script: "dist/index.js",
 
       // ✅ 멀티코어 무중단 클러스터
-      instances: "max",
-      exec_mode: "cluster",
+      instances: "1",
+      exec_mode: "fork",
 
       // ✅ 기본 안정성 옵션
       autorestart: true,
@@ -20,7 +20,7 @@ module.exports = {
       kill_timeout: 5000,
 
       // ✅ 메모리 제한 넘으면 재시작
-      max_memory_restart: "700M",
+      max_memory_restart: "500M",
 
       // ✅ 운영에서는 watch 끄기
       watch: false,
