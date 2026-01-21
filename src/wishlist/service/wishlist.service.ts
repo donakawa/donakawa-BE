@@ -22,17 +22,18 @@ export class WishlistService {
   constructor(
     private readonly wishlistRepository: WishlistRepository,
     private readonly crawlQueueClient: CrawlQueueClient,
-    private readonly valkeyClient: Promise<ValkeyClient>,
+    private readonly valkeyClientPromise: Promise<ValkeyClient>,
     private readonly eventEmitterClient: EventEmitterClient,
   ) {}
   async enqueueItemCrawl(
     data: AddCrawlTaskRequestDto,
   ): Promise<AddCrawlTaskResponseDto> {
+    const valkeyClient = await this.valkeyClientPromise;
     const jobId = uuid();
     const message = new CrawlRequestMessage(jobId, data.url);
-    const sentResult = await this.crawlQueueClient.enqueueCrawl(message);
+    await this.crawlQueueClient.enqueueCrawl(message);
     const sentAt = new Date().toISOString();
-    (await this.valkeyClient).valkeyPub.set(
+    await valkeyClient.valkeyPub.set(
       `status:crawl:${jobId}:status`,
       "PENDING",
       {
@@ -42,9 +43,10 @@ export class WishlistService {
     return new AddCrawlTaskResponseDto(jobId, sentAt);
   }
   async subscribeCrawlEvents(jobId: string) {
-    const currentValue = await (
-      await this.valkeyClient
-    ).valkeyPub.get(`status:crawl:${jobId}:status`);
+    const valkeyClient = await this.valkeyClientPromise;
+    const currentValue = await valkeyClient.valkeyPub.get(
+      `status:crawl:${jobId}:status`,
+    );
     if (!currentValue) {
       throw new NotFoundException(
         "JOB_ID_NOT_FOUND",
@@ -55,6 +57,7 @@ export class WishlistService {
       return currentValue as "DONE" | "FAILED";
     }
     const topic = EventType.CRAWL_STATUS_UPDATED;
+
     type resultValueType = {
       result: "DONE" | "FAILED" | null;
       dataId: string | null;
@@ -64,40 +67,40 @@ export class WishlistService {
       const handler = async (payload: CrawlStatusUpdatedPayload) => {
         if (!payload.jobId || payload.jobId !== jobId) return;
         try {
-          result = (await (
-            await this.valkeyClient
-          ).valkeyPub.get(`status:crawl:${jobId}:status`)) as "DONE" | "FAILED";
-          if (result === "DONE" || result === "FAILED") {
-            this.eventEmitterClient.off<CrawlStatusUpdatedPayload>(
-              topic,
-              handler,
-            );
-            const dataId =
-              (
-                await (
-                  await this.valkeyClient
-                ).valkeyPub.get(`status:crawl:${jobId}:resultId`)
-              )?.toString() ?? null;
-            const value: resultValueType = {
-              result,
-              dataId,
-            };
-            resolve(value);
-          }
+          valkeyClient.valkeyPub
+            .get(`status:crawl:${jobId}:status`)
+            .then((statusResult) => {
+              if (statusResult === "DONE" || statusResult === "FAILED") {
+                this.eventEmitterClient.off<CrawlStatusUpdatedPayload>(
+                  topic,
+                  handler,
+                );
+                return this.valkeyClientPromise
+                  .then(async (valkeyClient) =>
+                    valkeyClient.valkeyPub.get(
+                      `status:crawl:${jobId}:resultId`,
+                    ),
+                  )
+                  .then((dataId) => {
+                    resolve({
+                      result,
+                      dataId: dataId?.toString() ?? null,
+                    });
+                  });
+              }
+            });
         } catch (e) {
           this.eventEmitterClient.off(topic, handler);
-          const value: resultValueType = { result, dataId: null };
-          resolve(value);
+          resolve({ result, dataId: null });
         }
       };
       this.eventEmitterClient.on<CrawlStatusUpdatedPayload>(topic, handler);
     });
   }
   async getCrawlResult(jobId: string) {
+    const valkeyClient = await this.valkeyClientPromise;
     const targetId = (
-      await (
-        await this.valkeyClient
-      ).valkeyPub.get(`status:crawl:${jobId}:resultId`)
+      await valkeyClient.valkeyPub.get(`status:crawl:${jobId}:resultId`)
     )?.toString();
     if (!targetId) {
       throw new NotFoundException(
@@ -127,8 +130,8 @@ export class WishlistService {
       );
     }
     const isProductExist =
-      (await this.wishlistRepository.findProductById(command.cacheId)) === null;
-    if (isProductExist) {
+      (await this.wishlistRepository.findProductById(command.cacheId)) !== null;
+    if (!isProductExist) {
       throw new NotFoundException(
         "PRODUCT_NOT_FOUND",
         "존재하지 않는 상품입니다.",

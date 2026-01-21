@@ -63,7 +63,7 @@ async function bootstrap() {
       err: AppError | ValidateError,
       req: Request,
       res: Response,
-      next: NextFunction
+      next: NextFunction,
     ) => {
       if (res.headersSent) return next(err);
 
@@ -80,7 +80,7 @@ async function bootstrap() {
           data: err.data,
         });
       }
-    }
+    },
   );
 
   const server = app.listen(PORT, () => {

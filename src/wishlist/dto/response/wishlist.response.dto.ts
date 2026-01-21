@@ -22,7 +22,8 @@ export class GetCrawlResultResponseDto {
     this.platformName = storePlatformName;
     this.productId = entity.productId;
     this.price = entity.price;
-    this.updatedAt = entity.updatedAt!.toISOString();
+    this.updatedAt =
+      entity.updatedAt!.toISOString() ?? new Date().toISOString();
   }
 }
 export class AddWishListFromCacheResponseDto {
@@ -30,6 +31,6 @@ export class AddWishListFromCacheResponseDto {
   createdAt!: string;
   constructor(entity: AddedItemAuto) {
     this.id = entity.id.toString();
-    this.createdAt = entity.createdAt.toISOString();
+    this.createdAt = entity.createdAt.toISOString() ?? new Date().toISOString();
   }
 }

@@ -1,6 +1,5 @@
-import { EventType } from "aws-sdk/clients/budgets";
-import { off } from "node:cluster";
 import { EventEmitter } from "node:events";
+import { EventType } from "../../enum/event-type.enum";
 
 export class EventEmitterClient {
   emitter: EventEmitter = new EventEmitter();
