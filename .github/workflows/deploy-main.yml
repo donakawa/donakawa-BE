@@ -24,7 +24,7 @@ jobs:
       - name: Prune devDependencies (runtime) + Regenerate
         run: |
           npm prune --omit=dev
-          npx prisma generate
+          npx -p prisma prisma generate
       - name: Pack artifact
         run: |
           mkdir -p artifact
@@ -80,10 +80,10 @@ jobs:
         run: |
           ssh private 'sudo mkdir -p /opt/app/donakawa/incoming&&sudo chown -R ubuntu:ubuntu /opt/app/donakawa'
           cd artifact
-          rsync -az --delete \
+          rsync -az --delete --ignore-missing-args\
             --exclude ".git" \
             --exclude ".env" \
-            ./dist ./prisma ./node_modules ./package.json ./package-lock.json ecosystem.config.js \
+            ./dist/ ./prisma/ ./node_modules/ ./package.json ./package-lock.json ecosystem.config.js \
             private:/opt/app/donakawa/incoming/
       - name: Switch Environment
         run: |
@@ -149,10 +149,10 @@ jobs:
         run: |
           ssh private 'sudo mkdir -p /opt/app/donakawa/incoming&&sudo chown -R ubuntu:ubuntu /opt/app/donakawa'
           cd artifact
-          rsync -az --delete \
+          rsync -az --delete --ignore-missing-args\
             --exclude ".git" \
             --exclude ".env" \
-            ./dist ./prisma ./node_modules ./package.json ./package-lock.json ecosystem.config.js \
+            ./dist/ ./prisma/ ./node_modules/ ./package.json ./package-lock.json ecosystem.config.js \
             private:/opt/app/donakawa/incoming/
       - name: Switch Environment
         run: |
