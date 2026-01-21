@@ -65,7 +65,8 @@ export class ValkeyClient {
       },
       useTLS: isProd,
     });
-    await client.valkeyPub.configSet({ "notify-keyspace-events": "KEA" });
+    if (!isProd)
+      await client.valkeyPub.configSet({ "notify-keyspace-events": "KEA" });
     return client;
   }
 }
