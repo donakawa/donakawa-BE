@@ -63,7 +63,7 @@ async function bootstrap() {
       err: AppError | ValidateError,
       req: Request,
       res: Response,
-      next: NextFunction
+      next: NextFunction,
     ) => {
       if (res.headersSent) return next(err);
 
