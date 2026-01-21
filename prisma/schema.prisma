@@ -82,8 +82,8 @@ enum AddedItemStatus {
 
 model AddedItemAuto {
   id             BigInt          @id @default(autoincrement())
-  folderId       BigInt          @map("folder_id")
-  wishItemFolder WishItemFolder  @relation(fields: [folderId], references: [id])
+  folderId       BigInt?         @map("folder_id")
+  wishItemFolder WishItemFolder? @relation(fields: [folderId], references: [id])
   productId      BigInt          @map("product_id")
   product        Product         @relation(fields: [productId], references: [id])
   userId         BigInt          @map("user_id")

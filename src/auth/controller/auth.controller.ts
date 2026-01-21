@@ -43,7 +43,7 @@ export class AuthController {
   @Post("/login")
   public async login(
     @Body() body: LoginRequestDto,
-    @Request() req: ExpressRequest
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<LoginResponseDto>> {
     const { data, tokens } = await this.authService.authUser(body);
     JwtCookieUtil.setJwtCookies(req.res!, tokens);
@@ -56,7 +56,7 @@ export class AuthController {
     createdAt: "2026-01-12T10:30:00.000Z",
   })
   public async register(
-    @Body() body: RegisterRequestDto
+    @Body() body: RegisterRequestDto,
   ): Promise<ApiResponse<RegisterResponseDto>> {
     return success(await this.authService.createUser(body));
   }
