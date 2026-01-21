@@ -51,7 +51,7 @@ jobs:
       - name: Extract artifact
         run: |
           mkdir -p artifact
-          tar -xzf app-artifact.tgz -C artifact
+          tar -xzf artifact.tgz -C artifact
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
@@ -123,7 +123,7 @@ jobs:
       - name: Extract artifact
         run: |
           mkdir -p artifact
-          tar -xzf app-artifact.tgz -C artifact
+          tar -xzf artifact.tgz -C artifact
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
