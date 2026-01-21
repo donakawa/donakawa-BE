@@ -12,7 +12,7 @@ export class JwtCookieUtil {
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
       path: "/",
-      maxAge: 1000 * 60 * 15,
+      maxAge: 1000 * 60 * 60, // 1시간
     });
     res.cookie("refreshToken", tokens.refreshToken, {
       httpOnly: true,
