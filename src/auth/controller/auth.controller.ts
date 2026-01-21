@@ -46,7 +46,6 @@ export class AuthController {
 public async sendEmailVerificationCode(
   @Body() body: SendEmailCodeRequestDto
 ): Promise<ApiResponse<null>> {
-  console.log('controller 들어옴');
   await this.authService.sendEmailVerificationCode(body.email, body.type);
   return success(null);
 }
