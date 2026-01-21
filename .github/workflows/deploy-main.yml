@@ -47,7 +47,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: app-artifact
-          path: artifact
+          path: .
       - name: Extract artifact
         run: |
           mkdir -p artifact
@@ -119,7 +119,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: app-artifact
-          path: artifact
+          path: .
       - name: Extract artifact
         run: |
           mkdir -p artifact
