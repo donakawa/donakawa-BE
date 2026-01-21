@@ -87,7 +87,7 @@ jobs:
           rsync -az --delete --ignore-missing-args\
             --exclude ".git" \
             --exclude ".env" \
-            ./dist ./prisma ./node_modules ./package.json ./package-lock.json ecosystem.config.js \
+            ./dist ./prisma ./node_modules ./package.json ./package-lock.json prisma.config.js ecosystem.config.js \
             private:/opt/app/donakawa/incoming/
       - name: Switch Environment
         run: |
@@ -159,7 +159,7 @@ jobs:
           rsync -az --delete --ignore-missing-args\
             --exclude ".git" \
             --exclude ".env" \
-            ./dist ./prisma ./node_modules ./package.json ./package-lock.json ecosystem.config.js \
+            ./dist ./prisma ./node_modules ./package.json ./package-lock.json prisma.config.js ecosystem.config.js \
             private:/opt/app/donakawa/incoming/
       - name: Switch Environment
         run: |
