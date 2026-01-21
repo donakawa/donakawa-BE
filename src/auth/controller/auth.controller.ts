@@ -1,25 +1,21 @@
 import {
   Body,
   Example,
-  Get,
   Post,
   Route,
   SuccessResponse,
   Tags,
   Request,
 } from "tsoa";
-import { AppError } from "../../errors/app.error";
 import { ApiResponse, success } from "../../common/response";
 import {
-  HelloResponseDto,
-  LoginResponseDto,
   RegisterResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthService } from "../service/auth.service";
 import { container } from "../../container";
 import {
-  LoginRequestDto,
   RegisterRequestDto,
+  SendEmailCodeRequestDto,
 } from "../dto/request/auth.request.dto";
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
@@ -28,29 +24,9 @@ import { Request as ExpressRequest } from "express";
 @Tags("Auth")
 export class AuthController {
   private readonly authService: AuthService = container.auth.service;
-  @Get("/hello")
-  public hello(): ApiResponse<HelloResponseDto> {
-    return success(HelloResponseDto.from(this.authService.hello()));
-  }
-  @Get("/hello-fail")
-  public helloFail(): ApiResponse<HelloResponseDto> {
-    throw new AppError({
-      errorCode: "D001",
-      message: "테스트 에러",
-      statusCode: 400,
-    });
-  }
-  @Post("/login")
-  public async login(
-    @Body() body: LoginRequestDto,
-    @Request() req: ExpressRequest,
-  ): Promise<ApiResponse<LoginResponseDto>> {
-    const { data, tokens } = await this.authService.authUser(body);
-    JwtCookieUtil.setJwtCookies(req.res!, tokens);
-    return success(data);
-  }
+
   @Post("/register")
-  @SuccessResponse("201", "계정 생성 성공")
+  @SuccessResponse("201", "계정 생성 성공") //응답값 확인 필요
   @Example<RegisterResponseDto>({
     id: "1",
     createdAt: "2026-01-12T10:30:00.000Z",
@@ -60,4 +36,26 @@ export class AuthController {
   ): Promise<ApiResponse<RegisterResponseDto>> {
     return success(await this.authService.createUser(body));
   }
+
+@Post("email/send-code")
+@SuccessResponse("200", "이메일 인증 코드 전송 성공")
+public async sendEmailVerificationCode(
+  @Body() body: SendEmailCodeRequestDto
+): Promise<ApiResponse<null>> {
+  console.log('controller 들어옴');
+  await this.authService.sendEmailVerificationCode(body.email, body.type);
+  return success(null);
+}
+@Post("email/verify-code")
+@SuccessResponse("200", "이메일 인증 코드 검증 성공")
+public async verifyEmailVerificationCode(
+  @Body() body: SendEmailCodeRequestDto & { code: string }
+): Promise<ApiResponse<null>> {
+  await this.authService.verifyEmailVerificationCode(
+    body.email,
+    body.code,
+    body.type
+  );
+  return success(null);
+}
 }
