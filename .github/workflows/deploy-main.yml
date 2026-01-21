@@ -33,11 +33,12 @@ jobs:
           cp package.json package-lock.json prisma.config.js artifact/
           if [ -f ecosystem.config.js ]; then cp ecosystem.config.js artifact/; fi
           if [ -d prisma ]; then cp -r prisma artifact/prisma; fi
+          tar -czf artifact.tgz -C artifact .
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-artifact
-          path: artifact
+          path: artifact.tar.tgz
   deploy-A:
     runs-on: ubuntu-latest
     needs: build
@@ -47,7 +48,10 @@ jobs:
         with:
           name: app-artifact
           path: artifact
-
+      - name: Extract artifact
+        run: |
+          mkdir -p artifact
+          tar -xzf app-artifact.tgz -C artifact
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
@@ -116,7 +120,10 @@ jobs:
         with:
           name: app-artifact
           path: artifact
-
+      - name: Extract artifact
+        run: |
+          mkdir -p artifact
+          tar -xzf app-artifact.tgz -C artifact
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
