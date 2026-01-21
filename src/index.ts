@@ -80,7 +80,8 @@ async function bootstrap() {
           data: err.data,
         });
       }
-    },
+      console.error(err);
+    }
   );
 
   const server = app.listen(PORT, () => {
