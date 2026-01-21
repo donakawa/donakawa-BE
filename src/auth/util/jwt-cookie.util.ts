@@ -33,4 +33,12 @@ export class JwtCookieUtil {
     res.clearCookie("accessToken", base);
     res.clearCookie("refreshToken", base);
   }
+    static setAccessTokenCookie(res: Response, accessToken: string) {
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 1000, // 1시간
+    });
+  }
 }
