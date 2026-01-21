@@ -90,12 +90,6 @@ jobs:
             rm -rf current
             mv incoming current
           '
-      - name: Install dependencies
-        run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" && npm ci --prefix /opt/app/donakawa/current --omit=dev'
-      - name: Prisma generation
-        run: |
-          ssh private 'export PATH="/home/ubuntu/.nvm/versions/node/v24.13.0/bin:$PATH" &&cd /opt/app/donakawa/current&&npx prisma generate'
       - name: Create environment variables
         run: |
           ssh private "cat > /opt/app/donakawa/current/.env <<'EOF'
