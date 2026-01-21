@@ -62,7 +62,9 @@ export class WishlistService {
       result: "DONE" | "FAILED" | null;
       dataId: string | null;
     };
-    return new Promise<resultValueType>(async (resolve) => {
+
+    const TIMEOUT_MS = 1000 * 120; // 2 minutes
+    return new Promise<resultValueType>(async (resolve, reject) => {
       let result: "DONE" | "FAILED" | null = null;
       const handler = async (payload: CrawlStatusUpdatedPayload) => {
         if (!payload.jobId || payload.jobId !== jobId) return;
@@ -94,6 +96,10 @@ export class WishlistService {
           resolve({ result, dataId: null });
         }
       };
+      setTimeout(() => {
+        this.eventEmitterClient.off<CrawlStatusUpdatedPayload>(topic, handler);
+        reject(new Error("Crawl event subscription timed out"));
+      }, TIMEOUT_MS);
       this.eventEmitterClient.on<CrawlStatusUpdatedPayload>(topic, handler);
     });
   }
