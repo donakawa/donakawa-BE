@@ -34,19 +34,21 @@ export class GoalsService {
     return target;
   }
 
+  // 날짜 범위 검증
+  private validateIncomeDate(day: number) {
+    if (day < 1 || day > 31) {
+      throw new BadRequestException(
+        "B002",
+        "incomeDate는 1에서 31 사이의 값이어야 합니다.",
+      );
+    }
+  }
+
   // 목표 예산 등록
   async createTargetBudget(
     userId: bigint,
     body: GoalsRequestDto,
   ): Promise<GoalsResponseDto> {
-    if (
-      body.monthlyIncome === undefined ||
-      body.spendStrategy === undefined ||
-      body.shoppingBudget === undefined
-    ) {
-      throw new BadRequestException("B000", "요청 값이 올바르지 않습니다.");
-    }
-
     const isExist = await this.goalsRepository.findByUserId(userId);
     if (isExist) {
       throw new ConflictException(
@@ -56,6 +58,7 @@ export class GoalsService {
     }
 
     const incomeDay = body.incomeDate ?? 1;
+    this.validateIncomeDate(incomeDay);
     const { incomeDate: _, ...rest } = body;
     const nextIncomeDate = this.makeNextIncomeDate(incomeDay);
 
@@ -89,6 +92,7 @@ export class GoalsService {
 
     let nextIncomeDate = isExist.incomeDate;
     if (body.incomeDate !== undefined) {
+      this.validateIncomeDate(body.incomeDate);
       nextIncomeDate = this.makeNextIncomeDate(body.incomeDate);
     }
 
