@@ -103,18 +103,8 @@ export class WishlistService {
       this.eventEmitterClient.on<CrawlStatusUpdatedPayload>(topic, handler);
     });
   }
-  async getCrawlResult(jobId: string) {
-    const valkeyClient = await this.valkeyClientPromise;
-    const targetId = (
-      await valkeyClient.valkeyPub.get(`status:crawl:${jobId}:resultId`)
-    )?.toString();
-    if (!targetId) {
-      throw new NotFoundException(
-        "CRAWL_RESULT_NOT_FOUND",
-        "크롤링 결과를 찾을 수 없습니다.",
-      );
-    }
-    const result = await this.wishlistRepository.findProductById(targetId);
+  async getCrawlResult(cacheId: string) {
+    const result = await this.wishlistRepository.findProductById(cacheId);
     if (!result) {
       throw new NotFoundException(
         "CRAWL_RESULT_NOT_FOUND",
