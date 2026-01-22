@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsString } from "class-validator";
+import { IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MinLength } from "class-validator";
 import { Example } from "tsoa";
 import { EmailVerifyTypeEnum } from "../../enums/send-email.enum";
 import { User } from "@prisma/client";
@@ -41,6 +41,15 @@ export class LoginRequestDto {
   password!: string;
 }
 
-
-
-
+ export class PasswordResetConfirmDto {
+   @Example("example@example.com")
+   @IsEmail()
+   @IsNotEmpty()
+   email!: string;
+  @Example("password1!")
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(8, { message: "비밀번호는 8자 이상이어야 합니다." })
+  @Matches(/(?=.*[a-zA-Z])(?=.*\d)/, { message: "비밀번호는 영문과 숫자를 포함해야 합니다." })
+   newPassword!: string;
+ }
