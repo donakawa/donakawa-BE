@@ -8,6 +8,9 @@ import {
   Controller,
   Get,
   Produces,
+  FormField,
+  UploadedFile,
+  Middlewares,
 } from "tsoa";
 import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
@@ -16,12 +19,15 @@ import { ApiResponse, success } from "../../common/response";
 import {
   AddCrawlTaskRequestDto,
   AddWishListFromCacheRequestDto,
+  AddWishListRequestDto,
 } from "../dto/request/wishlist.request.dto";
 import {
   AddCrawlTaskResponseDto,
   AddWishListFromCacheResponseDto,
+  AddWishlistResponseDto,
   GetCrawlResultResponseDto,
 } from "../dto/response/wishlist.response.dto";
+import { validateImageFile } from "../policy/upload.policy";
 
 @Route("/wishlist")
 @Tags("Wishlist")
@@ -102,10 +108,27 @@ export class WishlistController extends Controller {
     body.userId = "1"; // TODO: 임시 유저 아이디 하드코딩, 추후 인증 구현시 변경 필요
     return success(await this.wishlistService.addWishListFromCache(body));
   }
-  // @Post("/items")
-  // public async addWishList(
-  //   @Body() body: AddCrawlTaskRequestDto,
-  // ): Promise<ApiResponse<AddWishlistResponseDto>> {
-  //   return success(await this.wishlistService.enqueueItemCrawl(body));
-  // }
+  @Post("/items")
+  @Middlewares(validateImageFile)
+  public async addWishList(
+    @FormField() productName: string,
+    @FormField() price: number,
+    @FormField() storeName: string,
+    @FormField() brandName: string,
+    @FormField() reason: string,
+    @FormField() url: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<ApiResponse<AddWishlistResponseDto>> {
+    const dto = new AddWishListRequestDto({
+      productName,
+      price,
+      storeName,
+      brandName,
+      reason,
+      url,
+      userId: "1", // TODO: 임시 유저 아이디 하드코딩, 추후 인증 구현시 변경 필요
+      photoFile: file,
+    });
+    return success(await this.wishlistService.addWishListManual(dto));
+  }
 }

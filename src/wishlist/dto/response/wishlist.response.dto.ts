@@ -1,4 +1,9 @@
-import { AddedItemAuto, Product, StorePlatform } from "@prisma/client";
+import {
+  AddedItemAuto,
+  AddedItemManual,
+  Product,
+  StorePlatform,
+} from "@prisma/client";
 
 export class AddCrawlTaskResponseDto {
   jobId!: string;
@@ -30,6 +35,14 @@ export class AddWishListFromCacheResponseDto {
   id!: string;
   createdAt!: string;
   constructor(entity: AddedItemAuto) {
+    this.id = entity.id.toString();
+    this.createdAt = entity.createdAt.toISOString() ?? new Date().toISOString();
+  }
+}
+export class AddWishlistResponseDto {
+  id!: string;
+  createdAt!: string;
+  constructor(entity: AddedItemManual) {
     this.id = entity.id.toString();
     this.createdAt = entity.createdAt.toISOString() ?? new Date().toISOString();
   }
