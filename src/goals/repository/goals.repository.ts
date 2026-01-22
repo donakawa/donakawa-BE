@@ -44,4 +44,12 @@ export class GoalsRepository {
       where: { userId },
     });
   }
+
+  // 목표 예산 수정
+  async updateTargetBudget(id: bigint, data: Partial<TargetBudget>) {
+    return this.prisma.targetBudget.update({
+      where: { id },
+      data,
+    });
+  }
 }

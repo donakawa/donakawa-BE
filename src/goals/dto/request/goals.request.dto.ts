@@ -1,4 +1,11 @@
-import { IsInt, IsNotEmpty, IsOptional, IsIn, Min, Max } from "class-validator";
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  Min,
+  Max,
+  IsNumber,
+} from "class-validator";
 import { Example } from "tsoa";
 
 export class GoalsRequestDto {
@@ -31,11 +38,34 @@ export class GoalsRequestDto {
 
   @Example(1)
   @IsInt()
-  @IsIn([1, 2, 3])
   @IsNotEmpty()
   spendStrategy!: number;
 
   @Example(30000)
+  @IsOptional()
+  @IsInt()
+  shoppingBudget?: number;
+}
+
+export class GoalsUpdateRequestDto {
+  @IsOptional()
+  @IsInt()
+  monthlyIncome?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  incomeDate?: number;
+
+  @IsOptional()
+  @IsInt()
+  fixedExpense?: number;
+
+  @IsOptional()
+  @IsInt()
+  monthlySaving?: number;
+
   @IsOptional()
   @IsInt()
   shoppingBudget?: number;
