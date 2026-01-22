@@ -84,11 +84,11 @@ export class WishlistController extends Controller {
    * @summary 위시리스트 크롤링 결과 조회
    * @description 위시리스트 크롤링 작업의 결과를 조회합니다.
    */
-  @Get("/crawl-tasks/:jobId/result")
+  @Get("/crawl-tasks/:cacheId/result")
   public async getCrawlResult(
-    @Path("jobId") jobId: string,
+    @Path("cacheId") cacheId: string,
   ): Promise<ApiResponse<GetCrawlResultResponseDto>> {
-    const result = await this.wishlistService.getCrawlResult(jobId);
+    const result = await this.wishlistService.getCrawlResult(cacheId);
     return success(result);
   }
   /**
