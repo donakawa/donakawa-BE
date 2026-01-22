@@ -1,11 +1,12 @@
 import { GoalsRepository } from "../repository/goals.repository";
 import { GoalsRequestDto } from "../dto/request/goals.request.dto";
 import { GoalsResponseDto } from "../dto/response/goals.response.dto";
-import { ConflictException } from "../../errors/error";
+import { ConflictException, NotFoundException } from "../../errors/error";
 
 export class GoalsService {
   constructor(private readonly goalsRepository: GoalsRepository) {}
 
+  // 갱신일 계산
   private makeNextIncomeDate(day: number): Date {
     const now = new Date();
     let year = now.getFullYear();
@@ -26,6 +27,7 @@ export class GoalsService {
     return target;
   }
 
+  // 목표 예산 등록
   async createTargetBudget(
     userId: bigint,
     body: GoalsRequestDto,
@@ -48,5 +50,15 @@ export class GoalsService {
     });
 
     return new GoalsResponseDto(saved);
+  }
+
+  // 목표 예산 조회
+  async getTargetBudget(userId: bigint): Promise<GoalsResponseDto | null> {
+    const result = await this.goalsRepository.findBudgetByUserId(userId);
+    if (!result) {
+      throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
+    }
+
+    return new GoalsResponseDto(result);
   }
 }

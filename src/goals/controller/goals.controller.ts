@@ -39,4 +39,19 @@ export class GoalsController {
 
     return success(data);
   }
+
+  /**
+   * @summary 목표 예산 조회 API
+   */
+  @Get("/budget")
+  @SuccessResponse("200", "목표 예산 조회 성공")
+  public async getTargetBudget(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<GoalsResponseDto | null>> {
+    // const userId = BigInt((req as any).user.id);
+    const userId = BigInt(1);
+    const data = await this.goalsService.getTargetBudget(userId);
+
+    return success(data);
+  }
 }

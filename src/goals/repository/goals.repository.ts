@@ -16,6 +16,7 @@ export class GoalsRepository {
     return db.targetBudget.findFirst({ where: { userId } });
   }
 
+  // 목표 예산 등록
   async createTargetBudget(
     userId: bigint,
     data: CreateTargetBudgetInput,
@@ -34,6 +35,13 @@ export class GoalsRepository {
         spendStrategy: data.spendStrategy,
         shoppingBudget: data.shoppingBudget ?? null,
       },
+    });
+  }
+
+  // 목표 예산 조회
+  async findBudgetByUserId(userId: bigint) {
+    return this.prisma.targetBudget.findFirst({
+      where: { userId },
     });
   }
 }
