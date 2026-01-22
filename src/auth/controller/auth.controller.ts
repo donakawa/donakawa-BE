@@ -64,6 +64,7 @@ public async verifyEmailVerificationCode(
 }
  //로그인
   @Post("/login")
+  @SuccessResponse("200", "로그인 성공")
   public async login(
     @Body() body: LoginRequestDto,
     @Request() req: ExpressRequest
@@ -75,6 +76,7 @@ public async verifyEmailVerificationCode(
   
   // 토큰 갱신
   @Post("/refresh")
+  @SuccessResponse("200", "토큰 갱신 성공")
   public async refresh(
     @Request() req: ExpressRequest
   ): Promise<ApiResponse<{ accessToken: string }>> {
@@ -93,6 +95,7 @@ public async verifyEmailVerificationCode(
     return success({ accessToken });
   }
   @Post("/account-recovery/password")
+  @SuccessResponse("200", "비밀번호 재설정 성공")
   public async resetPassword(
     @Body() body: PasswordResetConfirmDto
   ): Promise<ApiResponse<string>> {

@@ -230,12 +230,12 @@ export class AuthService {
       code,
       { EX: 60 * 3 }
     );
-  await redis.incr(attemptKey);
-  if (!attempts) {
-    await redis.expire(attemptKey, 3600); // 1시간
-  }
+    const newCount = await redis.incr(attemptKey);
+    if (newCount === 1) {
+      await redis.expire(attemptKey, 3600); // 1시간 - 첫 번째 시도에만 TTL 설정
+    }
     await this.sendEmail(email, code, type);
-  }
+    }
 
   // 이메일 인증 코드 검증
   async verifyEmailVerificationCode(
