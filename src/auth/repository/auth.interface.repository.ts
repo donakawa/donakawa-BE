@@ -10,4 +10,9 @@ export interface AuthRepositoryInterface {
     command: CreateUserCommand,
     tx?: Prisma.TransactionClient
   ): Promise<User>;
+  updatePassword(
+    userId: bigint,
+    hashedPassword: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<void>;
 }

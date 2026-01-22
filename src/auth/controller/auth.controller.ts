@@ -19,6 +19,7 @@ import {
   RegisterRequestDto,
   SendEmailCodeRequestDto,
   LoginRequestDto,
+  PasswordResetConfirmDto,
 } from "../dto/request/auth.request.dto";
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
@@ -91,5 +92,11 @@ public async verifyEmailVerificationCode(
     
     return success({ accessToken });
   }
-
+  @Post("/account-recovery/password")
+  public async resetPassword(
+    @Body() body: PasswordResetConfirmDto
+  ): Promise<ApiResponse<string>> {
+    await this.authService.resetPassword(body.email, body.newPassword);
+    return success("비밀번호가 성공적으로 변경되었습니다.");
+  }
 }

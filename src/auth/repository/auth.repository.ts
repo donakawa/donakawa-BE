@@ -30,4 +30,15 @@ export class AuthRepository implements AuthRepositoryInterface {
       },
     });
   }
+  async updatePassword(
+    userId: bigint,
+    hashedPassword: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<void> {
+    const client = tx ?? this.prisma;
+    await client.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+  }
 }

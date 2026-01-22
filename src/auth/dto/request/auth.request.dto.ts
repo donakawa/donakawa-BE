@@ -41,6 +41,15 @@ export class LoginRequestDto {
   password!: string;
 }
 
-
+export class PasswordResetConfirmDto {
+  @Example("example@example.com")
+  @IsEmail()
+  @IsNotEmpty()
+  email!: string;
+  @Example("p@ssword!")
+  @IsString()
+  @IsNotEmpty()
+  newPassword!: string;
+}
 
 
