@@ -29,6 +29,7 @@ const sqsClient = new SQSClient({
 });
 const s3Client = new S3StorageAdapter({
   config: {
+    region: process.env.AWS_REGION!,
     credentials: {
       accessKeyId: process.env.AWS_S3_ACCESS_KEY!,
       secretAccessKey: process.env.AWS_S3_SECRET_KEY!,

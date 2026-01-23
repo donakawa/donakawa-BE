@@ -25,6 +25,7 @@ import { FilesService } from "../../files/service/files.service";
 import { FileType } from "@prisma/client";
 import { FileTypeEnum } from "../../files/enum/file-type.enum";
 import { FilePayload } from "../../files/payload/file.payload";
+import path from "path";
 export class WishlistService {
   constructor(
     private readonly wishlistRepository: WishlistRepository,
@@ -147,9 +148,13 @@ export class WishlistService {
   }
   async addWishListManual(dto: AddWishListRequestDto) {
     const isAlreadyExist =
-      (await this.wishlistRepository.findAddedItemManualByUrl(dto.url, {
-        select: { id: true },
-      })) !== null;
+      (await this.wishlistRepository.findAddedItemManualByUrl(
+        dto.url,
+        dto.userId,
+        {
+          select: { id: true },
+        },
+      )) !== null;
     if (isAlreadyExist) {
       throw new ConflictException(
         "WISHLIST_ALREADY_EXIST",
@@ -157,25 +162,38 @@ export class WishlistService {
       );
     }
     let uploadedResultPayload: FilePayload | null = null;
-    if (dto.photoFile)
-      uploadedResultPayload = await this.filesService.upload(
-        dto.photoFile,
-        uuid(),
-        FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
-      );
-    const command = new AddWishListCommand({
-      userId: dto.userId,
-      name: dto.productName,
-      price: dto.price,
-      storeName: dto.storeName,
-      brandName: dto.brandName,
-      reason: dto.reason,
-      photoFileId: uploadedResultPayload?.id,
-      url: dto.url,
-    });
+    const fileName = uuid();
+    try {
+      if (dto.photoFile)
+        uploadedResultPayload = await this.filesService.upload(
+          dto.photoFile,
+          fileName,
+          FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
+        );
+      const command = new AddWishListCommand({
+        userId: dto.userId,
+        name: dto.productName,
+        price: dto.price,
+        storeName: dto.storeName,
+        brandName: dto.brandName,
+        reason: dto.reason,
+        photoFileId: uploadedResultPayload?.id,
+        url: dto.url,
+      });
 
-    const savedEntity =
-      await this.wishlistRepository.saveAddedItemManual(command);
-    return new AddWishlistResponseDto(savedEntity);
+      const savedEntity =
+        await this.wishlistRepository.saveAddedItemManual(command);
+      return new AddWishlistResponseDto(savedEntity);
+    } catch (e) {
+      if (dto.photoFile && uploadedResultPayload) {
+        const ext = path.extname(dto.photoFile?.originalname).toLowerCase();
+        const name = `${fileName}${ext}`;
+        await this.filesService.delete(
+          name,
+          FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
+        );
+      }
+      throw e;
+    }
   }
 }

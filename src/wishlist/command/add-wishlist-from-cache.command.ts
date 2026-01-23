@@ -1,8 +1,8 @@
 export class AddWishListFromCacheCommand {
   readonly cacheId: string;
   readonly userId: string;
-  constructor(cachedId: string, userId: string) {
-    this.cacheId = cachedId;
+  constructor(cacheId: string, userId: string) {
+    this.cacheId = cacheId;
     this.userId = userId;
   }
 }

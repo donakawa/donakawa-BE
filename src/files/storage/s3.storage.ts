@@ -18,18 +18,22 @@ export class S3StorageAdapter implements StoragePort {
       Key: `${filePath}/${fileName}`,
       Body: file.buffer,
     };
-    this.s3.putObject(params, (err: Error) => {
-      if (err) throw err;
-    });
+    await this.s3
+      .putObject(params, (err: Error) => {
+        if (err) throw err;
+      })
+      .promise();
   }
   async deleteFile(path: string): Promise<void> {
     const params = {
       Bucket: this.BUCKET_NAME,
       Key: path,
     };
-    this.s3.deleteObject(params, (err: Error) => {
-      if (err) throw err;
-    });
+    await this.s3
+      .deleteObject(params, (err: Error) => {
+        if (err) throw err;
+      })
+      .promise();
   }
   async getPresignedUrl(path: string, expiry: number): Promise<string> {
     const params = {
@@ -37,6 +41,6 @@ export class S3StorageAdapter implements StoragePort {
       Key: path,
       Expires: expiry,
     };
-    return this.s3.getSignedUrlPromise("getObject", params);
+    return await this.s3.getSignedUrlPromise("getObject", params);
   }
 }

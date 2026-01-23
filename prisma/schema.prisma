@@ -232,7 +232,7 @@ model Files {
   name          String        @db.VarChar(300) @unique
   createdAt     DateTime      @db.Timestamp() @default(now()) @map("created_at")
 
-  product Product[]
-  addedItemManual AddedItemManual[]
+  product Product?
+  addedItemManual AddedItemManual?
   @@map("files")
 }

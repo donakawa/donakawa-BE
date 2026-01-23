@@ -89,11 +89,12 @@ export class WishlistRepository {
     T extends Prisma.AddedItemManualFindUniqueArgs,
   >(
     url: string,
+    userId: string,
     args?: Omit<T, "where">,
   ): Promise<AddedItemManual | Prisma.AddedItemManualGetPayload<T> | null> {
     if (!args)
       return this.prisma.addedItemManual.findUnique({
-        where: { url: url },
+        where: { url: url, userId: BigInt(userId) },
       });
     return this.prisma.addedItemManual.findUnique({
       where: { url: url },

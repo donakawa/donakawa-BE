@@ -119,6 +119,7 @@ export class WishlistController extends Controller {
     @FormField() url: string,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<ApiResponse<AddWishlistResponseDto>> {
+    const userId = "1"; // TODO: 임시 유저 아이디 하드코딩, 추후 인증 구현시 변경 필요
     const dto = new AddWishListRequestDto({
       productName,
       price,
@@ -126,7 +127,7 @@ export class WishlistController extends Controller {
       brandName,
       reason,
       url,
-      userId: "1", // TODO: 임시 유저 아이디 하드코딩, 추후 인증 구현시 변경 필요
+      userId,
       photoFile: file,
     });
     return success(await this.wishlistService.addWishListManual(dto));
