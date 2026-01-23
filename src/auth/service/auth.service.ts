@@ -1,6 +1,8 @@
 import { Request } from "express";
 import { ParamsDictionary } from "express-serve-static-core";
 import { ParsedQs } from "qs";
+import { OauthProvider } from '@prisma/client';
+import { GoogleOAuthService } from './google-oauth.service';
 import {
   ConflictException,
   NotFoundException,
@@ -23,26 +25,25 @@ import { EmailVerifyTypeEnum } from "../enums/send-email.enum";
 import { LoginRequestDto } from "../dto/request/auth.request.dto";
 import { LoginResult } from "../../types/login-result.type";
 import { LoginResponseDto } from "../dto/response/auth.response.dto";
+import { User } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 
 
 export class AuthService {
-  constructor(private authRepository: AuthRepository) {}
-
-  // 로그인
-  async authUser(body: LoginRequestDto): Promise<LoginResult> {
-    const user = await this.authRepository.findUserByEmail(body.email);
-    if (!user)
-      throw new NotFoundException("U001", "존재하지 않는 계정 입니다.");
+  private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
+  constructor(
+    private authRepository: AuthRepository,
+    private googleOAuthService: GoogleOAuthService,
+  ) { }
 
 
-    if (!user.password) {
-      throw new UnauthorizedException("U002", "비밀번호로 로그인할 수 없는 계정입니다.");
-    }
 
-    if (!(await compareHash(body.password, user.password)))
-      throw new UnauthorizedException("U002", "잘못된 패스워드 입니다.");
-
-
+  // JWT 토큰 생성
+  private createJwtTokens(user: User): {
+    accessToken: string;
+    refreshToken: string;
+    sid: string;
+  } {
     const payload = {
       id: user.id.toString(),
       email: user.email,
@@ -62,32 +63,138 @@ export class AuthService {
       { expiresIn: "7d" }
     );
 
+    return { accessToken, refreshToken, sid: payload.sid };
+  }
+
+  // 세션 저장
+  private async saveSession(
+    userId: bigint,
+    sid: string,
+    refreshToken: string
+  ): Promise<void> {
     // 기존 세션 정리
-    const alreadyExistSid = await redis.get(`user:${user.id}:sid`);
+    await this.clearExistingSession(userId);
+
+    // 새 세션 저장
+    const hashedRefreshToken = await hashingString(refreshToken);
+
+    await redis
+      .multi()
+      .set(`user:${userId}:sid`, sid, { EX: this.SESSION_TTL })
+      .set(`user:refreshToken:${sid}`, hashedRefreshToken, { EX: this.SESSION_TTL })
+      .exec();
+  }
+
+  // 기존 세션 정리
+  private async clearExistingSession(userId: bigint): Promise<void> {
+    const alreadyExistSid = await redis.get(`user:${userId}:sid`);
     if (alreadyExistSid) {
       await redis.del(`user:refreshToken:${alreadyExistSid}`);
     }
+  }
 
-    // 새 세션 저장 (7일)
-    const TTL = 60 * 60 * 24 * 7;
-
-    // TTL = 초 단위
-    await redis.set(`user:${user.id}:sid`, payload.sid, { EX: TTL });
-
-    await redis.set(
-      `user:refreshToken:${payload.sid}`,
-      await hashingString(refreshToken),
-      { EX: TTL }
-    );
-
+  // 로그인 결과 생성
+  private async generateLoginResult(user: User): Promise<LoginResult> {
+    const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
+    await this.saveSession(user.id, sid, refreshToken);
 
     return {
       data: new LoginResponseDto(user),
-      tokens: {
-        accessToken,
-        refreshToken,
-      },
+      tokens: { accessToken, refreshToken },
     };
+  }
+
+  // 일반 로그인
+  async authUser(body: LoginRequestDto): Promise<LoginResult> {
+    const user = await this.authRepository.findUserByEmail(body.email);
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정 입니다.");
+    }
+
+    if (!user.password) {
+      throw new UnauthorizedException(
+        "U002",
+        "비밀번호로 로그인할 수 없는 계정입니다."
+      );
+    }
+
+    if (!(await compareHash(body.password, user.password))) {
+      throw new UnauthorizedException("U002", "잘못된 패스워드 입니다.");
+    }
+
+    return await this.generateLoginResult(user);
+  }
+
+  // Google OAuth 로그인 처리
+  async handleGoogleCallback(code: string, state: string): Promise<LoginResult> {
+    await this.verifyOAuthState(state);
+
+    // Google에서 사용자 정보 가져오기
+    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+
+    // 기존 소셜 로그인 사용자 확인
+    let user = await this.authRepository.findUserBySocialProvider(
+      OauthProvider.GOOGLE,
+      googleUserInfo.googleUid
+    );
+
+    // 없으면 이메일로 기존 사용자 확인
+    if (!user) {
+      user = await this.authRepository.findUserByEmail(googleUserInfo.email);
+
+      if (user) {
+        // 기존 계정에 Google 연동
+        await this.authRepository.createOauth(
+          user.id,
+          OauthProvider.GOOGLE,
+          googleUserInfo.googleUid
+        );
+      } else {
+        // 신규 사용자 생성
+        const command = new CreateUserCommand({
+          email: googleUserInfo.email,
+          password: '', // 소셜 로그인은 비밀번호 없음
+          nickname: googleUserInfo.nickname,
+        });
+
+        user = await this.authRepository.saveUser(command);
+
+        // OAuth 정보 저장
+        await this.authRepository.createOauth(
+          user.id,
+          OauthProvider.GOOGLE,
+          googleUserInfo.googleUid
+        );
+      }
+    }
+
+    // 로그인 결과 생성 (JWT 발급 + 세션 저장)
+    return await this.generateLoginResult(user);
+  }
+
+  // Google Auth URL 가져오기 (state 생성 및 저장)
+  async getGoogleAuthUrl(): Promise<string> {
+    // 랜덤 state 생성 (32바이트 = 64자 hex)
+    const state = randomBytes(32).toString('hex');
+
+    // Redis에 5분간 저장
+    const stateKey = `oauth:state:${state}`;
+    await redis.set(stateKey, 'valid', { EX: 300 });
+
+    return this.googleOAuthService.getAuthUrl(state);
+  }
+
+  // State 검증 메서드 추가
+  private async verifyOAuthState(state: string): Promise<void> {
+    const stateKey = `oauth:state:${state}`;
+    const isValid = await redis.get(stateKey);
+
+    if (!isValid) {
+      throw new UnauthorizedException('A010', '잘못된 OAuth 요청입니다.');
+    }
+
+    // 사용된 state는 즉시 삭제 (재사용 방지)
+    await redis.del(stateKey);
   }
 
   // 토큰 갱신
@@ -100,18 +207,15 @@ export class AuthService {
         process.env.REFRESH_TOKEN_SECRET_KEY!
       ) as any;
 
-      // Redis에서 저장된 해시 가져오기
       const storedHash = await redis.get(`user:refreshToken:${decoded.sid}`);
       if (!storedHash) {
         throw new UnauthorizedException("U003", "만료된 세션입니다.");
       }
 
-      // 토큰 해시 비교
       if (!(await compareHash(refreshToken, storedHash))) {
         throw new UnauthorizedException("U004", "유효하지 않은 토큰입니다.");
       }
 
-      // 새 Access Token 발급
       const payload = {
         id: decoded.id,
         email: decoded.email,
@@ -143,7 +247,7 @@ export class AuthService {
     await redis.del(`user:refreshToken:${sid}`);
   }
 
-  // 전체 세션 로그아웃 (모든 기기)
+  // 전체 세션 로그아웃
   async logoutAllDevices(userId: bigint): Promise<void> {
     const sid = await redis.get(`user:${userId}:sid`);
     if (sid) {
@@ -154,9 +258,7 @@ export class AuthService {
 
   // 회원가입
   async createUser(body: RegisterRequestDto): Promise<RegisterResponseDto> {
-    const verified = await redis.get(
-      `email:verified:REGISTER:${body.email}`
-    );
+    const verified = await redis.get(`email:verified:REGISTER:${body.email}`);
 
     if (!verified) {
       throw new UnauthorizedException(
@@ -176,21 +278,20 @@ export class AuthService {
     const isExist =
       (await this.authRepository.findUserByEmail(command.email)) !== null;
 
-    if (isExist)
+    if (isExist) {
       throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
+    }
 
     const user = await this.authRepository.saveUser(command);
     return new RegisterResponseDto(user);
   }
 
-
-   // 이메일 인증 코드 생성
+  // 이메일 인증 코드 생성
   private generateEmailCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString(); // 6자리 숫자
+    return Math.floor(100000 + Math.random() * 900000).toString();
   }
-  
-  // 이메일 인증 코드 전송
 
+  // 이메일 인증 코드 전송
   async sendEmailVerificationCode(
     email: string,
     type: EmailVerifyTypeEnum
@@ -201,41 +302,40 @@ export class AuthService {
         "이메일 형식이 올바르지 않습니다."
       );
     }
+
     const user = await this.authRepository.findUserByEmail(email);
 
-    //이메일 중복 검사
     if (type === "REGISTER") {
-    if (user) {
-      throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
+      if (user) {
+        throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
+      }
+    } else if (type === "RESET_PASSWORD") {
+      if (!user) {
+        throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+      }
     }
-  } else if (type === "RESET_PASSWORD") {
-    if (!user) {
-      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+
+    const attemptKey = `email:send_attempt:${type}:${email}`;
+    const attempts = await redis.get(attemptKey);
+
+    if (attempts && parseInt(attempts) >= 5) {
+      throw new UnauthorizedException(
+        "A010",
+        "인증 요청 횟수를 초과했습니다. 1시간 후 다시 시도해주세요."
+      );
     }
-  }
-  const attemptKey = `email:send_attempt:${type}:${email}`;
-  const attempts = await redis.get(attemptKey);
-  
-  if (attempts && parseInt(attempts) >= 5) {
-    throw new UnauthorizedException(
-      "A010",
-      "인증 요청 횟수를 초과했습니다. 1시간 후 다시 시도해주세요."
-    );
-  }
-    //코드 생성
+
     const code = this.generateEmailCode();
 
-    await redis.set(
-      `email:verify:${type}:${email}`,
-      code,
-      { EX: 60 * 3 }
-    );
+    await redis.set(`email:verify:${type}:${email}`, code, { EX: 60 * 3 });
+
     const newCount = await redis.incr(attemptKey);
     if (newCount === 1) {
-      await redis.expire(attemptKey, 3600); // 1시간 - 첫 번째 시도에만 TTL 설정
+      await redis.expire(attemptKey, 3600);
     }
+
     await this.sendEmail(email, code, type);
-    }
+  }
 
   // 이메일 인증 코드 검증
   async verifyEmailVerificationCode(
@@ -243,9 +343,7 @@ export class AuthService {
     code: string,
     type: EmailVerifyTypeEnum
   ): Promise<void> {
-    const savedCode = await redis.get(
-      `email:verify:${type}:${email}`
-    );
+    const savedCode = await redis.get(`email:verify:${type}:${email}`);
 
     if (!savedCode || savedCode !== code) {
       throw new UnauthorizedException(
@@ -255,54 +353,52 @@ export class AuthService {
     }
 
     await redis.del(`email:verify:${type}:${email}`);
-
-    await redis.set(
-      `email:verified:${type}:${email}`,
-      "true",
-      { EX: 60 * 10 }
-    );
+    await redis.set(`email:verified:${type}:${email}`, "true", {
+      EX: 60 * 10,
+    });
   }
 
-  //이메일 형식 검증
+  // 이메일 형식 검증
   private isValidEmail(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-private async sendEmail(
-  email: string, 
-  code: string, 
-  type: EmailVerifyTypeEnum
-): Promise<void> {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
-    },
-  });
+  // 이메일 전송
+  private async sendEmail(
+    email: string,
+    code: string,
+    type: EmailVerifyTypeEnum
+  ): Promise<void> {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD,
+      },
+    });
 
-  const emailTemplates = {
-    REGISTER: {
-      subject: "[회원가입] Donakawa 이메일 인증 코드",
-      title: "Donakawa 회원가입 이메일 인증",
-      description: "아래 인증 코드를 입력해 회원가입을 완료해주세요.",
-    },
-    RESET_PASSWORD: {
-      subject: "[비밀번호 재설정] Donakawa 이메일 인증 코드",
-      title: "Donakawa 비밀번호 재설정 인증",
-      description: "아래 인증 코드를 입력해 비밀번호 재설정을 진행해주세요.",
-    },
-  };
+    const emailTemplates = {
+      REGISTER: {
+        subject: "[회원가입] Donakawa 이메일 인증 코드",
+        title: "Donakawa 회원가입 이메일 인증",
+        description: "아래 인증 코드를 입력해 회원가입을 완료해주세요.",
+      },
+      RESET_PASSWORD: {
+        subject: "[비밀번호 재설정] Donakawa 이메일 인증 코드",
+        title: "Donakawa 비밀번호 재설정 인증",
+        description: "아래 인증 코드를 입력해 비밀번호 재설정을 진행해주세요.",
+      },
+    };
 
-  const template = emailTemplates[type];
+    const template = emailTemplates[type];
 
-await transporter.sendMail({
-    from: `"Donakawa" <${process.env.SMTP_USER}>`,
-    to: email,
-    subject: template.subject,
-    html: `
+    await transporter.sendMail({
+      from: `"Donakawa" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: template.subject,
+      html: `
       <div style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color: #7A5751;">${template.title}</h2>
         <p>안녕하세요, Donakawa입니다.</p>
@@ -319,61 +415,58 @@ await transporter.sendMail({
           ${code}
         </div>
         <p>인증 코드는 <strong>3분</strong> 동안 유효합니다.</p>
-        ${type === 'RESET_PASSWORD' ? '<p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>' : ''}
+        ${type === "RESET_PASSWORD"
+          ? '<p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>'
+          : ""
+        }
       </div>
     `,
-  });
-}
-async resetPassword(email: string, newPassword: string): Promise<void> {
-
-  // 인증 완료 상태 확인
-  const verified = await redis.get(`email:verified:RESET_PASSWORD:${email}`);
-  if (!verified) {
-    throw new UnauthorizedException("A007", "이메일 인증이 필요합니다.");
+    });
   }
 
-  // 계정 찾기
-  const user = await this.authRepository.findUserByEmail(email);
-  if (!user) {
-    throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+  // 비밀번호 재설정
+  async resetPassword(email: string, newPassword: string): Promise<void> {
+    const verified = await redis.get(`email:verified:RESET_PASSWORD:${email}`);
+    if (!verified) {
+      throw new UnauthorizedException("A007", "이메일 인증이 필요합니다.");
+    }
+
+    const user = await this.authRepository.findUserByEmail(email);
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+
+    if (!user.password) {
+      throw new UnauthorizedException(
+        "U007",
+        "소셜 로그인 계정은 비밀번호 재설정이 불가능합니다."
+      );
+    }
+
+    this.validatePassword(newPassword);
+
+    await redis.del(`email:verified:RESET_PASSWORD:${email}`);
+
+    const hashedPassword = await hashingString(newPassword);
+    await this.authRepository.updatePassword(user.id, hashedPassword);
+
+    await this.logoutAllDevices(user.id);
   }
 
-  // 소셜 로그인 계정 체크
-  if (!user.password) {
-    throw new UnauthorizedException(
-      "U007",
-      "소셜 로그인 계정은 비밀번호 재설정이 불가능합니다."
-    );
-  }
   // 비밀번호 정책 검증
-  this.validatePassword(newPassword);
+  private validatePassword(password: string): void {
+    if (password.length < 8) {
+      throw new UnauthorizedException(
+        "A008",
+        "비밀번호는 8자 이상이어야 합니다."
+      );
+    }
 
-  // 인증 상태 먼저 삭제 (재사용 방지)
-  await redis.del(`email:verified:RESET_PASSWORD:${email}`);
-
-  // 비밀번호 변경
-  const hashedPassword = await hashingString(newPassword);
-  await this.authRepository.updatePassword(user.id, hashedPassword);
-
-  // 기존 세션 모두 삭제 (보안)
-  await this.logoutAllDevices(user.id);
-}
-
-// 비밀번호 정책 검증
-private validatePassword(password: string): void {
-  if (password.length < 8) {
-    throw new UnauthorizedException(
-      "A008",
-      "비밀번호는 8자 이상이어야 합니다."
-    );
+    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
+      throw new UnauthorizedException(
+        "A009",
+        "비밀번호는 영문과 숫자를 포함해야 합니다."
+      );
+    }
   }
-  
-  if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
-    throw new UnauthorizedException(
-      "A009",
-      "비밀번호는 영문과 숫자를 포함해야 합니다."
-    );
-  }
-}
-
 }
