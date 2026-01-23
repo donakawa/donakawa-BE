@@ -11,6 +11,8 @@ export class RegisterRequestDto {
   @Example("p@ssword!")
   @IsString()
   @IsNotEmpty()
+  @MinLength(8, { message: "비밀번호는 8자 이상이어야 합니다." })
+  @Matches(/(?=.*[a-zA-Z])(?=.*\d)/, { message: "비밀번호는 영문과 숫자를 포함해야 합니다." })
   password!: string;
   @Example("UMC")
   @IsString()
@@ -42,10 +44,10 @@ export class LoginRequestDto {
 }
 
  export class PasswordResetConfirmDto {
-   @Example("example@example.com")
-   @IsEmail()
-   @IsNotEmpty()
-   email!: string;
+  @Example("example@example.com")
+  @IsEmail()
+  @IsNotEmpty()
+  email!: string;
   @Example("password1!")
   @IsString()
   @IsNotEmpty()
@@ -53,3 +55,4 @@ export class LoginRequestDto {
   @Matches(/(?=.*[a-zA-Z])(?=.*\d)/, { message: "비밀번호는 영문과 숫자를 포함해야 합니다." })
    newPassword!: string;
  }
+

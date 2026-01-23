@@ -7,6 +7,8 @@ import {
   Tags,
   Request,
   Security,
+  Get,
+  Query,
 } from "tsoa";
 import { ApiResponse, success } from "../../common/response";
 import {
@@ -31,7 +33,7 @@ export class AuthController {
   private readonly authService: AuthService = container.auth.service;
 
   @Post("/register")
-  @SuccessResponse("201", "계정 생성 성공") //응답값 확인 필요
+  @SuccessResponse("201", "계정 생성 성공")
   @Example<RegisterResponseDto>({
     id: "1",
     createdAt: "2026-01-12T10:30:00.000Z",
@@ -50,6 +52,7 @@ public async sendEmailVerificationCode(
   await this.authService.sendEmailVerificationCode(body.email, body.type);
   return success(null);
 }
+
 @Post("email/verify-code")
 @SuccessResponse("200", "이메일 인증 코드 검증 성공")
 public async verifyEmailVerificationCode(
@@ -98,8 +101,41 @@ public async verifyEmailVerificationCode(
   @SuccessResponse("200", "비밀번호 재설정 성공")
   public async resetPassword(
     @Body() body: PasswordResetConfirmDto
-  ): Promise<ApiResponse<string>> {
+  ): Promise<ApiResponse<null>> {
     await this.authService.resetPassword(body.email, body.newPassword);
-    return success("비밀번호가 성공적으로 변경되었습니다.");
+    return success(null);
+  }
+  
+// Google 로그인 시작 - 프론트에서 이 URL로 리다이렉트
+  @Get("/google-login")
+  @SuccessResponse("302", "Google 로그인 페이지로 리다이렉트")
+  public async initiateGoogleLogin(
+    @Request() req: ExpressRequest
+  ): Promise<void> {
+    const authUrl = this.authService.getGoogleAuthUrl();
+    req.res!.redirect(authUrl);
+  }
+
+  // Google OAuth 콜백 - Google이 여기로 리다이렉트
+  @Get("/google/callback")
+  @SuccessResponse("302", "로그인 성공")
+  public async googleCallback(
+    @Query() code: string,
+    @Request() req: ExpressRequest
+  ): Promise<void> {
+    try {
+      const { data, tokens } = await this.authService.handleGoogleCallback(code);
+
+      // JWT 토큰을 쿠키에 저장
+      JwtCookieUtil.setJwtCookies(req.res!, tokens);
+
+      // 프론트엔드로 리다이렉트
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
+    } catch (error) {
+      console.error('Google Login Error:', error);
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      req.res!.redirect(`${frontendUrl}/auth/callback?success=false&error=google_login_failed`);
+    }
   }
 }
