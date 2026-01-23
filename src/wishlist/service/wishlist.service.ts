@@ -74,41 +74,40 @@ export class WishlistService {
 
     const TIMEOUT_MS = 1000 * 120; // 2 minutes
     return new Promise<resultValueType>(async (resolve, reject) => {
-      let result: "DONE" | "FAILED" | null = null;
-      const handler = async (payload: CrawlStatusUpdatedPayload) => {
-        if (!payload.jobId || payload.jobId !== jobId) return;
-        try {
-          valkeyClient.valkeyPub
-            .get(`status:crawl:${jobId}:status`)
-            .then((statusResult) => {
-              if (statusResult === "DONE" || statusResult === "FAILED") {
-                this.eventEmitterClient.off<CrawlStatusUpdatedPayload>(
-                  topic,
-                  handler,
-                );
-                return this.valkeyClientPromise
-                  .then(async (valkeyClient) =>
-                    valkeyClient.valkeyPub.get(
-                      `status:crawl:${jobId}:resultId`,
-                    ),
-                  )
-                  .then((dataId) => {
-                    resolve({
-                      result,
-                      dataId: dataId?.toString() ?? null,
-                    });
-                  });
-              }
-            });
-        } catch (e) {
-          this.eventEmitterClient.off(topic, handler);
-          resolve({ result, dataId: null });
-        }
-      };
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         this.eventEmitterClient.off<CrawlStatusUpdatedPayload>(topic, handler);
         reject(new Error("Crawl event subscription timed out"));
       }, TIMEOUT_MS);
+      const handler = async (payload: CrawlStatusUpdatedPayload) => {
+        if (!payload.jobId || payload.jobId !== jobId) return;
+        try {
+          const client = await this.valkeyClientPromise;
+          const statusResult = await client.valkeyPub.get(
+            `status:crawl:${jobId}:status`,
+          );
+          if (statusResult !== "DONE" && statusResult !== "FAILED") return;
+          const result = statusResult as "DONE" | "FAILED";
+          this.eventEmitterClient.off<CrawlStatusUpdatedPayload>(
+            topic,
+            handler,
+          );
+          const dataId = await client.valkeyPub.get(
+            `status:crawl:${jobId}:resultId`,
+          );
+          resolve({
+            result,
+            dataId: dataId?.toString() ?? null,
+          });
+        } catch (e) {
+          this.eventEmitterClient.off<CrawlStatusUpdatedPayload>(
+            topic,
+            handler,
+          );
+          resolve({ result: "FAILED", dataId: null });
+        } finally {
+          clearTimeout(timeout);
+        }
+      };
       this.eventEmitterClient.on<CrawlStatusUpdatedPayload>(topic, handler);
     });
   }
