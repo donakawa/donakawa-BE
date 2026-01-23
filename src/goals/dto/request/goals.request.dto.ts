@@ -31,20 +31,14 @@ export class GoalsRequestDto {
   @IsInt()
   monthlySaving?: number;
 
-  @Example(10000)
-  @IsOptional()
-  @IsInt()
-  recommendSaving?: number;
-
   @Example(1)
   @IsInt()
-  @IsNotEmpty()
   spendStrategy!: number;
 
   @Example(30000)
-  @IsOptional()
   @IsInt()
-  shoppingBudget?: number;
+  @IsNotEmpty()
+  shoppingBudget!: number;
 }
 
 export class GoalsUpdateRequestDto {

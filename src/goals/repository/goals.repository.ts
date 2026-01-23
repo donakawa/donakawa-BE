@@ -31,9 +31,8 @@ export class GoalsRepository {
         incomeDate: data.incomeDate,
         fixedExpense: data.fixedExpense ?? null,
         monthlySaving: data.monthlySaving ?? null,
-        recommendSaving: data.recommendSaving ?? null,
         spendStrategy: data.spendStrategy,
-        shoppingBudget: data.shoppingBudget ?? null,
+        shoppingBudget: data.shoppingBudget,
       },
     });
   }
