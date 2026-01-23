@@ -117,11 +117,11 @@ model Product {
   price           Int
   files           Files?        @relation(fields: [photoFileId], references: [id])
   photoFileId     BigInt?       @map("photo_file_id") @unique
-  productId       String        @unique @db.VarChar(500) @map("product_id")
+  productId       String        @db.VarChar(500) @map("product_id")
   updatedAt       DateTime?     @default(now()) @updatedAt @db.Timestamp()
 
   addedItemAuto AddedItemAuto[]
-
+  @@unique([productId, storePlatformId])
   @@map("product")
 }
 
