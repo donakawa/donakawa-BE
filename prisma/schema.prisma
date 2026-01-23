@@ -115,6 +115,8 @@ model Product {
   storePlatform   StorePlatform @relation(fields: [storePlatformId], references: [id])
   name            String        @db.VarChar(300)
   price           Int
+  files           Files?        @relation(fields: [photoFileId], references: [id])
+  photoFileId     BigInt?       @map("photo_file_id") @unique
   productId       String        @unique @db.VarChar(500) @map("product_id")
   updatedAt       DateTime?     @default(now()) @updatedAt @db.Timestamp()
 
@@ -144,12 +146,16 @@ model PurchasedHistory {
 
 model AddedItemManual {
   id             BigInt          @id @default(autoincrement())
-  folderId       BigInt          @map("folder_id")
-  wishItemFolder WishItemFolder  @relation(fields: [folderId], references: [id])
+  folderId       BigInt?         @map("folder_id")
+  wishItemFolder WishItemFolder? @relation(fields: [folderId], references: [id])
   userId         BigInt          @map("user_id")
   user           User            @relation(fields: [userId], references: [id])
   name           String          @db.VarChar(50)
   price          Int
+  files          Files?          @relation(fields: [photoFileId], references: [id])
+  photoFileId    BigInt?         @map("photo_file_id") @unique
+  storePlatform  String          @db.VarChar(50)
+  url            String          @db.VarChar(300)
   brand          String          @db.VarChar(50)
   reason         String          @db.VarChar(50)
   status         AddedItemStatus @default(WISHLISTED)
@@ -214,4 +220,19 @@ model AiChatSelection {
   content       String        @db.Text()
 
   @@map("ai_chat_seleciton")
+}
+
+enum FileType {
+  AUTO_ADDED_PRODUCT_PHOTO
+  MANUAL_ADDED_PRODUCT_PHOTO
+}
+model Files {
+  id            BigInt        @id @default(autoincrement())
+  type          FileType
+  name          String        @db.VarChar(300) @unique
+  createdAt     DateTime      @db.Timestamp() @default(now()) @map("created_at")
+
+  product Product?
+  addedItemManual AddedItemManual?
+  @@map("files")
 }
