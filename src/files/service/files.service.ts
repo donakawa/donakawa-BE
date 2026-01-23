@@ -34,8 +34,8 @@ export class FilesService {
   }
   async delete(fileName: string, type: FileTypeEnum) {
     const fileType = type.toString();
-    const path = `${fileType}/${fileName}`;
-    await this.s3Client.deleteFile(path);
+    const filePath = `${fileType}/${fileName}`;
+    await this.s3Client.deleteFile(filePath);
     const command = new FileCommand(type, fileName);
     const deletedResult = await this.filesRepository.deleteFile(command);
     return new FilePayload({

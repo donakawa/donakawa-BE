@@ -97,7 +97,7 @@ export class WishlistRepository {
         where: { url: url, userId: BigInt(userId) },
       });
     return this.prisma.addedItemManual.findUnique({
-      where: { url: url },
+      where: { url: url, userId: BigInt(userId) },
       select: args?.select,
     });
   }
