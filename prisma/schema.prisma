@@ -44,6 +44,9 @@ model Oauth {
   uid      String        @db.VarChar(200)
   provider OauthProvider
 
+  @@unique([provider, uid])   
+  @@unique([userId, provider]) 
+
   @@map("oauth")
 }
 

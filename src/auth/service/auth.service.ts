@@ -27,12 +27,14 @@ import { LoginResult } from "../../types/login-result.type";
 import { LoginResponseDto } from "../dto/response/auth.response.dto";
 import { User } from "@prisma/client";
 
+
 export class AuthService {
   private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
 constructor(
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
   ) {}
+
 
 
   // JWT 토큰 생성
@@ -72,13 +74,14 @@ constructor(
     // 기존 세션 정리
     await this.clearExistingSession(userId);
 
-    // 새 세션 저장
-    await redis.set(`user:${userId}:sid`, sid, { EX: this.SESSION_TTL });
-    await redis.set(
-      `user:refreshToken:${sid}`,
-      await hashingString(refreshToken),
-      { EX: this.SESSION_TTL }
-    );
+  // 새 세션 저장
+  const hashedRefreshToken = await hashingString(refreshToken);
+
+    await redis
+      .multi()
+      .set(`user:${userId}:sid`, sid, { EX: this.SESSION_TTL })
+      .set(`user:refreshToken:${sid}`, hashedRefreshToken, { EX: this.SESSION_TTL })
+      .exec();
   }
 
   // 기존 세션 정리
