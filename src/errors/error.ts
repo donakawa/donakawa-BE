@@ -40,3 +40,13 @@ export class ServiceUnavailableException extends AppError {
     });
   }
 }
+export class BadRequestException extends AppError {
+  constructor(errorCode: string, message: string, data?: any) {
+    super({
+      errorCode,
+      statusCode: 400,
+      message,
+      data,
+    });
+  }
+}

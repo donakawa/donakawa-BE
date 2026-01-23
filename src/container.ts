@@ -14,6 +14,9 @@ import { CrawlQueueClient } from "./wishlist/infra/crawl-queue.client";
 import { ValkeyClient } from "./infra/valkey.client";
 import { EventEmitterClient } from "./wishlist/infra/event-emitter.client";
 import { GoogleOAuthService } from "./auth/service/google-oauth.service";
+import { FilesRepository } from "./files/repository/files.repository";
+import { FilesService } from "./files/service/files.service";
+import { S3StorageAdapter } from "./files/storage/s3.storage";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 const googleOAuthService = new GoogleOAuthService();
@@ -25,6 +28,16 @@ const sqsClient = new SQSClient({
     accessKeyId: process.env.AWS_SQS_ACCESS_KEY!,
     secretAccessKey: process.env.AWS_SQS_SECRET_KEY!,
   },
+});
+const s3Client = new S3StorageAdapter({
+  config: {
+    region: process.env.AWS_REGION!,
+    credentials: {
+      accessKeyId: process.env.AWS_S3_ACCESS_KEY!,
+      secretAccessKey: process.env.AWS_S3_SECRET_KEY!,
+    },
+  },
+  bucketName: process.env.AWS_S3_BUCKET_NAME!,
 });
 const eventEmitterClient = new EventEmitterClient();
 const valkeyClient = ValkeyClient.init(eventEmitterClient);
@@ -54,6 +67,15 @@ const histories = {
   service: historiesService,
   repository: historiesRepository,
 };
+
+// Files 도메인
+const filesRepository = new FilesRepository(prisma);
+const filesService = new FilesService(filesRepository, s3Client);
+const files = {
+  service: filesService,
+  repository: filesRepository,
+  storage: s3Client,
+};
 // Wishlist 도메인
 const crawlQueueClient = new CrawlQueueClient(sqsClient);
 const wishlistRepository = new WishlistRepository(prisma);
@@ -62,6 +84,7 @@ const wishlistService = new WishlistService(
   crawlQueueClient,
   valkeyClient,
   eventEmitterClient,
+  filesService,
 );
 const wishlist = {
   service: wishlistService,
@@ -72,4 +95,4 @@ const wishlist = {
   },
 };
 
-export const container = { prisma, auth, goals, histories, wishlist };
+export const container = { prisma, auth, goals, histories, wishlist, files };
