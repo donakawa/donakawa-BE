@@ -16,6 +16,7 @@ export class GoalsRepository {
     return db.targetBudget.findFirst({ where: { userId } });
   }
 
+  // 목표 예산 등록
   async createTargetBudget(
     userId: bigint,
     data: CreateTargetBudgetInput,
@@ -30,10 +31,24 @@ export class GoalsRepository {
         incomeDate: data.incomeDate,
         fixedExpense: data.fixedExpense ?? null,
         monthlySaving: data.monthlySaving ?? null,
-        recommendSaving: data.recommendSaving ?? null,
         spendStrategy: data.spendStrategy,
-        shoppingBudget: data.shoppingBudget ?? null,
+        shoppingBudget: data.shoppingBudget,
       },
+    });
+  }
+
+  // 목표 예산 조회
+  async findBudgetByUserId(userId: bigint) {
+    return this.prisma.targetBudget.findFirst({
+      where: { userId },
+    });
+  }
+
+  // 목표 예산 수정
+  async updateTargetBudget(id: bigint, data: Partial<TargetBudget>) {
+    return this.prisma.targetBudget.update({
+      where: { id },
+      data,
     });
   }
 }
