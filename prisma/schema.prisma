@@ -152,10 +152,10 @@ model AddedItemManual {
   user           User            @relation(fields: [userId], references: [id])
   name           String          @db.VarChar(50)
   price          Int
-  files          Files?         @relation(fields: [photoFileId], references: [id])
-  photoFileId    BigInt?        @map("photo_file_id") @unique
+  files          Files?          @relation(fields: [photoFileId], references: [id])
+  photoFileId    BigInt?         @map("photo_file_id") @unique
   storePlatform  String          @db.VarChar(50)
-  url            String           @db.VarChar(300) @unique
+  url            String          @db.VarChar(300)
   brand          String          @db.VarChar(50)
   reason         String          @db.VarChar(50)
   status         AddedItemStatus @default(WISHLISTED)
