@@ -26,14 +26,15 @@ import { LoginRequestDto } from "../dto/request/auth.request.dto";
 import { LoginResult } from "../../types/login-result.type";
 import { LoginResponseDto } from "../dto/response/auth.response.dto";
 import { User } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 
 
 export class AuthService {
   private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
-constructor(
+  constructor(
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
-  ) {}
+  ) { }
 
 
 
@@ -74,8 +75,8 @@ constructor(
     // 기존 세션 정리
     await this.clearExistingSession(userId);
 
-  // 새 세션 저장
-  const hashedRefreshToken = await hashingString(refreshToken);
+    // 새 세션 저장
+    const hashedRefreshToken = await hashingString(refreshToken);
 
     await redis
       .multi()
@@ -124,55 +125,77 @@ constructor(
     return await this.generateLoginResult(user);
   }
 
- // Google OAuth 로그인 처리
-  async handleGoogleCallback(code: string): Promise<LoginResult> {
-  // Google에서 사용자 정보 가져오기
-  const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+  // Google OAuth 로그인 처리
+  async handleGoogleCallback(code: string, state: string): Promise<LoginResult> {
+    await this.verifyOAuthState(state);
 
-  // 기존 소셜 로그인 사용자 확인
-  let user = await this.authRepository.findUserBySocialProvider(
-    OauthProvider.GOOGLE,
-    googleUserInfo.googleUid
-  );
+    // Google에서 사용자 정보 가져오기
+    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
 
-  // 없으면 이메일로 기존 사용자 확인
-  if (!user) {
-    user = await this.authRepository.findUserByEmail(googleUserInfo.email);
+    // 기존 소셜 로그인 사용자 확인
+    let user = await this.authRepository.findUserBySocialProvider(
+      OauthProvider.GOOGLE,
+      googleUserInfo.googleUid
+    );
 
-    if (user) {
-      // 기존 계정에 Google 연동
-      await this.authRepository.createOauth(
-        user.id,
-        OauthProvider.GOOGLE,
-        googleUserInfo.googleUid
-      );
-    } else {
-      // 신규 사용자 생성
-      const command = new CreateUserCommand({
-        email: googleUserInfo.email,
-        password: '', // 소셜 로그인은 비밀번호 없음
-        nickname: googleUserInfo.nickname,
-      });
+    // 없으면 이메일로 기존 사용자 확인
+    if (!user) {
+      user = await this.authRepository.findUserByEmail(googleUserInfo.email);
 
-      user = await this.authRepository.saveUser(command);
+      if (user) {
+        // 기존 계정에 Google 연동
+        await this.authRepository.createOauth(
+          user.id,
+          OauthProvider.GOOGLE,
+          googleUserInfo.googleUid
+        );
+      } else {
+        // 신규 사용자 생성
+        const command = new CreateUserCommand({
+          email: googleUserInfo.email,
+          password: '', // 소셜 로그인은 비밀번호 없음
+          nickname: googleUserInfo.nickname,
+        });
 
-      // OAuth 정보 저장
-      await this.authRepository.createOauth(
-        user.id,
-        OauthProvider.GOOGLE,
-        googleUserInfo.googleUid
-      );
+        user = await this.authRepository.saveUser(command);
+
+        // OAuth 정보 저장
+        await this.authRepository.createOauth(
+          user.id,
+          OauthProvider.GOOGLE,
+          googleUserInfo.googleUid
+        );
+      }
     }
+
+    // 로그인 결과 생성 (JWT 발급 + 세션 저장)
+    return await this.generateLoginResult(user);
   }
 
-  // 로그인 결과 생성 (JWT 발급 + 세션 저장)
-  return await this.generateLoginResult(user);
-}
+  // Google Auth URL 가져오기 (state 생성 및 저장)
+  async getGoogleAuthUrl(): Promise<string> {
+    // 랜덤 state 생성 (32바이트 = 64자 hex)
+    const state = randomBytes(32).toString('hex');
 
-// Google Auth URL 가져오기
-getGoogleAuthUrl(): string {
-  return this.googleOAuthService.getAuthUrl();
-}
+    // Redis에 5분간 저장
+    const stateKey = `oauth:state:${state}`;
+    await redis.set(stateKey, 'valid', { EX: 300 });
+
+    return this.googleOAuthService.getAuthUrl(state);
+  }
+
+  // State 검증 메서드 추가
+  private async verifyOAuthState(state: string): Promise<void> {
+    const stateKey = `oauth:state:${state}`;
+    const isValid = await redis.get(stateKey);
+
+    if (!isValid) {
+      throw new UnauthorizedException('A010', '잘못된 OAuth 요청입니다.');
+    }
+
+    // 사용된 state는 즉시 삭제 (재사용 방지)
+    await redis.del(stateKey);
+  }
 
   // 토큰 갱신
   async refreshAccessToken(
@@ -238,7 +261,11 @@ getGoogleAuthUrl(): string {
     const verified = await redis.get(`email:verified:REGISTER:${body.email}`);
 
     if (!verified) {
-     }
+      throw new UnauthorizedException(
+        "A003",
+        "이메일 인증이 필요합니다."
+      );
+    }
 
     await redis.del(`email:verified:REGISTER:${body.email}`);
 
@@ -388,10 +415,9 @@ getGoogleAuthUrl(): string {
           ${code}
         </div>
         <p>인증 코드는 <strong>3분</strong> 동안 유효합니다.</p>
-        ${
-          type === "RESET_PASSWORD"
-            ? '<p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>'
-            : ""
+        ${type === "RESET_PASSWORD"
+          ? '<p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>'
+          : ""
         }
       </div>
     `,

@@ -17,23 +17,24 @@ export class GoogleOAuthService {
   }
 
   // Google 로그인 URL 생성
-  getAuthUrl(): string {
+  getAuthUrl(state: string): string {
     return this.oauth2Client.generateAuthUrl({
       scope: [
         'https://www.googleapis.com/auth/userinfo.profile',
         'https://www.googleapis.com/auth/userinfo.email',
       ],
+      state,
     });
   }
 
   // Authorization code로 사용자 정보 가져오기
   async getUserInfo(code: string) {
     try {
-      // 1. Code를 Access Token으로 교환
+      // Code를 Access Token으로 교환
       const { tokens } = await this.oauth2Client.getToken(code);
       this.oauth2Client.setCredentials(tokens);
 
-      // 2. 사용자 정보 가져오기
+      // 사용자 정보 가져오기
       const oauth2 = google.oauth2({
         auth: this.oauth2Client,
         version: 'v2',

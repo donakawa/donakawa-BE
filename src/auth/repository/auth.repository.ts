@@ -94,10 +94,12 @@ export class AuthRepository implements AuthRepositoryInterface {
     tx?: Prisma.TransactionClient
   ): Promise<Oauth | null> {
     const db = tx ?? this.prisma;
-    return await db.oauth.findFirst({
+    return await db.oauth.findUnique({
       where: {
-        userId,
-        provider,
+        userId_provider: {  // 복합 유니크 키
+          userId,
+          provider,
+        },
       },
     });
   }
