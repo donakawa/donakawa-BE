@@ -125,9 +125,8 @@ const models: TsoaRoute.Models = {
             "incomeDate": {"dataType":"double"},
             "fixedExpense": {"dataType":"double"},
             "monthlySaving": {"dataType":"double"},
-            "recommendSaving": {"dataType":"double"},
             "spendStrategy": {"dataType":"double","required":true},
-            "shoppingBudget": {"dataType":"double"},
+            "shoppingBudget": {"dataType":"double","required":true},
         },
         "additionalProperties": false,
     },
@@ -149,8 +148,29 @@ const models: TsoaRoute.Models = {
             "incomeDate": {"dataType":"double"},
             "fixedExpense": {"dataType":"double"},
             "monthlySaving": {"dataType":"double"},
-            "recommendSaving": {"dataType":"double"},
             "spendStrategy": {"dataType":"double","required":true},
+            "shoppingBudget": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_GoalsResponseDto-or-null_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"dataType":"union","subSchemas":[{"ref":"GoalsResponseDto"},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GoalsUpdateRequestDto": {
+        "dataType": "refObject",
+        "properties": {
+            "monthlyIncome": {"dataType":"double"},
+            "incomeDate": {"dataType":"double"},
+            "fixedExpense": {"dataType":"double"},
+            "monthlySaving": {"dataType":"double"},
             "shoppingBudget": {"dataType":"double"},
         },
         "additionalProperties": false,
@@ -473,6 +493,67 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 201,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsGoalsController_getTargetBudget: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/goals/budget',
+            ...(fetchMiddlewares<RequestHandler>(GoalsController)),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.getTargetBudget)),
+
+            async function GoalsController_getTargetBudget(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_getTargetBudget, request, response });
+
+                const controller = new GoalsController();
+
+              await templateService.apiHandler({
+                methodName: 'getTargetBudget',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsGoalsController_updateTargetBudget: Record<string, TsoaRoute.ParameterSchema> = {
+                body: {"in":"body","name":"body","required":true,"ref":"GoalsUpdateRequestDto"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.patch('/goals/budget',
+            ...(fetchMiddlewares<RequestHandler>(GoalsController)),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.updateTargetBudget)),
+
+            async function GoalsController_updateTargetBudget(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_updateTargetBudget, request, response });
+
+                const controller = new GoalsController();
+
+              await templateService.apiHandler({
+                methodName: 'updateTargetBudget',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
               });
             } catch (err) {
                 return next(err);
