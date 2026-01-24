@@ -21,7 +21,12 @@ export class GetCrawlResultResponseDto {
   productId!: string;
   price!: number;
   updatedAt!: string;
-  constructor(entity: Product, storePlatformName: string) {
+  imageUrl!: string | undefined;
+  constructor(
+    entity: Product,
+    storePlatformName: string,
+    imageUrl: string | undefined,
+  ) {
     this.id = entity.id.toString();
     this.productName = entity.name;
     this.platformName = storePlatformName;
@@ -29,6 +34,7 @@ export class GetCrawlResultResponseDto {
     this.price = entity.price;
     this.updatedAt =
       entity.updatedAt!.toISOString() ?? new Date().toISOString();
+    this.imageUrl = imageUrl;
   }
 }
 export class AddWishListFromCacheResponseDto {
