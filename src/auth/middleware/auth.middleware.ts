@@ -24,8 +24,9 @@ export async function expressAuthentication(
 
     const token =
         request.cookies?.accessToken ||
-        request.headers.authorization?.substring(7);
-
+        (request.headers.authorization?.startsWith("Bearer ")
+            ? request.headers.authorization.substring(7)
+            : undefined);
     if (!token) {
         throw new UnauthorizedException("A004", "인증 토큰이 없습니다.");
     }
