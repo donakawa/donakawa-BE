@@ -1,6 +1,13 @@
 import "express-serve-static-core";
+import { JwtPayload } from "../auth/middleware/auth.middleware";
+
 
 declare module "express-serve-static-core" {
+
+  interface Request {
+    user?: JwtPayload;
+  }
+
   interface Response {
     success(data: any): this;
     error(payload: {
@@ -11,4 +18,4 @@ declare module "express-serve-static-core" {
   }
 }
 
-export {};
+export { };
