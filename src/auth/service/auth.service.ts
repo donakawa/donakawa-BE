@@ -111,10 +111,10 @@ export class AuthService {
       throw new NotFoundException("U001", "존재하지 않는 계정 입니다.");
     }
 
-    if (!user.password) {
+    if (!user.password || user.password === '') {
       throw new UnauthorizedException(
         "U002",
-        "비밀번호로 로그인할 수 없는 계정입니다."
+        "비밀번호로 로그인할 수 없는 계정입니다. 소셜 로그인을 이용하거나 비밀번호를 설정해주세요."
       );
     }
 
