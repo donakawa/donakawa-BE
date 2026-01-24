@@ -283,7 +283,13 @@ const models: TsoaRoute.Models = {
 };
 const templateService = new ExpressTemplateService(models, {"noImplicitAdditionalProperties":"throw-on-extras","bodyCoercion":true});
 
-// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+/**
+ * Register all generated API routes onto the provided Express Router.
+ *
+ * @param app - The Express Router to attach generated routes to.
+ * @param opts - Optional configuration.
+ * @param opts.multer - Optional multer instance to handle multipart/form-data uploads; if omitted a default multer with an 8,388,608 byte fileSize limit is used.
+ */
 
 
 

@@ -10,8 +10,15 @@ export interface JwtPayload {
 }
 
 /**
- * TSOA authentication 함수
- * @Security("jwt") 데코레이터가 붙은 엔드포인트에서 자동으로 실행됨
+ * Authenticate the incoming request using a JWT and attach the decoded payload to the request.
+ *
+ * @param scopes - Optional list of authorization scopes (reserved for future use)
+ * @returns The decoded JWT payload (`id`, `email`, `nickname`, `sid`)
+ * @throws UnauthorizedException with code `A011` if the specified security method is unsupported
+ * @throws UnauthorizedException with code `A004` if no authentication token is present
+ * @throws UnauthorizedException with code `A005` if the token has expired
+ * @throws UnauthorizedException with code `A006` if the token is invalid
+ * @throws UnauthorizedException with code `A007` for other authentication failures
  */
 export async function expressAuthentication(
     request: Request,
