@@ -119,7 +119,18 @@ export class WishlistService {
         "크롤링 결과를 찾을 수 없습니다.",
       );
     }
-    return new GetCrawlResultResponseDto(result, result.storePlatform.name);
+    let imageUrl;
+    if (result.photoFileId)
+      imageUrl = await this.filesService.generateUrl(
+        result.photoFileId.toString(),
+        60 * 10,
+      );
+    if (!imageUrl) imageUrl = undefined;
+    return new GetCrawlResultResponseDto(
+      result,
+      result.storePlatform.name,
+      imageUrl,
+    );
   }
   async addWishListFromCache(data: AddWishListFromCacheRequestDto) {
     const command = new AddWishListFromCacheCommand(data.cacheId, data.userId);

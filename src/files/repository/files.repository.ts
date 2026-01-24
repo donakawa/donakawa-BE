@@ -21,4 +21,8 @@ export class FilesRepository {
       },
     });
   }
+  async findFileById(id: string, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    return await db.files.findUnique({ where: { id: BigInt(id) } });
+  }
 }

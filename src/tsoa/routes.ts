@@ -59,6 +59,7 @@ const models: TsoaRoute.Models = {
             "productId": {"dataType":"string","required":true},
             "price": {"dataType":"double","required":true},
             "updatedAt": {"dataType":"string","required":true},
+            "imageUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"undefined"}],"required":true},
         },
         "additionalProperties": false,
     },
