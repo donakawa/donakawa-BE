@@ -249,7 +249,11 @@ const models: TsoaRoute.Models = {
 };
 const templateService = new ExpressTemplateService(models, {"noImplicitAdditionalProperties":"throw-on-extras","bodyCoercion":true});
 
-// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+/**
+ * Register all generated HTTP routes on the provided Express router.
+ *
+ * @param app - The Express Router instance to attach the generated routes to
+ */
 
 
 
