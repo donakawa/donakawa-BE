@@ -606,6 +606,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.post('/goals/budget',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(GoalsController)),
             ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.createTargetBudget)),
 
@@ -636,6 +637,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.get('/goals/budget',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(GoalsController)),
             ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.getTargetBudget)),
 
@@ -667,6 +669,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.patch('/goals/budget',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(GoalsController)),
             ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.updateTargetBudget)),
 
