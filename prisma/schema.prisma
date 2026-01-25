@@ -44,6 +44,9 @@ model Oauth {
   uid      String        @db.VarChar(200)
   provider OauthProvider
 
+  @@unique([provider, uid])   
+  @@unique([userId, provider]) 
+
   @@map("oauth")
 }
 
@@ -103,6 +106,7 @@ model StorePlatform {
   id        BigInt @id @default(autoincrement())
   name      String @unique @db.VarChar(50)
   urlDomain String @unique @map("url_domain") @db.VarChar(100)
+  productUrlTemplate String @db.VarChar(100) @map("product_url_template")
 
   product Product[]
 

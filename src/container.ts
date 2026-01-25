@@ -13,11 +13,13 @@ import { SQSClient } from "@aws-sdk/client-sqs";
 import { CrawlQueueClient } from "./wishlist/infra/crawl-queue.client";
 import { ValkeyClient } from "./infra/valkey.client";
 import { EventEmitterClient } from "./wishlist/infra/event-emitter.client";
+import { GoogleOAuthService } from "./auth/service/google-oauth.service";
 import { FilesRepository } from "./files/repository/files.repository";
 import { FilesService } from "./files/service/files.service";
 import { S3StorageAdapter } from "./files/storage/s3.storage";
 
 const connectionString = `${process.env.DATABASE_URL}`;
+const googleOAuthService = new GoogleOAuthService();
 
 // AWS Infra
 const sqsClient = new SQSClient({
@@ -46,7 +48,7 @@ const prisma = new PrismaClient({ adapter });
 
 // Auth 도메인
 const authRepository = new AuthRepository(prisma);
-const authService = new AuthService(authRepository);
+const authService = new AuthService(authRepository, googleOAuthService);
 const auth = {
   service: authService,
   repository: authRepository,

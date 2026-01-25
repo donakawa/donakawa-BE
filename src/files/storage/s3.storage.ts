@@ -41,6 +41,7 @@ export class S3StorageAdapter implements StoragePort {
       Key: path,
       Expires: expiry,
     };
-    return await this.s3.getSignedUrlPromise("getObject", params);
+    const result = await this.s3.getSignedUrlPromise("getObject", params);
+    return result;
   }
 }

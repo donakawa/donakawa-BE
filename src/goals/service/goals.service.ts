@@ -1,11 +1,19 @@
 import { GoalsRepository } from "../repository/goals.repository";
-import { GoalsRequestDto } from "../dto/request/goals.request.dto";
+import {
+  GoalsRequestDto,
+  GoalsUpdateRequestDto,
+} from "../dto/request/goals.request.dto";
 import { GoalsResponseDto } from "../dto/response/goals.response.dto";
-import { ConflictException } from "../../errors/error";
+import {
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from "../../errors/error";
 
 export class GoalsService {
   constructor(private readonly goalsRepository: GoalsRepository) {}
 
+  // 갱신일 계산
   private makeNextIncomeDate(day: number): Date {
     const now = new Date();
     let year = now.getFullYear();
@@ -26,6 +34,17 @@ export class GoalsService {
     return target;
   }
 
+  // 날짜 범위 검증
+  private validateIncomeDate(day: number) {
+    if (day < 1 || day > 31) {
+      throw new BadRequestException(
+        "B002",
+        "incomeDate는 1에서 31 사이의 값이어야 합니다.",
+      );
+    }
+  }
+
+  // 목표 예산 등록
   async createTargetBudget(
     userId: bigint,
     body: GoalsRequestDto,
@@ -39,6 +58,7 @@ export class GoalsService {
     }
 
     const incomeDay = body.incomeDate ?? 1;
+    this.validateIncomeDate(incomeDay);
     const { incomeDate: _, ...rest } = body;
     const nextIncomeDate = this.makeNextIncomeDate(incomeDay);
 
@@ -48,5 +68,39 @@ export class GoalsService {
     });
 
     return new GoalsResponseDto(saved);
+  }
+
+  // 목표 예산 조회
+  async getTargetBudget(userId: bigint): Promise<GoalsResponseDto | null> {
+    const result = await this.goalsRepository.findBudgetByUserId(userId);
+    if (!result) {
+      throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
+    }
+
+    return new GoalsResponseDto(result);
+  }
+
+  // 목표 예산 수정
+  async updateTargetBudget(
+    userId: bigint,
+    body: GoalsUpdateRequestDto,
+  ): Promise<GoalsResponseDto> {
+    const isExist = await this.goalsRepository.findBudgetByUserId(userId);
+    if (!isExist) {
+      throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
+    }
+
+    let nextIncomeDate = isExist.incomeDate;
+    if (body.incomeDate !== undefined) {
+      this.validateIncomeDate(body.incomeDate);
+      nextIncomeDate = this.makeNextIncomeDate(body.incomeDate);
+    }
+
+    const updated = await this.goalsRepository.updateTargetBudget(isExist.id, {
+      ...body,
+      incomeDate: nextIncomeDate,
+    });
+
+    return new GoalsResponseDto(updated);
   }
 }
