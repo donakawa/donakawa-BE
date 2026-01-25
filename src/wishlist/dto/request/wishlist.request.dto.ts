@@ -1,12 +1,15 @@
 import {
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsNumberString,
+  IsOptional,
   IsString,
   IsUrl,
   Matches,
   Validate,
 } from "class-validator";
+import { DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS } from "google-auth-library/build/src/auth/authclient";
 
 export class AddCrawlTaskRequestDto {
   @IsUrl()
@@ -61,4 +64,32 @@ export class AddWishListFromCacheRequestDto {
   @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
   @IsNotEmpty()
   userId!: string;
+}
+export class ShowWishitemListRequestDto {
+  @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
+  @IsNotEmpty()
+  userId!: string;
+
+  @IsIn(["WISHLISTED", "DROPPED", "BOUGHT"])
+  @IsNotEmpty()
+  status!: string;
+
+  @Matches(/^[AM]\d{26}$/)
+  @IsOptional()
+  cursor!: string | undefined;
+
+  @IsNumber()
+  @IsNotEmpty()
+  take!: number;
+  constructor(param: {
+    userId: string;
+    status: string;
+    cursor: string | undefined;
+    take: number;
+  }) {
+    this.userId = param.userId;
+    this.status = param.status;
+    this.cursor = param.cursor;
+    this.take = param.take;
+  }
 }

@@ -121,6 +121,78 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ShowWishitemDetailResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "folder": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "name": {"dataType":"string","required":true},
+            "price": {"dataType":"double","required":true},
+            "platform": {"dataType":"string","required":true},
+            "brand": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "photoUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "productUrl": {"dataType":"string","required":true},
+            "reason": {"dataType":"string","required":true},
+            "refreshedAt": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "addedAt": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "updatedAt": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "status": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_ShowWishitemDetailResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"ShowWishitemDetailResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "WishitemType": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["MANUAL"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "WishitemStatus": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["WISHLISTED"]},{"dataType":"enum","enums":["DROPPED"]},{"dataType":"enum","enums":["BOUGHT"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "WishItemPreviewPayload": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "price": {"dataType":"double","required":true},
+            "photoUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "type": {"ref":"WishitemType","required":true},
+            "status": {"ref":"WishitemStatus","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ShowWishitemListResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "nextCursor": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "wishitems": {"dataType":"array","array":{"dataType":"refObject","ref":"WishItemPreviewPayload"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_ShowWishitemListResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"ShowWishitemListResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "GoalsResponseDto": {
         "dataType": "refObject",
         "properties": {
@@ -451,6 +523,73 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'addWishList',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsWishlistController_showWishitemDetail: Record<string, TsoaRoute.ParameterSchema> = {
+                itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
+                type: {"in":"query","name":"type","required":true,"dataType":"string"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/wishlist/items/:itemId',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(WishlistController)),
+            ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.showWishitemDetail)),
+
+            async function WishlistController_showWishitemDetail(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsWishlistController_showWishitemDetail, request, response });
+
+                const controller = new WishlistController();
+
+              await templateService.apiHandler({
+                methodName: 'showWishitemDetail',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsWishlistController_showWishitemList: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                status: {"in":"query","name":"status","required":true,"dataType":"string"},
+                take: {"in":"query","name":"take","required":true,"dataType":"double"},
+                cursor: {"in":"query","name":"cursor","dataType":"string"},
+        };
+        app.get('/wishlist/items',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(WishlistController)),
+            ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.showWishitemList)),
+
+            async function WishlistController_showWishitemList(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsWishlistController_showWishitemList, request, response });
+
+                const controller = new WishlistController();
+
+              await templateService.apiHandler({
+                methodName: 'showWishitemList',
                 controller,
                 response,
                 next,
@@ -800,6 +939,76 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
+
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+    function authenticateMiddleware(security: TsoaRoute.Security[] = []) {
+        return async function runAuthenticationMiddleware(request: any, response: any, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            // keep track of failed auth attempts so we can hand back the most
+            // recent one.  This behavior was previously existing so preserving it
+            // here
+            const failedAttempts: any[] = [];
+            const pushAndRethrow = (error: any) => {
+                failedAttempts.push(error);
+                throw error;
+            };
+
+            const secMethodOrPromises: Promise<any>[] = [];
+            for (const secMethod of security) {
+                if (Object.keys(secMethod).length > 1) {
+                    const secMethodAndPromises: Promise<any>[] = [];
+
+                    for (const name in secMethod) {
+                        secMethodAndPromises.push(
+                            expressAuthenticationRecasted(request, name, secMethod[name], response)
+                                .catch(pushAndRethrow)
+                        );
+                    }
+
+                    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+                    secMethodOrPromises.push(Promise.all(secMethodAndPromises)
+                        .then(users => { return users[0]; }));
+                } else {
+                    for (const name in secMethod) {
+                        secMethodOrPromises.push(
+                            expressAuthenticationRecasted(request, name, secMethod[name], response)
+                                .catch(pushAndRethrow)
+                        );
+                    }
+                }
+            }
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            try {
+                request['user'] = await Promise.any(secMethodOrPromises);
+
+                // Response was sent in middleware, abort
+                if (response.writableEnded) {
+                    return;
+                }
+
+                next();
+            }
+            catch(err) {
+                // Show most recent error as response
+                const error = failedAttempts.pop();
+                error.status = error.status || 401;
+
+                // Response was sent in middleware, abort
+                if (response.writableEnded) {
+                    return;
+                }
+                next(error);
+            }
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        }
+    }
 
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 }
