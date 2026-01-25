@@ -13,7 +13,7 @@ export class WishItemPayload {
   refreshedAt!: Date | null;
   addedAt!: Date | null;
   updatedAt!: Date | null;
-  status!: string;
+  status!: WishitemStatus;
   constructor(param: {
     id: string;
     folder: string | null;
@@ -27,7 +27,7 @@ export class WishItemPayload {
     refreshedAt: Date | null;
     addedAt: Date | null;
     updatedAt: Date | null;
-    status: string;
+    status: WishitemStatus;
   }) {
     this.id = param.id;
     this.folder = param.folder;

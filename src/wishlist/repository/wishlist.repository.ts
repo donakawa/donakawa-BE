@@ -158,7 +158,7 @@ export class WishlistRepository {
   ) {
     const conditions: Prisma.Sql[] = [];
     if (cursor) conditions.push(Prisma.sql`cursor < ${cursor}`);
-    if (folderId) conditions.push(Prisma.sql`folder_id=${BigInt(folderId)}`);
+    if (folderId) conditions.push(Prisma.sql`folderId=${BigInt(folderId)}`);
     if (status) conditions.push(Prisma.sql`status=${status}`);
     const whereClause =
       conditions.length > 0

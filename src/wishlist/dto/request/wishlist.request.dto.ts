@@ -2,14 +2,13 @@ import {
   IsIn,
   IsNotEmpty,
   IsNumber,
-  IsNumberString,
   IsOptional,
   IsString,
   IsUrl,
   Matches,
-  Validate,
+  Max,
+  Min,
 } from "class-validator";
-import { DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS } from "google-auth-library/build/src/auth/authclient";
 
 export class AddCrawlTaskRequestDto {
   @IsUrl()
@@ -80,6 +79,8 @@ export class ShowWishitemListRequestDto {
 
   @IsNumber()
   @IsNotEmpty()
+  @Min(1)
+  @Max(10)
   take!: number;
   constructor(param: {
     userId: string;
