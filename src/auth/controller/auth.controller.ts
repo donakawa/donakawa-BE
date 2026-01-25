@@ -13,7 +13,7 @@ import {
 import { ApiResponse, success } from "../../common/response";
 import {
   RegisterResponseDto,
-  LoginResponseDto
+  LoginResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthService } from "../service/auth.service";
 import { container } from "../../container";
@@ -47,7 +47,7 @@ export class AuthController {
   @Post("email/send-code")
   @SuccessResponse("200", "이메일 인증 코드 전송 성공")
   public async sendEmailVerificationCode(
-    @Body() body: SendEmailCodeRequestDto
+    @Body() body: SendEmailCodeRequestDto,
   ): Promise<ApiResponse<null>> {
     await this.authService.sendEmailVerificationCode(body.email, body.type);
     return success(null);
@@ -56,12 +56,12 @@ export class AuthController {
   @Post("email/verify-code")
   @SuccessResponse("200", "이메일 인증 코드 검증 성공")
   public async verifyEmailVerificationCode(
-    @Body() body: SendEmailCodeRequestDto & { code: string }
+    @Body() body: SendEmailCodeRequestDto & { code: string },
   ): Promise<ApiResponse<null>> {
     await this.authService.verifyEmailVerificationCode(
       body.email,
       body.code,
-      body.type
+      body.type,
     );
     return success(null);
   }
@@ -70,7 +70,7 @@ export class AuthController {
   @SuccessResponse("200", "로그인 성공")
   public async login(
     @Body() body: LoginRequestDto,
-    @Request() req: ExpressRequest
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<LoginResponseDto>> {
     const { data, tokens } = await this.authService.authUser(body);
     JwtCookieUtil.setJwtCookies(req.res!, tokens);
@@ -81,7 +81,7 @@ export class AuthController {
   @Post("/refresh")
   @SuccessResponse("200", "토큰 갱신 성공")
   public async refresh(
-    @Request() req: ExpressRequest
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<{ accessToken: string }>> {
     // 쿠키에서 refresh token 읽기
     const refreshToken = req.cookies?.refreshToken;
@@ -90,7 +90,8 @@ export class AuthController {
       throw new UnauthorizedException("A004", "리프레시 토큰이 없습니다.");
     }
 
-    const { accessToken } = await this.authService.refreshAccessToken(refreshToken);
+    const { accessToken } =
+      await this.authService.refreshAccessToken(refreshToken);
 
     // 새 access token을 쿠키에 저장
     JwtCookieUtil.setAccessTokenCookie(req.res!, accessToken);
@@ -100,7 +101,7 @@ export class AuthController {
   @Post("/account-recovery/password")
   @SuccessResponse("200", "비밀번호 재설정 성공")
   public async resetPassword(
-    @Body() body: PasswordResetConfirmDto
+    @Body() body: PasswordResetConfirmDto,
   ): Promise<ApiResponse<null>> {
     await this.authService.resetPassword(body.email, body.newPassword);
     return success(null);
@@ -124,15 +125,20 @@ export class AuthController {
   ): Promise<void> {
     try {
       // state도 함께 전달
-      const { data, tokens } = await this.authService.handleGoogleCallback(code, state);
+      const { data, tokens } = await this.authService.handleGoogleCallback(
+        code,
+        state,
+      );
 
       JwtCookieUtil.setJwtCookies(req.res!, tokens);
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
       req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
     } catch (error) {
-      console.error('Google Login Error:', error);
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      req.res!.redirect(`${frontendUrl}/auth/callback?success=false&error=google_login_failed`);
+      console.error("Google Login Error:", error);
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      req.res!.redirect(
+        `${frontendUrl}/auth/callback?success=false&error=google_login_failed`,
+      );
     }
   }
   @Post("/logout")

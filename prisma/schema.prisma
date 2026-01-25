@@ -106,6 +106,7 @@ model StorePlatform {
   id        BigInt @id @default(autoincrement())
   name      String @unique @db.VarChar(50)
   urlDomain String @unique @map("url_domain") @db.VarChar(100)
+  productUrlTemplate String @db.VarChar(100) @map("product_url_template")
 
   product Product[]
 

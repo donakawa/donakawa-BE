@@ -44,4 +44,12 @@ export class FilesService {
       deletedAt: new Date(),
     });
   }
+  async generateUrl(fileId: string, expiry: number) {
+    const targetFile = await this.filesRepository.findFileById(fileId);
+    if (!targetFile) return null;
+    const fileName = targetFile.name;
+    const fileType = targetFile.type.toString();
+    const filePath = `${fileType}/${fileName}`;
+    return await this.s3Client.getPresignedUrl(filePath, expiry);
+  }
 }

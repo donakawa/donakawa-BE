@@ -4,6 +4,8 @@ import {
   Product,
   StorePlatform,
 } from "@prisma/client";
+import { WishItemPreviewPayload } from "../../payload/wishlist.payload";
+import { WishlistRecordInterface } from "../../interface/wishlist.interface";
 
 export class AddCrawlTaskResponseDto {
   jobId!: string;
@@ -21,7 +23,12 @@ export class GetCrawlResultResponseDto {
   productId!: string;
   price!: number;
   updatedAt!: string;
-  constructor(entity: Product, storePlatformName: string) {
+  imageUrl!: string | undefined;
+  constructor(
+    entity: Product,
+    storePlatformName: string,
+    imageUrl: string | undefined,
+  ) {
     this.id = entity.id.toString();
     this.productName = entity.name;
     this.platformName = storePlatformName;
@@ -29,6 +36,7 @@ export class GetCrawlResultResponseDto {
     this.price = entity.price;
     this.updatedAt =
       entity.updatedAt!.toISOString() ?? new Date().toISOString();
+    this.imageUrl = imageUrl;
   }
 }
 export class AddWishListFromCacheResponseDto {
@@ -45,5 +53,76 @@ export class AddWishlistResponseDto {
   constructor(entity: AddedItemManual) {
     this.id = entity.id.toString();
     this.createdAt = entity.createdAt.toISOString() ?? new Date().toISOString();
+  }
+}
+export class ShowWishitemDetailResponseDto {
+  id!: string;
+  folder!: string | null;
+  name!: string;
+  price!: number;
+  platform!: string;
+  brand!: string | null;
+  photoUrl!: string | null;
+  productUrl!: string;
+  reason!: string;
+  refreshedAt!: string | null;
+  addedAt!: string | null;
+  updatedAt!: string | null;
+  status!: string;
+  constructor(param: {
+    id: string;
+    folder: string | null;
+    name: string;
+    price: number;
+    platform: string;
+    brand: string | null;
+    photoUrl: string | null;
+    productUrl: string;
+    reason: string;
+    refreshedAt: Date | null;
+    addedAt: Date | null;
+    updatedAt: Date | null;
+    status: string;
+  }) {
+    this.id = param.id;
+    this.folder = param.folder;
+    this.name = param.name;
+    this.price = param.price;
+    this.platform = param.platform;
+    this.brand = param.brand;
+    this.photoUrl = param.photoUrl;
+    this.productUrl = param.productUrl;
+    this.reason = param.reason;
+    this.refreshedAt = param.refreshedAt
+      ? param.refreshedAt.toISOString()
+      : null;
+    this.addedAt = param.addedAt ? param.addedAt.toISOString() : null;
+    this.updatedAt = param.updatedAt ? param.updatedAt.toISOString() : null;
+    this.status = param.status;
+  }
+}
+export class ShowWishitemListResponseDto {
+  nextCursor!: string | null;
+  wishitems!: WishItemPreviewPayload[];
+  constructor(
+    wishitems: WishlistRecordInterface[],
+    nextCursor: string | null,
+    photoUrls: Record<string, string | null>,
+  ) {
+    this.nextCursor = nextCursor;
+    this.wishitems = wishitems.reduce<WishItemPreviewPayload[]>(
+      (acc, wishitem) => {
+        acc.push({
+          id: wishitem.id.toString(),
+          name: wishitem.name,
+          price: wishitem.price,
+          photoUrl: photoUrls[wishitem.cursor],
+          type: wishitem.type,
+          status: wishitem.status,
+        });
+        return acc;
+      },
+      [],
+    );
   }
 }

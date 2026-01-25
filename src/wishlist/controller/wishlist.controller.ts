@@ -11,6 +11,8 @@ import {
   FormField,
   UploadedFile,
   Middlewares,
+  Security,
+  Query,
 } from "tsoa";
 import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
@@ -20,14 +22,19 @@ import {
   AddCrawlTaskRequestDto,
   AddWishListFromCacheRequestDto,
   AddWishListRequestDto,
+  ShowWishitemListRequestDto,
 } from "../dto/request/wishlist.request.dto";
 import {
   AddCrawlTaskResponseDto,
   AddWishListFromCacheResponseDto,
   AddWishlistResponseDto,
   GetCrawlResultResponseDto,
+  ShowWishitemDetailResponseDto,
+  ShowWishitemListResponseDto,
 } from "../dto/response/wishlist.response.dto";
 import { validateImageFile } from "../policy/upload.policy";
+import { BadRequestException } from "../../errors/error";
+import { IsOptional } from "class-validator";
 
 @Route("/wishlist")
 @Tags("Wishlist")
@@ -108,6 +115,10 @@ export class WishlistController extends Controller {
     body.userId = "1"; // TODO: 임시 유저 아이디 하드코딩, 추후 인증 구현시 변경 필요
     return success(await this.wishlistService.addWishListFromCache(body));
   }
+  /**
+   * @summary 위시 아이템 수동 등록
+   * @description 위시 아이템을 수동으로 등록합니다.
+   */
   @Post("/items")
   @Middlewares(validateImageFile)
   public async addWishList(
@@ -131,5 +142,48 @@ export class WishlistController extends Controller {
       photoFile: file,
     });
     return success(await this.wishlistService.addWishListManual(dto));
+  }
+  /**
+   * @summary 위시리스트 아이템 상세 조회 (위시/구매/포기 아이템 모두 포함)
+   * @description 위시/구매/포기 아이템을 모두 포함하여 지정한 한개의 아이템을 상세 조회합니다.
+   */
+
+  @Get("/items/:itemId")
+  @Security("jwt")
+  public async showWishitemDetail(
+    @Path("itemId") itemId: string,
+    @Query("type") type: string,
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<ShowWishitemDetailResponseDto>> {
+    if (!itemId.match(/^(0|[1-9]\d*)$/))
+      throw new BadRequestException(
+        "INVALID_INPUT_FORM",
+        "유효하지 않은 입력 값 입니다.",
+      );
+    const userId = req.user!.id;
+    return success(
+      await this.wishlistService.getWishlistItemInfo(itemId, type, userId),
+    );
+  }
+  /**
+   * @summary 위시리스트 가져오기(위시/구매/포기 아이템 모두 포함)
+   * @description 위시/구매/포기 아에팀중 한 분류를 선택하여 아이템 리스트를 가져옵니다.
+   */
+  @Get("/items")
+  @Security("jwt")
+  public async showWishitemList(
+    @Request() req: ExpressRequest,
+    @Query("status") status: string,
+    @Query("take") take: number,
+    @Query("cursor") cursor?: string,
+  ): Promise<ApiResponse<ShowWishitemListResponseDto>> {
+    const userId = req.user!.id;
+    const dto = new ShowWishitemListRequestDto({
+      userId,
+      status,
+      cursor,
+      take,
+    });
+    return success(await this.wishlistService.getWishlist(dto));
   }
 }
