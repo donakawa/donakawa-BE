@@ -13,6 +13,7 @@ import {
   Middlewares,
   Security,
   Query,
+  BodyProp,
 } from "tsoa";
 import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
@@ -114,11 +115,12 @@ export class WishlistController extends Controller {
   @Post("/items/from-cache")
   @Security("jwt")
   public async addWishListFromCache(
-    @Body() body: AddWishListFromCacheRequestDto,
+    @BodyProp("cacheId") cacheId: string,
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<AddWishListFromCacheResponseDto>> {
     const userId = req.user!.id;
-    return success(await this.wishlistService.addWishListFromCache(body));
+    const dto = new AddWishListFromCacheRequestDto({ cacheId, userId });
+    return success(await this.wishlistService.addWishListFromCache(dto));
   }
   /**
    * @summary 위시 아이템 수동 등록
