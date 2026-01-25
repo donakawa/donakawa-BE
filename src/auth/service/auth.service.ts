@@ -247,15 +247,6 @@ export class AuthService {
     await redis.del(`user:refreshToken:${sid}`);
   }
 
-  // 전체 세션 로그아웃
-  async logoutAllDevices(userId: bigint): Promise<void> {
-    const sid = await redis.get(`user:${userId}:sid`);
-    if (sid) {
-      await redis.del(`user:${userId}:sid`);
-      await redis.del(`user:refreshToken:${sid}`);
-    }
-  }
-
   // 회원가입
   async createUser(body: RegisterRequestDto): Promise<RegisterResponseDto> {
     const verified = await redis.get(`email:verified:REGISTER:${body.email}`);
@@ -450,7 +441,6 @@ export class AuthService {
     const hashedPassword = await hashingString(newPassword);
     await this.authRepository.updatePassword(user.id, hashedPassword);
 
-    await this.logoutAllDevices(user.id);
   }
 
   // 비밀번호 정책 검증

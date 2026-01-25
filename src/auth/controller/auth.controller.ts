@@ -110,7 +110,7 @@ export class AuthController {
   @Get("/google-login")
   @SuccessResponse("302", "Google 로그인 페이지로 리다이렉트")
   public async initiateGoogleLogin(@Request() req: ExpressRequest): Promise<void> {
-    const authUrl = await this.authService.getGoogleAuthUrl(); // ✅ async로 변경
+    const authUrl = await this.authService.getGoogleAuthUrl(); 
     req.res!.redirect(authUrl);
   }
 
@@ -119,7 +119,7 @@ export class AuthController {
   @SuccessResponse("302", "로그인 성공")
   public async googleCallback(
     @Query() code: string,
-    @Query() state: string,  // ✅ state 파라미터 추가
+    @Query() state: string,  // state 파라미터 추가
     @Request() req: ExpressRequest
   ): Promise<void> {
     try {
@@ -134,5 +134,16 @@ export class AuthController {
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       req.res!.redirect(`${frontendUrl}/auth/callback?success=false&error=google_login_failed`);
     }
+  }
+  @Post("/logout")
+  @Security("jwt")
+  @SuccessResponse("200", "로그아웃 성공")
+  public async logout(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<null>> {
+    const user = req.user!; // JWT 미들웨어에서 주입된 사용자 정보
+    await this.authService.logout(BigInt(user.id), user.sid);
+    JwtCookieUtil.clearJwtCookies(req.res!);
+    return success(null);
   }
 }
