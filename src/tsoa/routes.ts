@@ -375,6 +375,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 body: {"in":"body","name":"body","required":true,"ref":"AddCrawlTaskRequestDto"},
         };
         app.post('/wishlist/crawl-tasks',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.addCrawlTask)),
 
@@ -406,6 +407,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 jobId: {"in":"path","name":"jobId","required":true,"dataType":"string"},
         };
         app.get('/wishlist/crawl-tasks/:jobId/events',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.listenCrawlEvents)),
 
@@ -436,6 +438,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 cacheId: {"in":"path","name":"cacheId","required":true,"dataType":"string"},
         };
         app.get('/wishlist/crawl-tasks/:cacheId/result',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.getCrawlResult)),
 
@@ -464,8 +467,10 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsWishlistController_addWishListFromCache: Record<string, TsoaRoute.ParameterSchema> = {
                 body: {"in":"body","name":"body","required":true,"ref":"AddWishListFromCacheRequestDto"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.post('/wishlist/items/from-cache',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.addWishListFromCache)),
 
@@ -499,9 +504,11 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 brandName: {"in":"formData","name":"brandName","required":true,"dataType":"string"},
                 reason: {"in":"formData","name":"reason","required":true,"dataType":"string"},
                 url: {"in":"formData","name":"url","required":true,"dataType":"string"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
                 file: {"in":"formData","name":"file","dataType":"file"},
         };
         app.post('/wishlist/items',
+            authenticateMiddleware([{"jwt":[]}]),
             upload.fields([
                 {
                     name: "file",
