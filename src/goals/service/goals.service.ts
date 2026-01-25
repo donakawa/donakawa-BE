@@ -46,7 +46,7 @@ export class GoalsService {
 
   // 목표 예산 등록
   async createTargetBudget(
-    userId: bigint,
+    userId: string,
     body: GoalsRequestDto,
   ): Promise<GoalsResponseDto> {
     const isExist = await this.goalsRepository.findByUserId(userId);
@@ -71,7 +71,7 @@ export class GoalsService {
   }
 
   // 목표 예산 조회
-  async getTargetBudget(userId: bigint): Promise<GoalsResponseDto | null> {
+  async getTargetBudget(userId: string): Promise<GoalsResponseDto | null> {
     const result = await this.goalsRepository.findBudgetByUserId(userId);
     if (!result) {
       throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
@@ -82,7 +82,7 @@ export class GoalsService {
 
   // 목표 예산 수정
   async updateTargetBudget(
-    userId: bigint,
+    userId: string,
     body: GoalsUpdateRequestDto,
   ): Promise<GoalsResponseDto> {
     const isExist = await this.goalsRepository.findBudgetByUserId(userId);

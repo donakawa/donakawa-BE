@@ -24,7 +24,7 @@ import { GoalsService } from "../service/goals.service";
 
 @Route("/goals")
 @Tags("Goals")
-// @Security("jwt")
+@Security("jwt")
 export class GoalsController {
   private readonly goalsService: GoalsService = container.goals.service;
 
@@ -37,8 +37,7 @@ export class GoalsController {
     @Body() body: GoalsRequestDto,
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<GoalsResponseDto>> {
-    // const userId = BigInt((req as any).user.id);
-    const userId = BigInt(1);
+    const userId = req.user!.id;
     const data = await this.goalsService.createTargetBudget(userId, body);
 
     return success(data);
@@ -52,8 +51,7 @@ export class GoalsController {
   public async getTargetBudget(
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<GoalsResponseDto | null>> {
-    // const userId = BigInt((req as any).user.id);
-    const userId = BigInt(1);
+    const userId = req.user!.id;
     const data = await this.goalsService.getTargetBudget(userId);
 
     return success(data);
@@ -68,10 +66,9 @@ export class GoalsController {
     @Body() body: GoalsUpdateRequestDto,
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<GoalsResponseDto>> {
-    // const userId = BigInt((req as any).user.id);
-    const userId = BigInt(1);
-
+    const userId = req.user!.id;
     const data = await this.goalsService.updateTargetBudget(userId, body);
+
     return success(data);
   }
 }
