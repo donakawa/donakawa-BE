@@ -18,7 +18,10 @@ import {
   GoalsRequestDto,
   GoalsUpdateRequestDto,
 } from "../dto/request/goals.request.dto";
-import { GoalsResponseDto } from "../dto/response/goals.response.dto";
+import {
+  GoalsResponseDto,
+  BudgetSpendResponseDto,
+} from "../dto/response/goals.response.dto";
 import { container } from "../../container";
 import { GoalsService } from "../service/goals.service";
 
@@ -27,6 +30,18 @@ import { GoalsService } from "../service/goals.service";
 @Security("jwt")
 export class GoalsController {
   private readonly goalsService: GoalsService = container.goals.service;
+
+  /**
+   * @summary 소비, 남은 예산 값 조회 API
+   */
+  @Get("/spend")
+  @SuccessResponse("200", "소비, 남은 예산 값 조회 성공")
+  public async getBudgetSpend(
+    @Request() req: ExpressRequest,
+  ): Promise<BudgetSpendResponseDto> {
+    const userId = req.user!.id;
+    return this.goalsService.getBudgetSpend(userId);
+  }
 
   /**
    * @summary 목표 예산 설정 API

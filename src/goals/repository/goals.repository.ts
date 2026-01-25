@@ -53,4 +53,39 @@ export class GoalsRepository {
       data,
     });
   }
+
+  // 총 소비 금액 조회
+  async getTotalSpendByUser(userId: string, since: Date): Promise<number> {
+    const userIdBigInt = BigInt(userId);
+
+    const histories = await this.prisma.purchasedHistory.findMany({
+      where: {
+        purchasedDate: {
+          gte: since,
+        },
+        OR: [
+          { addedItemAuto: { userId: userIdBigInt } },
+          { addedItemManual: { userId: userIdBigInt } },
+        ],
+      },
+      include: {
+        addedItemAuto: {
+          select: { product: { select: { price: true } } },
+        },
+        addedItemManual: {
+          select: { price: true },
+        },
+      },
+    });
+
+    return histories.reduce((sum, h) => {
+      if (h.addedItemAuto) {
+        return sum + h.addedItemAuto.product.price;
+      }
+      if (h.addedItemManual) {
+        return sum + h.addedItemManual.price;
+      }
+      return sum;
+    }, 0);
+  }
 }

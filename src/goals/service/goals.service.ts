@@ -3,7 +3,10 @@ import {
   GoalsRequestDto,
   GoalsUpdateRequestDto,
 } from "../dto/request/goals.request.dto";
-import { GoalsResponseDto } from "../dto/response/goals.response.dto";
+import {
+  GoalsResponseDto,
+  BudgetSpendResponseDto,
+} from "../dto/response/goals.response.dto";
 import {
   ConflictException,
   NotFoundException,
@@ -13,7 +16,7 @@ import {
 export class GoalsService {
   constructor(private readonly goalsRepository: GoalsRepository) {}
 
-  // 갱신일 계산
+  // 갱신일 등록 계산
   private makeNextIncomeDate(day: number): Date {
     const now = new Date();
     let year = now.getFullYear();
@@ -28,7 +31,25 @@ export class GoalsService {
       }
     }
 
-    let target = new Date(Date.UTC(year, month, day, 0, 0, 0));
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    const targetDay = Math.min(day, lastDayOfMonth);
+
+    let target = new Date(Date.UTC(year, month, targetDay, 0, 0, 0));
+    target = new Date(target.getTime() + 9 * 60 * 60 * 1000);
+
+    return target;
+  }
+
+  // 갱신일 업데이트
+  private makeNextCycleDate(currentNext: Date): Date {
+    const year = currentNext.getFullYear();
+    const month = currentNext.getMonth();
+    const day = currentNext.getDate();
+
+    const lastDayOfNextMonth = new Date(year, month + 2, 0).getDate();
+    const targetDay = Math.min(day, lastDayOfNextMonth);
+
+    let target = new Date(Date.UTC(year, month + 1, targetDay, 0, 0, 0));
     target = new Date(target.getTime() + 9 * 60 * 60 * 1000);
 
     return target;
@@ -102,5 +123,36 @@ export class GoalsService {
     });
 
     return new GoalsResponseDto(updated);
+  }
+
+  // 소비, 남은 예산 값 조회
+  async getBudgetSpend(userId: string) {
+    const budget = await this.goalsRepository.findBudgetByUserId(userId);
+    if (!budget) {
+      throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
+    }
+
+    const now = new Date();
+    let nextIncomeDate = budget.incomeDate!;
+
+    if (now >= nextIncomeDate) {
+      nextIncomeDate = this.makeNextCycleDate(nextIncomeDate);
+
+      await this.goalsRepository.updateTargetBudget(budget.id, {
+        incomeDate: nextIncomeDate,
+      });
+    }
+
+    const cycleStart = new Date(nextIncomeDate);
+    cycleStart.setMonth(cycleStart.getMonth() - 1);
+
+    const totalSpend = await this.goalsRepository.getTotalSpendByUser(
+      userId,
+      cycleStart,
+    );
+    const shoppingBudget = budget.shoppingBudget ?? 0;
+    const remainingBudget = shoppingBudget - totalSpend;
+
+    return new BudgetSpendResponseDto({ totalSpend, remainingBudget });
   }
 }
