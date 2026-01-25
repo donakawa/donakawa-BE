@@ -147,9 +147,15 @@ export class AuthController {
   public async logout(
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<null>> {
-    const user = req.user!; // JWT 미들웨어에서 주입된 사용자 정보
-    await this.authService.logout(BigInt(user.id), user.sid);
-    JwtCookieUtil.clearJwtCookies(req.res!);
-    return success(null);
+    const user = req.user;
+    try {
+      if (!user?.id || !user?.sid) {
+        throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
+      }
+      await this.authService.logout(BigInt(user.id), user.sid);
+      return success(null);
+    } finally {
+      JwtCookieUtil.clearJwtCookies(req.res!);
+    }
   }
 }
