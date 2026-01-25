@@ -1,16 +1,23 @@
 import { TimeUnit } from "@valkey/valkey-glide";
-import { ConflictException, NotFoundException } from "../../errors/error";
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from "../../errors/error";
 import { ValkeyClient } from "../../infra/valkey.client";
 import {
   AddCrawlTaskRequestDto,
   AddWishListFromCacheRequestDto,
   AddWishListRequestDto,
+  ShowWishitemListRequestDto,
 } from "../dto/request/wishlist.request.dto";
 import {
   AddCrawlTaskResponseDto,
   AddWishListFromCacheResponseDto,
   AddWishlistResponseDto,
   GetCrawlResultResponseDto,
+  ShowWishitemDetailResponseDto,
+  ShowWishitemListResponseDto,
 } from "../dto/response/wishlist.response.dto";
 import { CrawlQueueClient } from "../infra/crawl-queue.client";
 import { CrawlRequestMessage } from "../messages/crawl-request.message";
@@ -22,10 +29,18 @@ import { CrawlStatusUpdatedPayload } from "../../interface/event-payload.interfa
 import { AddWishListFromCacheCommand } from "../command/add-wishlist-from-cache.command";
 import { AddWishListCommand } from "../command/add-wishlist.command";
 import { FilesService } from "../../files/service/files.service";
-import { FileType } from "@prisma/client";
+import { AddedItemManual, FileType } from "@prisma/client";
 import { FileTypeEnum } from "../../files/enum/file-type.enum";
 import { FilePayload } from "../../files/payload/file.payload";
 import path from "path";
+import {
+  isWishitemStatus,
+  isWishitemType,
+  WishitemStatus,
+  WishitemType,
+} from "../types/wishitem.types";
+import { WishItemPayload } from "../payload/wishlist.payload";
+import { WishlistRecordInterface } from "../interface/wishlist.interface";
 export class WishlistService {
   constructor(
     private readonly wishlistRepository: WishlistRepository,
@@ -205,5 +220,180 @@ export class WishlistService {
       }
       throw e;
     }
+  }
+  async fetchWishitemDetails(id: string, userId: string, type: WishitemType) {
+    if (type === "AUTO") {
+      const wishitem = await this.wishlistRepository.findAddedItemAutoById(id, {
+        select: {
+          id: true,
+          userId: true,
+          wishItemFolder: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          product: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              storePlatform: {
+                select: {
+                  id: true,
+                  name: true,
+                  productUrlTemplate: true,
+                },
+              },
+              photoFileId: true,
+              productId: true,
+              updatedAt: true,
+            },
+          },
+          status: true,
+          reason: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+      const isExist = wishitem !== null;
+      const hasPermission = wishitem?.userId === BigInt(userId);
+      if (!isExist || !hasPermission)
+        throw new NotFoundException(
+          "WISHITEM_NOT_FOUND",
+          "해당하는 위시 아이템을 찾을 수 없습니다.",
+        );
+      const urlTemplate = wishitem.product.storePlatform.productUrlTemplate;
+      const productId = wishitem.product.productId;
+      const productUrl = urlTemplate.replace("${productId}", productId);
+      const photoFileId = wishitem.product.photoFileId;
+      const photoUrl = photoFileId
+        ? await this.filesService.generateUrl(photoFileId.toString(), 60 * 10)
+        : null;
+      return new WishItemPayload({
+        id: wishitem.id.toString(),
+        folder: wishitem.wishItemFolder?.name ?? null,
+        name: wishitem.product.name,
+        price: wishitem.product.price,
+        platform: wishitem.product.storePlatform.name,
+        brand: null,
+        photoUrl,
+        productUrl,
+        reason: wishitem.reason,
+        refreshedAt: wishitem.product.updatedAt ?? null,
+        addedAt: wishitem.createdAt ?? null,
+        updatedAt: wishitem.updatedAt ?? null,
+        status: wishitem.status,
+      });
+    } else {
+      const wishitem = await this.wishlistRepository.findAddedItemManualById(
+        id,
+        {
+          select: {
+            id: true,
+            userId: true,
+            wishItemFolder: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            name: true,
+            price: true,
+            photoFileId: true,
+            storePlatform: true,
+            url: true,
+            brand: true,
+            reason: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      );
+      const isExist = wishitem !== null;
+      const hasPermission = wishitem?.userId === BigInt(userId);
+      if (!isExist || !hasPermission)
+        throw new NotFoundException(
+          "WISHITEM_NOT_FOUND",
+          "해당하는 위시 아이템을 찾을 수 없습니다.",
+        );
+      const photoFileId = wishitem.photoFileId;
+      const photoUrl = photoFileId
+        ? await this.filesService.generateUrl(photoFileId.toString(), 60 * 10)
+        : null;
+      const refreshedAt = wishitem.updatedAt
+        ? wishitem.updatedAt
+        : wishitem.createdAt;
+      return new WishItemPayload({
+        id: wishitem.id.toString(),
+        folder: wishitem.wishItemFolder?.name ?? null,
+        name: wishitem.name,
+        price: wishitem.price,
+        platform: wishitem.storePlatform,
+        brand: wishitem.brand,
+        photoUrl,
+        productUrl: wishitem.url,
+        reason: wishitem.reason,
+        refreshedAt,
+        addedAt: wishitem.createdAt ?? null,
+        updatedAt: wishitem.updatedAt ?? null,
+        status: wishitem.status,
+      });
+    }
+  }
+  async getWishlistItemInfo(itemId: string, type: string, userId: string) {
+    if (!isWishitemType(type))
+      throw new BadRequestException(
+        "INVALID_INPUT_FORM",
+        "유효하지 않은 입력 값 입니다.",
+      );
+    const wishitem = await this.fetchWishitemDetails(itemId, userId, type);
+    return new ShowWishitemDetailResponseDto({
+      id: wishitem.id,
+      folder: wishitem.folder,
+      name: wishitem.name,
+      price: wishitem.price,
+      platform: wishitem.platform,
+      brand: wishitem.brand,
+      photoUrl: wishitem.photoUrl,
+      productUrl: wishitem.productUrl,
+      reason: wishitem.reason,
+      refreshedAt: wishitem.refreshedAt,
+      addedAt: wishitem.addedAt,
+      updatedAt: wishitem.updatedAt,
+      status: wishitem.status,
+    });
+  }
+  async getWishlist(data: ShowWishitemListRequestDto) {
+    if (!isWishitemStatus(data.status))
+      throw new BadRequestException(
+        "INVALID_INPUT_FORM",
+        "유효하지 않은 입력 값 입니다.",
+      );
+    const rows: WishlistRecordInterface[] =
+      (await this.wishlistRepository.findAllAddedItem(
+        data.userId,
+        data.take,
+        data.status,
+        data.cursor,
+      )) as unknown as WishlistRecordInterface[];
+    const nextCursor =
+      rows.length > data.take ? rows[rows.length - 2].cursor : null;
+    if (rows.length > data.take) rows.pop();
+    const entries = await Promise.all(
+      rows.map(async (row) => {
+        const url = row.photoFileId
+          ? await this.filesService.generateUrl(
+              row.photoFileId.toString(),
+              60 * 10,
+            )
+          : null;
+        return [row.cursor, url] as const;
+      }),
+    );
+    const photoUrls: Record<string, string | null> =
+      Object.fromEntries(entries);
+    return new ShowWishitemListResponseDto(rows, nextCursor, photoUrls);
   }
 }

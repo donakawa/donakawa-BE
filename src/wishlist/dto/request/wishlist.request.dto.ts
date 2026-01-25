@@ -1,13 +1,18 @@
 import {
+  IsIn,
+  IsInt,
   IsNotEmpty,
   IsNumber,
-  IsNumberString,
+  IsOptional,
   IsString,
   IsUrl,
   Matches,
-  Validate,
+  Max,
+  Min,
 } from "class-validator";
 
+import { WishitemStatus } from "../../types/wishitem.types";
+import { Type } from "class-transformer";
 export class AddCrawlTaskRequestDto {
   @IsUrl()
   @IsNotEmpty()
@@ -61,4 +66,39 @@ export class AddWishListFromCacheRequestDto {
   @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
   @IsNotEmpty()
   userId!: string;
+}
+export class ShowWishitemListRequestDto {
+  @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
+  @IsNotEmpty()
+  userId!: string;
+
+  @IsIn([
+    "WISHLISTED",
+    "DROPPED",
+    "BOUGHT",
+  ] as const satisfies readonly WishitemStatus[])
+  @IsNotEmpty()
+  status!: string;
+
+  @Matches(/^[AM]\d{26}$/)
+  @IsOptional()
+  cursor!: string | undefined;
+
+  @Type(() => Number)
+  @IsInt()
+  @IsNotEmpty()
+  @Min(1)
+  @Max(10)
+  take!: number;
+  constructor(param: {
+    userId: string;
+    status: string;
+    cursor: string | undefined;
+    take: number;
+  }) {
+    this.userId = param.userId;
+    this.status = param.status;
+    this.cursor = param.cursor;
+    this.take = param.take;
+  }
 }
