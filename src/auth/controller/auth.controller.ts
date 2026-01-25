@@ -110,10 +110,8 @@ export class AuthController {
   // Google 로그인 시작 - 프론트에서 이 URL로 리다이렉트
   @Get("/google-login")
   @SuccessResponse("302", "Google 로그인 페이지로 리다이렉트")
-  public async initiateGoogleLogin(
-    @Request() req: ExpressRequest,
-  ): Promise<void> {
-    const authUrl = await this.authService.getGoogleAuthUrl(); // ✅ async로 변경
+  public async initiateGoogleLogin(@Request() req: ExpressRequest): Promise<void> {
+    const authUrl = await this.authService.getGoogleAuthUrl(); 
     req.res!.redirect(authUrl);
   }
 
@@ -122,8 +120,8 @@ export class AuthController {
   @SuccessResponse("302", "로그인 성공")
   public async googleCallback(
     @Query() code: string,
-    @Query() state: string, // ✅ state 파라미터 추가
-    @Request() req: ExpressRequest,
+    @Query() state: string,  // state 파라미터 추가
+    @Request() req: ExpressRequest
   ): Promise<void> {
     try {
       // state도 함께 전달
@@ -141,6 +139,23 @@ export class AuthController {
       req.res!.redirect(
         `${frontendUrl}/auth/callback?success=false&error=google_login_failed`,
       );
+    }
+  }
+  @Post("/logout")
+  @Security("jwt")
+  @SuccessResponse("200", "로그아웃 성공")
+  public async logout(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<null>> {
+    const user = req.user;
+    try {
+      if (!user?.id || !user?.sid) {
+        throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
+      }
+      await this.authService.logout(BigInt(user.id), user.sid);
+      return success(null);
+    } finally {
+      JwtCookieUtil.clearJwtCookies(req.res!);
     }
   }
 }
