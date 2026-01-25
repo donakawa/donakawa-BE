@@ -13,6 +13,7 @@ import {
   Middlewares,
   Security,
   Query,
+  BodyProp,
 } from "tsoa";
 import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
@@ -46,6 +47,7 @@ export class WishlistController extends Controller {
    * @description 위시리스트 추가를 위한 크롤링 작업을 요청합니다.
    */
   @Post("/crawl-tasks")
+  @Security("jwt")
   public async addCrawlTask(
     @Body() body: AddCrawlTaskRequestDto,
   ): Promise<ApiResponse<AddCrawlTaskResponseDto>> {
@@ -56,6 +58,7 @@ export class WishlistController extends Controller {
    * @description SSE(Server-Sent Events)를 통해 위시리스트 크롤링 작업의 진행 상황을 실시간으로 수신합니다.
    */
   @Get("/crawl-tasks/:jobId/events")
+  @Security("jwt")
   @Produces("text/event-stream")
   public async listenCrawlEvents(
     @Request() req: ExpressRequest,
@@ -98,6 +101,7 @@ export class WishlistController extends Controller {
    * @description 위시리스트 크롤링 작업의 결과를 조회합니다.
    */
   @Get("/crawl-tasks/:cacheId/result")
+  @Security("jwt")
   public async getCrawlResult(
     @Path("cacheId") cacheId: string,
   ): Promise<ApiResponse<GetCrawlResultResponseDto>> {
@@ -109,17 +113,21 @@ export class WishlistController extends Controller {
    * @description 캐시에 저장된 상품 정보를 기반으로 위시리스트에 아이템을 추가합니다.
    */
   @Post("/items/from-cache")
+  @Security("jwt")
   public async addWishListFromCache(
-    @Body() body: AddWishListFromCacheRequestDto,
+    @BodyProp("cacheId") cacheId: string,
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<AddWishListFromCacheResponseDto>> {
-    body.userId = "1"; // TODO: 임시 유저 아이디 하드코딩, 추후 인증 구현시 변경 필요
-    return success(await this.wishlistService.addWishListFromCache(body));
+    const userId = req.user!.id;
+    const dto = new AddWishListFromCacheRequestDto({ cacheId, userId });
+    return success(await this.wishlistService.addWishListFromCache(dto));
   }
   /**
    * @summary 위시 아이템 수동 등록
    * @description 위시 아이템을 수동으로 등록합니다.
    */
   @Post("/items")
+  @Security("jwt")
   @Middlewares(validateImageFile)
   public async addWishList(
     @FormField() productName: string,
@@ -128,9 +136,10 @@ export class WishlistController extends Controller {
     @FormField() brandName: string,
     @FormField() reason: string,
     @FormField() url: string,
+    @Request() req: ExpressRequest,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<ApiResponse<AddWishlistResponseDto>> {
-    const userId = "1"; // TODO: 임시 유저 아이디 하드코딩, 추후 인증 구현시 변경 필요
+    const userId = req.user!.id;
     const dto = new AddWishListRequestDto({
       productName,
       price,
