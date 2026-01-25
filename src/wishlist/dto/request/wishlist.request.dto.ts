@@ -1,5 +1,6 @@
 import {
   IsIn,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -10,6 +11,8 @@ import {
   Min,
 } from "class-validator";
 
+import { WishitemStatus } from "../../types/wishitem.types";
+import { Type } from "class-transformer";
 export class AddCrawlTaskRequestDto {
   @IsUrl()
   @IsNotEmpty()
@@ -69,7 +72,11 @@ export class ShowWishitemListRequestDto {
   @IsNotEmpty()
   userId!: string;
 
-  @IsIn(["WISHLISTED", "DROPPED", "BOUGHT"])
+  @IsIn([
+    "WISHLISTED",
+    "DROPPED",
+    "BOUGHT",
+  ] as const satisfies readonly WishitemStatus[])
   @IsNotEmpty()
   status!: string;
 
@@ -77,7 +84,8 @@ export class ShowWishitemListRequestDto {
   @IsOptional()
   cursor!: string | undefined;
 
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
   @IsNotEmpty()
   @Min(1)
   @Max(10)

@@ -6,8 +6,8 @@ import {
 } from "@prisma/client";
 import { AddWishListFromCacheCommand } from "../command/add-wishlist-from-cache.command";
 import { AddWishListCommand } from "../command/add-wishlist.command";
-import { Row } from "aws-sdk/clients/rdsdataservice";
-import { WishitemStatus, WishitemType } from "../types/wishitem.types";
+import { WishitemStatus } from "../types/wishitem.types";
+import { WishlistRecordInterface } from "../interface/wishlist.interface";
 export class WishlistRepository {
   constructor(private readonly prisma: PrismaClient) {}
   async findProductById(id: string) {
@@ -168,6 +168,6 @@ export class WishlistRepository {
 SELECT added_item_auto.id, p.name, p.price,p.photo_file_id as "photoFileId", replace(s.product_url_template, '\$\{productId\}', p.product_id) as url,  "createdAt",added_item_auto.status,folder_id, 'AUTO'::text as type,concat('A',lpad((extract(epoch from "createdAt")*1000)::bigint::text,13,'0'),lpad(added_item_auto.id::text,13,'0'))
 from added_item_auto left join public.product p on added_item_auto.product_id = p.id
 left join store_platform s on p.store_platform_id = s.id where user_id = ${userId}) as t ${whereClause} order by cursor desc limit ${take + 1};`;
-    return this.prisma.$queryRaw<Row[]>(query);
+    return this.prisma.$queryRaw<WishlistRecordInterface[]>(query);
   }
 }
