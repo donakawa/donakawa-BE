@@ -67,3 +67,11 @@ export class WishItemPreviewPayload {
     this.status = param.status;
   }
 }
+export class WishItemFolderPayload {
+  id!: string;
+  name!: string;
+  constructor(param: { id: string; name: string }) {
+    this.id = param.id;
+    this.name = param.id;
+  }
+}

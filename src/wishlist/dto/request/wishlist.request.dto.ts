@@ -106,3 +106,69 @@ export class ShowWishitemListRequestDto {
     this.take = param.take;
   }
 }
+export class ShowWishitemFoldersRequestDto {
+  @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
+  @IsOptional()
+  cursor!: string | undefined;
+
+  @IsInt()
+  @Type(() => Number)
+  @Min(1)
+  @Max(10)
+  @IsNotEmpty()
+  take!: number;
+
+  @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
+  @IsNotEmpty()
+  userId!: string;
+
+  constructor(param: {
+    cursor: string | undefined;
+    take: number;
+    userId: string;
+  }) {
+    this.cursor = param.cursor;
+    this.take = param.take;
+    this.userId = param.userId;
+  }
+}
+export class CreateWishitemFolderRequestDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
+  @IsNotEmpty()
+  userId!: string;
+
+  constructor(param: { name: string; userId: string }) {
+    this.name = param.name;
+    this.userId = param.userId;
+  }
+}
+export class DeleteWishitemFolderRequestDto {
+  @Matches(/^\d+$/, { message: "folderId must be a valid integer string" })
+  @IsNotEmpty()
+  folderId!: string;
+
+  @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
+  @IsNotEmpty()
+  userId!: string;
+  constructor(param: { folderId: string; userId: string }) {
+    this.folderId = param.folderId;
+    this.userId = param.userId;
+  }
+}
+export class ChangeWishitemFolderLocationRequestDto {
+  @Matches(/^\d+$/, { message: "itemId must be a valid integer string" })
+  @IsNotEmpty()
+  itemId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  type!: string;
+
+  @Matches(/^\d+$/, { message: "folderId must be a valid integer string" })
+  @IsOptional()
+  folderId?: string;
+}
