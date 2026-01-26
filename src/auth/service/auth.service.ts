@@ -1,6 +1,7 @@
-import { OauthProvider } from '@prisma/client';
+import { OauthProvider, PrismaClient } from '@prisma/client';
 import { GoogleOAuthService } from './google-oauth.service';
 import {
+  BadRequestException,
   ConflictException,
   NotFoundException,
   UnauthorizedException,
@@ -12,6 +13,7 @@ import {
 } from "../dto/request/auth.request.dto";
 import {
   RegisterResponseDto,
+  UpdateGoalResponseDto,
   UpdateNicknameResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthRepository } from "../repository/auth.repository";
@@ -34,6 +36,7 @@ export class AuthService {
   constructor(
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
+    private prisma: PrismaClient
   ) { }
 
   // JWT 토큰 생성
@@ -154,6 +157,7 @@ export class AuthService {
           email: googleUserInfo.email,
           password: null, // 소셜 로그인은 비밀번호 없음
           nickname: googleUserInfo.nickname,
+          goal: ""
         });
 
         user = await this.authRepository.saveUser(command);
@@ -225,7 +229,7 @@ export class AuthService {
       const accessToken = jwt.sign(
         payload,
         process.env.ACCESS_TOKEN_SECRET_KEY!,
-        { expiresIn: "15m" }
+        { expiresIn: "1h" }
       );
 
       return { accessToken };
@@ -263,6 +267,7 @@ export class AuthService {
       email: body.email,
       password: await hashingString(body.password),
       nickname: body.nickname,
+      goal: body.goal
     });
 
     const isExist =
@@ -271,7 +276,9 @@ export class AuthService {
     if (isExist) {
       throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
     }
-
+    if(body.goal.length > 10){
+      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
+    }
     const user = await this.authRepository.saveUser(command);
     return new RegisterResponseDto(user);
   }
@@ -482,10 +489,35 @@ export class AuthService {
       throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
     }
 
+    // 닉네임 길이 확인
+    if (newNickname.length < 2 || newNickname.length > 20) {
+      throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
+    }
+
     // 닉네임 업데이트
     const updatedUser = await this.authRepository.updateNickname(userId, newNickname);
     
     return new UpdateNicknameResponseDto(updatedUser);
+  }
+  // 목표 수정
+  async updateGoal(
+    userId: bigint,
+    newGoal: string
+  ): Promise<UpdateGoalResponseDto> {
+    // 현재 사용자 조회
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+    // 현재 목표 동일한지 확인
+    if (user.goal === newGoal) {
+      throw new ConflictException("U008", "현재 목표와 동일합니다.");
+    }
+
+    // 목표 업데이트
+    const updatedUser = await this.authRepository.updateGoal(userId, newGoal);
+    
+    return new UpdateGoalResponseDto(updatedUser);
   }
   
   // 회원탈퇴
@@ -510,10 +542,16 @@ export class AuthService {
       }
     }
 
-    // 세션 정리
-    await this.clearUserSession(userId);
+    await this.prisma.$transaction(async (tx) => {
+      await this.authRepository.deleteUser(userId, tx);
+    });
 
-    // 사용자 삭제
-    await this.authRepository.deleteUser(userId);
+  // 세션 정리 (실패해도 자동 만료됨)
+  try {
+    await this.clearUserSession(userId);
+  } catch (error) {
+    // 세션 삭제 실패는 로그만 남김 (TTL로 자동 만료되므로 치명적이지 않음)
+    console.error('Failed to clear user session:', error);
+  }
   }
 }

@@ -17,6 +17,7 @@ import {
   RegisterResponseDto,
   LoginResponseDto,
   UpdateNicknameResponseDto,
+  UpdateGoalResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthService } from "../service/auth.service";
 import { container } from "../../container";
@@ -27,6 +28,7 @@ import {
   PasswordResetConfirmDto,
   DeleteAccountRequestDto,
   UpdateNicknameRequestDto,
+  UpdateGoalRequestDto,
 } from "../dto/request/auth.request.dto";
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
@@ -201,6 +203,27 @@ export class AuthController {
     const result = await this.authService.updateNickname(
       BigInt(user.id),
       body.nickname
+    );
+    
+    return success(result);
+  }
+
+  @Patch("/profile/goal")
+  @Security("jwt")
+  @SuccessResponse("200", "목표 수정 성공")
+  public async updateGoal(
+    @Body() body: UpdateGoalRequestDto,
+    @Request() req: ExpressRequest
+  ): Promise<ApiResponse<UpdateGoalResponseDto>> {
+    const user = req.user;
+    
+    if (!user?.id) {
+      throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
+    }
+
+    const result = await this.authService.updateGoal(
+      BigInt(user.id),
+      body.goal
     );
     
     return success(result);

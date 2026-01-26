@@ -31,3 +31,15 @@ export class UpdateNicknameResponseDto {
     this.updatedAt = (entity.updatedAt || new Date()).toISOString();
   }
 }
+
+export class UpdateGoalResponseDto {
+  readonly id: string;
+  readonly goal: string;
+  readonly updatedAt: string;
+  
+  constructor(entity: User) {
+    this.id = entity.id.toString();
+    this.goal = entity.nickname;
+    this.updatedAt = (entity.updatedAt || new Date()).toISOString();
+  }
+}

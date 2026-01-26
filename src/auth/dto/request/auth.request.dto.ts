@@ -20,6 +20,11 @@ export class RegisterRequestDto {
   @MinLength(2, { message: "닉네임은 2자 이상이어야 합니다." })
   @MaxLength(20, { message: "닉네임은 20자 이하여야 합니다." })
   nickname!: string;
+  @Example("new-goal")
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(10, { message: "목표는 10자 이하여야 합니다." })
+  goal!: string;
 }
 
 export class SendEmailCodeRequestDto {
@@ -65,7 +70,6 @@ export class LoginRequestDto {
   password?: string;
 }
 
-
 export class UpdateNicknameRequestDto {
   @Example("new-nickname")
   @IsString()
@@ -73,4 +77,12 @@ export class UpdateNicknameRequestDto {
   @MinLength(2, { message: "닉네임은 2자 이상이어야 합니다." })
   @MaxLength(20, { message: "닉네임은 20자 이하여야 합니다." })
   nickname!: string;
+}
+
+export class UpdateGoalRequestDto {
+  @Example("new-goal")
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(10, { message: "목표는 10자 이하여야 합니다." })
+  goal!: string;
 }

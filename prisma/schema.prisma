@@ -18,6 +18,7 @@ model User {
   email     String    @unique @db.VarChar(100)
   password  String?   @db.VarChar(100)
   nickname  String    @db.VarChar(10)
+  goal      String    @db.VarChar(10)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
   deletedAt DateTime? @map("deleted_at") @db.Timestamp()

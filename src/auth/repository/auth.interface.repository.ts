@@ -26,4 +26,10 @@ export interface AuthRepositoryInterface {
     nickname: string,
     tx?: Prisma.TransactionClient
   ): Promise<User | null>;
+
+  updateGoal(
+  userId: bigint,
+  goal: string,
+  tx?: Prisma.TransactionClient
+  ): Promise<User>;
 }
