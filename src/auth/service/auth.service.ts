@@ -12,6 +12,7 @@ import {
 } from "../dto/request/auth.request.dto";
 import {
   RegisterResponseDto,
+  UpdateNicknameResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthRepository } from "../repository/auth.repository";
 import { compareHash, hashingString } from "../util/encrypt.util";
@@ -459,7 +460,34 @@ export class AuthService {
       );
     }
   }
+// 닉네임 수정
+  async updateNickname(
+    userId: bigint,
+    newNickname: string
+  ): Promise<UpdateNicknameResponseDto> {
+    // 현재 사용자 조회
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
 
+    // 현재 닉네임과 동일한지 확인
+    if (user.nickname === newNickname) {
+      throw new ConflictException("U008", "현재 닉네임과 동일합니다.");
+    }
+
+    // 닉네임 중복 확인
+    const existingUser = await this.authRepository.findUserByNickname(newNickname);
+    if (existingUser && existingUser.id !== userId) {
+      throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
+    }
+
+    // 닉네임 업데이트
+    const updatedUser = await this.authRepository.updateNickname(userId, newNickname);
+    
+    return new UpdateNicknameResponseDto(updatedUser);
+  }
+  
   // 회원탈퇴
   async deleteAccount(userId: bigint, sid: string, password?: string): Promise<void> {
     const user = await this.authRepository.findUserById(userId);
