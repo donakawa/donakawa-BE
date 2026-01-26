@@ -34,25 +34,22 @@ export class GoalsService {
     const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
     const targetDay = Math.min(day, lastDayOfMonth);
 
-    let target = new Date(Date.UTC(year, month, targetDay, 0, 0, 0));
-    target = new Date(target.getTime() + 9 * 60 * 60 * 1000);
-
-    return target;
+    return new Date(year, month, targetDay, 0, 0, 0);
   }
 
   // 갱신일 업데이트
-  private makeNextCycleDate(currentNext: Date): Date {
+  private makeNextCycleDate(
+    currentNext: Date,
+    originalIncomeDay: number,
+  ): Date {
     const year = currentNext.getFullYear();
-    const month = currentNext.getMonth();
-    const day = currentNext.getDate();
+    const month = currentNext.getMonth() + 1;
+    const day = originalIncomeDay;
 
-    const lastDayOfNextMonth = new Date(year, month + 2, 0).getDate();
+    const lastDayOfNextMonth = new Date(year, month + 1, 0).getDate();
     const targetDay = Math.min(day, lastDayOfNextMonth);
 
-    let target = new Date(Date.UTC(year, month + 1, targetDay, 0, 0, 0));
-    target = new Date(target.getTime() + 9 * 60 * 60 * 1000);
-
-    return target;
+    return new Date(year, month, targetDay, 0, 0, 0);
   }
 
   // 날짜 범위 검증
@@ -86,13 +83,14 @@ export class GoalsService {
     const saved = await this.goalsRepository.createTargetBudget(userId, {
       ...rest,
       incomeDate: nextIncomeDate,
+      incomeDay,
     });
 
     return new GoalsResponseDto(saved);
   }
 
   // 목표 예산 조회
-  async getTargetBudget(userId: string): Promise<GoalsResponseDto | null> {
+  async getTargetBudget(userId: string): Promise<GoalsResponseDto> {
     const result = await this.goalsRepository.findBudgetByUserId(userId);
     if (!result) {
       throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
@@ -112,20 +110,24 @@ export class GoalsService {
     }
 
     let nextIncomeDate = isExist.incomeDate;
+    let incomeDay = isExist.incomeDay ?? 1;
+
     if (body.incomeDate !== undefined) {
       this.validateIncomeDate(body.incomeDate);
+      incomeDay = body.incomeDate;
       nextIncomeDate = this.makeNextIncomeDate(body.incomeDate);
     }
 
     const updated = await this.goalsRepository.updateTargetBudget(isExist.id, {
       ...body,
       incomeDate: nextIncomeDate,
+      incomeDay,
     });
 
     return new GoalsResponseDto(updated);
   }
 
-  // 소비, 남은 예산 값 조회
+  // 소비, 남은 예산 값 조회 (갱신일 자동 적용)
   async getBudgetSpend(userId: string) {
     const budget = await this.goalsRepository.findBudgetByUserId(userId);
     if (!budget) {
@@ -134,9 +136,13 @@ export class GoalsService {
 
     const now = new Date();
     let nextIncomeDate = budget.incomeDate!;
+    const originalIncomeDay = budget.incomeDay ?? nextIncomeDate.getDate();
 
     if (now >= nextIncomeDate) {
-      nextIncomeDate = this.makeNextCycleDate(nextIncomeDate);
+      nextIncomeDate = this.makeNextCycleDate(
+        nextIncomeDate,
+        originalIncomeDay,
+      );
 
       await this.goalsRepository.updateTargetBudget(budget.id, {
         incomeDate: nextIncomeDate,
@@ -150,9 +156,14 @@ export class GoalsService {
       userId,
       cycleStart,
     );
-    const shoppingBudget = budget.shoppingBudget ?? 0;
-    const remainingBudget = shoppingBudget - totalSpend;
 
-    return new BudgetSpendResponseDto({ totalSpend, remainingBudget });
+    const resetSpend = now >= budget.incomeDate! ? 0 : totalSpend;
+    const shoppingBudget = budget.shoppingBudget ?? 0;
+    const remainingBudget = shoppingBudget - resetSpend;
+
+    return new BudgetSpendResponseDto({
+      totalSpend: resetSpend,
+      remainingBudget,
+    });
   }
 }
