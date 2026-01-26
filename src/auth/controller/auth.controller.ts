@@ -168,7 +168,9 @@ export class AuthController {
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<null>> {
     const user = req.user!;
-    
+    if (!user?.id || !user?.sid) {
+     throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
+    }
     await this.authService.deleteAccount(
       BigInt(user.id),
       user.sid,

@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MinLength } from "class-validator";
+import { IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MinLength, IsOptional } from "class-validator";
 import { Example } from "tsoa";
 import { EmailVerifyTypeEnum } from "../../enums/send-email.enum";
 import { User } from "@prisma/client";
@@ -59,5 +59,6 @@ export class LoginRequestDto {
  export class DeleteAccountRequestDto {
   @Example("p@ssword123!")
   @IsString()
+  @IsOptional()
   password?: string;
 }
