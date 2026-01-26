@@ -50,7 +50,7 @@ const dbRepository = new DbRepository(prisma);
 
 // Auth 도메인
 const authRepository = new AuthRepository(prisma);
-const authService = new AuthService(authRepository, googleOAuthService);
+const authService = new AuthService(authRepository, googleOAuthService, prisma);
 const auth = {
   service: authService,
   repository: authRepository,

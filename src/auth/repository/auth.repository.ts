@@ -31,6 +31,7 @@ export class AuthRepository implements AuthRepositoryInterface {
         email: command.email,
         password: command.password,
         nickname: command.nickname,
+        goal: command.goal
       },
     });
   }
@@ -120,4 +121,35 @@ export class AuthRepository implements AuthRepositoryInterface {
     where: { id: userId }
   });
 }
+ async updateNickname(
+    userId: bigint,
+    nickname: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<User> {
+    const db = tx ?? this.prisma;
+    return await db.user.update({
+      where: { id: userId },
+      data: { nickname },
+    });
+  }
+
+  async findUserByNickname(
+    nickname: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<User | null> {
+    const db = tx ?? this.prisma;
+    return await db.user.findFirst({ where: { nickname } });
+  }
+
+   async updateGoal(
+    userId: bigint,
+    goal: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<User> {
+    const db = tx ?? this.prisma;
+    return await db.user.update({
+      where: { id: userId },
+      data: { goal },
+    });
+  }
 }
