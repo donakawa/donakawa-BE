@@ -9,16 +9,18 @@ export class GoalsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async findByUserId(
-    userId: bigint,
+    userId: string,
     tx?: Prisma.TransactionClient,
   ): Promise<TargetBudget | null> {
     const db = tx ?? this.prisma;
-    return db.targetBudget.findFirst({ where: { userId } });
+    return db.targetBudget.findFirst({
+      where: { userId: BigInt(userId) },
+    });
   }
 
   // 목표 예산 등록
   async createTargetBudget(
-    userId: bigint,
+    userId: string,
     data: CreateTargetBudgetInput,
     tx?: Prisma.TransactionClient,
   ): Promise<TargetBudget> {
@@ -26,7 +28,7 @@ export class GoalsRepository {
 
     return db.targetBudget.create({
       data: {
-        userId,
+        userId: BigInt(userId),
         monthlyIncome: data.monthlyIncome,
         incomeDate: data.incomeDate,
         fixedExpense: data.fixedExpense ?? null,
@@ -38,9 +40,9 @@ export class GoalsRepository {
   }
 
   // 목표 예산 조회
-  async findBudgetByUserId(userId: bigint) {
+  async findBudgetByUserId(userId: string) {
     return this.prisma.targetBudget.findFirst({
-      where: { userId },
+      where: { userId: BigInt(userId) },
     });
   }
 

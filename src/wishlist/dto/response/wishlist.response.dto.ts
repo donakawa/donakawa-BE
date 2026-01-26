@@ -3,8 +3,12 @@ import {
   AddedItemManual,
   Product,
   StorePlatform,
+  WishItemFolder,
 } from "@prisma/client";
-import { WishItemPreviewPayload } from "../../payload/wishlist.payload";
+import {
+  WishItemFolderPayload,
+  WishItemPreviewPayload,
+} from "../../payload/wishlist.payload";
 import { WishlistRecordInterface } from "../../interface/wishlist.interface";
 
 export class AddCrawlTaskResponseDto {
@@ -124,5 +128,24 @@ export class ShowWishitemListResponseDto {
       },
       [],
     );
+  }
+}
+export class ShowWishitemFoldersResponseDto {
+  folders!: WishItemFolderPayload[];
+  nextCursor!: string | null;
+  constructor(param: { folders: WishItemFolder[]; nextCursor: string | null }) {
+    this.folders = param.folders.map<WishItemFolderPayload>((folder) => ({
+      id: folder.id.toString(),
+      name: folder.name,
+    }));
+    this.nextCursor = param.nextCursor;
+  }
+}
+export class CreateWishitemFolderResponseDto {
+  folderId!: string;
+  createdAt!: string;
+  constructor(id: string) {
+    this.folderId = id;
+    this.createdAt = new Date().toISOString();
   }
 }
