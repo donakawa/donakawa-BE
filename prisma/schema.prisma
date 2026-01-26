@@ -40,9 +40,12 @@ enum OauthProvider {
 model Oauth {
   id       BigInt        @id @default(autoincrement())
   userId   BigInt        @map("user_id")
-  user     User          @relation(fields: [userId], references: [id])
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   uid      String        @db.VarChar(200)
   provider OauthProvider
+
+  @@unique([provider, uid])   
+  @@unique([userId, provider]) 
 
   @@map("oauth")
 }
@@ -82,8 +85,8 @@ enum AddedItemStatus {
 
 model AddedItemAuto {
   id             BigInt          @id @default(autoincrement())
-  folderId       BigInt          @map("folder_id")
-  wishItemFolder WishItemFolder  @relation(fields: [folderId], references: [id])
+  folderId       BigInt?         @map("folder_id")
+  wishItemFolder WishItemFolder? @relation(fields: [folderId], references: [id])
   productId      BigInt          @map("product_id")
   product        Product         @relation(fields: [productId], references: [id])
   userId         BigInt          @map("user_id")
@@ -104,6 +107,7 @@ model StorePlatform {
   id        BigInt @id @default(autoincrement())
   name      String @unique @db.VarChar(50)
   urlDomain String @unique @map("url_domain") @db.VarChar(100)
+  productUrlTemplate String @db.VarChar(100) @map("product_url_template")
 
   product Product[]
 
@@ -116,11 +120,13 @@ model Product {
   storePlatform   StorePlatform @relation(fields: [storePlatformId], references: [id])
   name            String        @db.VarChar(300)
   price           Int
-  productId       String        @unique @db.VarChar(500) @map("product_id")
+  files           Files?        @relation(fields: [photoFileId], references: [id])
+  photoFileId     BigInt?       @map("photo_file_id") @unique
+  productId       String        @db.VarChar(500) @map("product_id")
   updatedAt       DateTime?     @default(now()) @updatedAt @db.Timestamp()
 
   addedItemAuto AddedItemAuto[]
-
+  @@unique([productId, storePlatformId])
   @@map("product")
 }
 
@@ -145,12 +151,16 @@ model PurchasedHistory {
 
 model AddedItemManual {
   id             BigInt          @id @default(autoincrement())
-  folderId       BigInt          @map("folder_id")
-  wishItemFolder WishItemFolder  @relation(fields: [folderId], references: [id])
+  folderId       BigInt?         @map("folder_id")
+  wishItemFolder WishItemFolder? @relation(fields: [folderId], references: [id])
   userId         BigInt          @map("user_id")
   user           User            @relation(fields: [userId], references: [id])
   name           String          @db.VarChar(50)
   price          Int
+  files          Files?          @relation(fields: [photoFileId], references: [id])
+  photoFileId    BigInt?         @map("photo_file_id") @unique
+  storePlatform  String          @db.VarChar(50)
+  url            String          @db.VarChar(300)
   brand          String          @db.VarChar(50)
   reason         String          @db.VarChar(50)
   status         AddedItemStatus @default(WISHLISTED)
@@ -237,4 +247,17 @@ model AiChatResult {
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamp()
 
   @@map("ai_chat_result")
+enum FileType {
+  AUTO_ADDED_PRODUCT_PHOTO
+  MANUAL_ADDED_PRODUCT_PHOTO
+}
+model Files {
+  id            BigInt        @id @default(autoincrement())
+  type          FileType
+  name          String        @db.VarChar(300) @unique
+  createdAt     DateTime      @db.Timestamp() @default(now()) @map("created_at")
+
+  product Product?
+  addedItemManual AddedItemManual?
+  @@map("files")
 }

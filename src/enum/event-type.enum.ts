@@ -1,0 +1,3 @@
+export enum EventType {
+  CRAWL_STATUS_UPDATED = "CRAWL_STATUS_UPDATED",
+}

@@ -5,10 +5,18 @@
   "spec": {
     "outputDirectory": "dist",
     "specVersion": 3,
-    "basePath": "/"
+    "basePath": "/",
+    "securityDefinitions": {
+    "jwt": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT"
+    }
+  }
   },
   "routes": {
     "routesDir": "src/tsoa",
-    "middleware": "express"
+    "middleware": "express",
+    "authenticationModule": "./src/auth/middleware/auth.middleware.ts"
   }
 }

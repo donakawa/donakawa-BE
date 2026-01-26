@@ -30,3 +30,23 @@ export class ConflictException extends AppError {
     });
   }
 }
+export class ServiceUnavailableException extends AppError {
+  constructor(errorCode: string, message: string, data?: any) {
+    super({
+      errorCode,
+      statusCode: 503,
+      message,
+      data,
+    });
+  }
+}
+export class BadRequestException extends AppError {
+  constructor(errorCode: string, message: string, data?: any) {
+    super({
+      errorCode,
+      statusCode: 400,
+      message,
+      data,
+    });
+  }
+}
