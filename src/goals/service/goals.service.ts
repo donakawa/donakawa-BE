@@ -110,7 +110,7 @@ export class GoalsService {
     }
 
     let nextIncomeDate = isExist.incomeDate;
-    let incomeDay = isExist.incomeDay ?? 1;
+    let incomeDay = isExist.incomeDay;
 
     if (body.incomeDate !== undefined) {
       this.validateIncomeDate(body.incomeDate);

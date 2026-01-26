@@ -38,9 +38,11 @@ export class GoalsController {
   @SuccessResponse("200", "소비, 남은 예산 값 조회 성공")
   public async getBudgetSpend(
     @Request() req: ExpressRequest,
-  ): Promise<BudgetSpendResponseDto> {
+  ): Promise<ApiResponse<BudgetSpendResponseDto>> {
     const userId = req.user!.id;
-    return this.goalsService.getBudgetSpend(userId);
+    const data = await this.goalsService.getBudgetSpend(userId);
+
+    return success(data);
   }
 
   /**
