@@ -103,4 +103,21 @@ export class AuthRepository implements AuthRepositoryInterface {
       },
     });
   }
+  async deleteUser(
+  userId: bigint,
+  tx?: Prisma.TransactionClient
+): Promise<void> {
+  const db = tx ?? this.prisma;
+  
+  // OAuth 정보도 함께 삭제
+  // 확장성을 위해 deleteMany 사용
+  await db.oauth.deleteMany({
+    where: { userId }
+  });
+  
+  // 사용자 삭제
+  await db.user.delete({
+    where: { id: userId }
+  });
+}
 }

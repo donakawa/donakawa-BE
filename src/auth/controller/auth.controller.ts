@@ -9,6 +9,7 @@ import {
   Security,
   Get,
   Query,
+  Delete
 } from "tsoa";
 import { ApiResponse, success } from "../../common/response";
 import {
@@ -22,6 +23,7 @@ import {
   SendEmailCodeRequestDto,
   LoginRequestDto,
   PasswordResetConfirmDto,
+  DeleteAccountRequestDto,
 } from "../dto/request/auth.request.dto";
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
@@ -157,5 +159,25 @@ export class AuthController {
     } finally {
       JwtCookieUtil.clearJwtCookies(req.res!);
     }
+  }
+  @Delete("/account")
+  @Security("jwt")
+  @SuccessResponse("200", "회원탈퇴 성공")
+  public async deleteAccount(
+    @Body() body: DeleteAccountRequestDto,
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<null>> {
+    const user = req.user!;
+    
+    await this.authService.deleteAccount(
+      BigInt(user.id),
+      user.sid,
+      body.password
+    );
+    
+    // 쿠키 삭제
+    JwtCookieUtil.clearJwtCookies(req.res!);
+    
+    return success(null);
   }
 }

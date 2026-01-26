@@ -15,4 +15,5 @@ export interface AuthRepositoryInterface {
     hashedPassword: string,
     tx?: Prisma.TransactionClient
   ): Promise<void>;
+  deleteUser(userId: bigint, tx?: Prisma.TransactionClient): Promise<void>;
 }

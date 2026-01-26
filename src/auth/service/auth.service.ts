@@ -1,6 +1,3 @@
-import { Request } from "express";
-import { ParamsDictionary } from "express-serve-static-core";
-import { ParsedQs } from "qs";
 import { OauthProvider } from '@prisma/client';
 import { GoogleOAuthService } from './google-oauth.service';
 import {
@@ -18,6 +15,7 @@ import {
 } from "../dto/response/auth.response.dto";
 import { AuthRepository } from "../repository/auth.repository";
 import { compareHash, hashingString } from "../util/encrypt.util";
+import { PasswordUtil } from "../util/password.util";
 import jwt from "jsonwebtoken";
 import { v4 as uuid } from "uuid";
 import nodemailer from "nodemailer";
@@ -31,12 +29,11 @@ import { randomBytes } from "node:crypto";
 
 export class AuthService {
   private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
+  
   constructor(
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
   ) { }
-
-
 
   // JWT 토큰 생성
   private createJwtTokens(user: User): {
@@ -54,7 +51,7 @@ export class AuthService {
     const accessToken = jwt.sign(
       payload,
       process.env.ACCESS_TOKEN_SECRET_KEY!,
-      { expiresIn: "1h" }
+      { expiresIn: "15m" }
     );
 
     const refreshToken = jwt.sign(
@@ -72,8 +69,8 @@ export class AuthService {
     sid: string,
     refreshToken: string
   ): Promise<void> {
-    // 기존 세션 정리
-    await this.clearExistingSession(userId);
+    // 기존 세션 정리 (한 번에 하나의 세션만 유지)
+    await this.clearUserSession(userId);
 
     // 새 세션 저장
     const hashedRefreshToken = await hashingString(refreshToken);
@@ -85,11 +82,12 @@ export class AuthService {
       .exec();
   }
 
-  // 기존 세션 정리
-  private async clearExistingSession(userId: bigint): Promise<void> {
-    const alreadyExistSid = await redis.get(`user:${userId}:sid`);
-    if (alreadyExistSid) {
-      await redis.del(`user:refreshToken:${alreadyExistSid}`);
+  // 사용자의 모든 세션 정리 (userId만으로 삭제)
+  private async clearUserSession(userId: bigint): Promise<void> {
+    const sid = await redis.get(`user:${userId}:sid`);
+    if (sid) {
+      await redis.del(`user:refreshToken:${sid}`);
+      await redis.del(`user:${userId}:sid`);
     }
   }
 
@@ -111,14 +109,14 @@ export class AuthService {
       throw new NotFoundException("U001", "존재하지 않는 계정 입니다.");
     }
 
-    if (!user.password || user.password === '') {
+    if (PasswordUtil.isSocialUser(user.password)) {
       throw new UnauthorizedException(
         "U002",
         "비밀번호로 로그인할 수 없는 계정입니다. 소셜 로그인을 이용하거나 비밀번호를 설정해주세요."
       );
     }
 
-    if (!(await compareHash(body.password, user.password))) {
+    if (!(await compareHash(body.password, user.password!))) {
       throw new UnauthorizedException("U002", "잘못된 패스워드 입니다.");
     }
 
@@ -153,7 +151,7 @@ export class AuthService {
         // 신규 사용자 생성
         const command = new CreateUserCommand({
           email: googleUserInfo.email,
-          password: '', // 소셜 로그인은 비밀번호 없음
+          password: null, // 소셜 로그인은 비밀번호 없음
           nickname: googleUserInfo.nickname,
         });
 
@@ -184,7 +182,7 @@ export class AuthService {
     return this.googleOAuthService.getAuthUrl(state);
   }
 
-  // State 검증 메서드 추가
+  // State 검증
   private async verifyOAuthState(state: string): Promise<void> {
     const stateKey = `oauth:state:${state}`;
     const isValid = await redis.get(stateKey);
@@ -226,7 +224,7 @@ export class AuthService {
       const accessToken = jwt.sign(
         payload,
         process.env.ACCESS_TOKEN_SECRET_KEY!,
-        { expiresIn: "1h" }
+        { expiresIn: "15m" }
       );
 
       return { accessToken };
@@ -427,7 +425,7 @@ export class AuthService {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
 
-    if (!user.password) {
+    if (PasswordUtil.isSocialUser(user.password)) {
       throw new UnauthorizedException(
         "U007",
         "소셜 로그인 계정은 비밀번호 재설정이 불가능합니다."
@@ -441,6 +439,8 @@ export class AuthService {
     const hashedPassword = await hashingString(newPassword);
     await this.authRepository.updatePassword(user.id, hashedPassword);
 
+    // 비밀번호 변경 시 기존 세션 로그아웃
+    await this.clearUserSession(user.id);
   }
 
   // 비밀번호 정책 검증
@@ -458,5 +458,34 @@ export class AuthService {
         "비밀번호는 영문과 숫자를 포함해야 합니다."
       );
     }
+  }
+
+  // 회원탈퇴
+  async deleteAccount(userId: bigint, sid: string, password?: string): Promise<void> {
+    const user = await this.authRepository.findUserById(userId);
+    
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+
+    // 일반 로그인 사용자는 비밀번호 확인
+    if (PasswordUtil.hasPassword(user.password)) {
+      if (!password) {
+        throw new UnauthorizedException(
+          "U008",
+          "비밀번호 확인이 필요합니다."
+        );
+      }
+      
+      if (!(await compareHash(password, user.password!))) {
+        throw new UnauthorizedException("U002", "잘못된 패스워드입니다.");
+      }
+    }
+
+    // 세션 정리
+    await this.clearUserSession(userId);
+
+    // 사용자 삭제
+    await this.authRepository.deleteUser(userId);
   }
 }
