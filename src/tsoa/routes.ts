@@ -231,20 +231,9 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ApiResponse_void_": {
-        "dataType": "refObject",
-        "properties": {
-            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
-            "error": {"dataType":"enum","enums":[null],"required":true},
-            "data": {"dataType":"void","required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ChangeWishitemFolderLocationRequestDto": {
         "dataType": "refObject",
         "properties": {
-            "itemId": {"dataType":"string","required":true},
             "type": {"dataType":"string","required":true},
             "folderId": {"dataType":"string"},
         },
@@ -764,10 +753,11 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsWishlistController_changeWishitemFolderLocation: Record<string, TsoaRoute.ParameterSchema> = {
+                itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
                 body: {"in":"body","name":"body","required":true,"ref":"ChangeWishitemFolderLocationRequestDto"},
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
-        app.patch('/wishlist/folders/:folderId',
+        app.patch('/wishlist/items/:itemId/folder',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.changeWishitemFolderLocation)),

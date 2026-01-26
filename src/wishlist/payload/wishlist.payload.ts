@@ -72,6 +72,6 @@ export class WishItemFolderPayload {
   name!: string;
   constructor(param: { id: string; name: string }) {
     this.id = param.id;
-    this.name = param.id;
+    this.name = param.name;
   }
 }

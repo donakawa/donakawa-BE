@@ -107,7 +107,7 @@ export class ShowWishitemListRequestDto {
   }
 }
 export class ShowWishitemFoldersRequestDto {
-  @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
+  @Matches(/^\d+$/, { message: "cursor must be a valid integer string" })
   @IsOptional()
   cursor!: string | undefined;
 
@@ -160,10 +160,6 @@ export class DeleteWishitemFolderRequestDto {
   }
 }
 export class ChangeWishitemFolderLocationRequestDto {
-  @Matches(/^\d+$/, { message: "itemId must be a valid integer string" })
-  @IsNotEmpty()
-  itemId!: string;
-
   @IsString()
   @IsNotEmpty()
   type!: string;

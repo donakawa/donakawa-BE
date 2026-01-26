@@ -247,20 +247,21 @@ export class WishlistController extends Controller {
   ) {
     const userId = req.user!.id;
     const dto = new DeleteWishitemFolderRequestDto({ folderId, userId });
-    return success(await this.wishlistService.removeWishitemFolder(dto));
+    await this.wishlistService.removeWishitemFolder(dto);
   }
   /**
    * @summary 위시 아이템 폴더 위치 변경
    * @description 위시 아이템의 폴더 위치를 지정한 폴더로 변경 합니다.
    */
-  @Patch("/folders/:folderId")
+  @Patch("/items/:itemId/folder")
   @Security("jwt")
   @SuccessResponse(204, "Updated")
   public async changeWishitemFolderLocation(
+    @Path("itemId") itemId: string,
     @Body() body: ChangeWishitemFolderLocationRequestDto,
     @Request() req: ExpressRequest,
   ) {
     const userId = req.user!.id;
-    return success(await this.wishlistService.setWishitemFolder(body, userId));
+    await this.wishlistService.setWishitemFolder(body, itemId, userId);
   }
 }

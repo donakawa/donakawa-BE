@@ -445,13 +445,12 @@ export class WishlistService {
     return new CreateWishitemFolderResponseDto(folder.id.toString());
   }
   async removeWishitemFolder(data: DeleteWishitemFolderRequestDto) {
-    const isExist =
-      (
-        await this.wishlistRepository.findWishitemFolders({
-          where: { id: BigInt(data.folderId) },
-        })
-      ).length !== 0;
-    if (!isExist)
+    const folder = await this.wishlistRepository.findWishitemFolders({
+      where: { id: BigInt(data.folderId) },
+    });
+    const isExist = folder.length !== 0;
+    const hasPermission = folder[0]?.userId === BigInt(data.userId);
+    if (!isExist || !hasPermission)
       throw new NotFoundException(
         "FOLDER_NOT_FOUND",
         "폴더를 찾을 수 없습니다.",
@@ -483,8 +482,14 @@ export class WishlistService {
   }
   async setWishitemFolder(
     data: ChangeWishitemFolderLocationRequestDto,
+    itemId: string,
     userId: string,
   ) {
+    if (!/^\d+$/.exec(itemId))
+      throw new BadRequestException(
+        "INVALID_ITEM_ID",
+        "유효하지 않은 아이템 ID 입니다.",
+      );
     if (!isWishitemType(data.type))
       throw new BadRequestException(
         "INVALID_TYPE",
@@ -492,8 +497,8 @@ export class WishlistService {
       );
     const item =
       data.type === "AUTO"
-        ? await this.wishlistRepository.findAddedItemAutoById(data.itemId)
-        : await this.wishlistRepository.findAddedItemManualById(data.itemId);
+        ? await this.wishlistRepository.findAddedItemAutoById(itemId)
+        : await this.wishlistRepository.findAddedItemManualById(itemId);
     const isExistItem = item !== null;
     const hasPermissionItem = item?.userId === BigInt(userId);
     if (!isExistItem || !hasPermissionItem)
@@ -506,7 +511,7 @@ export class WishlistService {
         where: { id: BigInt(data.folderId) },
       });
       const isExistFolder = folder.length !== 0;
-      const hasPermissionFolder = folder[0].userId === BigInt(userId);
+      const hasPermissionFolder = folder[0]?.userId === BigInt(userId);
       if (!isExistFolder || !hasPermissionFolder)
         throw new NotFoundException(
           "WISHITEM_FOLDER_NOT_FOUND",
@@ -515,13 +520,13 @@ export class WishlistService {
     }
     data.type === "AUTO"
       ? await this.wishlistRepository.updateAddedItemAuto({
-          where: { id: BigInt(data.itemId) },
+          where: { id: BigInt(itemId) },
           data: {
             folderId: data.folderId ? BigInt(data.folderId) : null,
           },
         })
       : await this.wishlistRepository.updateAddedItemManual({
-          where: { id: BigInt(data.itemId) },
+          where: { id: BigInt(itemId) },
           data: { folderId: data.folderId ? BigInt(data.folderId) : null },
         });
   }
