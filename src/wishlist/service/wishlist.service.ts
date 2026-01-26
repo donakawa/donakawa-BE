@@ -418,6 +418,9 @@ export class WishlistService {
         },
       },
       take: data.take + 1,
+      orderBy: {
+        id: "asc",
+      },
     });
     const nextCursor =
       folders.length > data.take
