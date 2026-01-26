@@ -9,14 +9,20 @@ import {
   AddCrawlTaskRequestDto,
   AddWishListFromCacheRequestDto,
   AddWishListRequestDto,
+  ChangeWishitemFolderLocationRequestDto,
+  CreateWishitemFolderRequestDto,
+  DeleteWishitemFolderRequestDto,
+  ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
 } from "../dto/request/wishlist.request.dto";
 import {
   AddCrawlTaskResponseDto,
   AddWishListFromCacheResponseDto,
   AddWishlistResponseDto,
+  CreateWishitemFolderResponseDto,
   GetCrawlResultResponseDto,
   ShowWishitemDetailResponseDto,
+  ShowWishitemFoldersResponseDto,
   ShowWishitemListResponseDto,
 } from "../dto/response/wishlist.response.dto";
 import { CrawlQueueClient } from "../infra/crawl-queue.client";
@@ -29,7 +35,12 @@ import { CrawlStatusUpdatedPayload } from "../../interface/event-payload.interfa
 import { AddWishListFromCacheCommand } from "../command/add-wishlist-from-cache.command";
 import { AddWishListCommand } from "../command/add-wishlist.command";
 import { FilesService } from "../../files/service/files.service";
-import { AddedItemManual, FileType } from "@prisma/client";
+import {
+  AddedItemManual,
+  FileType,
+  Prisma,
+  PrismaClient,
+} from "@prisma/client";
 import { FileTypeEnum } from "../../files/enum/file-type.enum";
 import { FilePayload } from "../../files/payload/file.payload";
 import path from "path";
@@ -41,8 +52,10 @@ import {
 } from "../types/wishitem.types";
 import { WishItemPayload } from "../payload/wishlist.payload";
 import { WishlistRecordInterface } from "../interface/wishlist.interface";
+import { DbRepository } from "../../infra/db.repository";
 export class WishlistService {
   constructor(
+    private readonly dbRepository: DbRepository,
     private readonly wishlistRepository: WishlistRepository,
     private readonly crawlQueueClient: CrawlQueueClient,
     private readonly valkeyClientPromise: Promise<ValkeyClient>,
@@ -395,5 +408,129 @@ export class WishlistService {
     const photoUrls: Record<string, string | null> =
       Object.fromEntries(entries);
     return new ShowWishitemListResponseDto(rows, nextCursor, photoUrls);
+  }
+  async getWishitemFolders(data: ShowWishitemFoldersRequestDto) {
+    const folders = await this.wishlistRepository.findWishitemFolders({
+      where: {
+        userId: BigInt(data.userId),
+        id: {
+          gt: data.cursor ? BigInt(data.cursor) : 0,
+        },
+      },
+      take: data.take + 1,
+      orderBy: {
+        id: "asc",
+      },
+    });
+    const nextCursor =
+      folders.length > data.take
+        ? folders[folders.length - 2].id.toString()
+        : null;
+    if (folders.length > data.take) folders.pop();
+    return new ShowWishitemFoldersResponseDto({ folders, nextCursor });
+  }
+  async addWishitemFolders(data: CreateWishitemFolderRequestDto) {
+    const isDuplicateName =
+      (
+        await this.wishlistRepository.findWishitemFolders({
+          where: { userId: BigInt(data.userId), name: data.name },
+        })
+      ).length !== 0;
+    if (isDuplicateName)
+      throw new ConflictException(
+        "DUPLICATE_FOLDER_NAME",
+        "중복되는 폴더 이름은 사용할 수 없습니다.",
+      );
+    const folder = await this.wishlistRepository.saveWishitemFolder(
+      data.userId,
+      data.name,
+    );
+    return new CreateWishitemFolderResponseDto(folder.id.toString());
+  }
+  async removeWishitemFolder(data: DeleteWishitemFolderRequestDto) {
+    const folder = await this.wishlistRepository.findWishitemFolders({
+      where: { id: BigInt(data.folderId) },
+    });
+    const isExist = folder.length !== 0;
+    const hasPermission = folder[0]?.userId === BigInt(data.userId);
+    if (!isExist || !hasPermission)
+      throw new NotFoundException(
+        "FOLDER_NOT_FOUND",
+        "폴더를 찾을 수 없습니다.",
+      );
+    await this.dbRepository.transaction(async (tx) => {
+      await this.wishlistRepository.updateAddedItemAuto(
+        {
+          where: { folderId: BigInt(data.folderId) },
+          data: {
+            folderId: null,
+          },
+        },
+        tx,
+      );
+      await this.wishlistRepository.updateAddedItemManual(
+        {
+          where: { folderId: BigInt(data.folderId) },
+          data: {
+            folderId: null,
+          },
+        },
+        tx,
+      );
+      return await this.wishlistRepository.deleteWishitemFolder(
+        data.folderId,
+        tx,
+      );
+    });
+  }
+  async setWishitemFolder(
+    data: ChangeWishitemFolderLocationRequestDto,
+    itemId: string,
+    userId: string,
+  ) {
+    if (!/^\d+$/.exec(itemId))
+      throw new BadRequestException(
+        "INVALID_ITEM_ID",
+        "유효하지 않은 아이템 ID 입니다.",
+      );
+    if (!isWishitemType(data.type))
+      throw new BadRequestException(
+        "INVALID_TYPE",
+        "유효하지 않은 아이템 타입 입니다.",
+      );
+    const item =
+      data.type === "AUTO"
+        ? await this.wishlistRepository.findAddedItemAutoById(itemId)
+        : await this.wishlistRepository.findAddedItemManualById(itemId);
+    const isExistItem = item !== null;
+    const hasPermissionItem = item?.userId === BigInt(userId);
+    if (!isExistItem || !hasPermissionItem)
+      throw new NotFoundException(
+        "WISHITEM_NOT_FOUND",
+        "대상 위시 아이템을 찾을 수 없습니다.",
+      );
+    if (data.folderId) {
+      const folder = await this.wishlistRepository.findWishitemFolders({
+        where: { id: BigInt(data.folderId) },
+      });
+      const isExistFolder = folder.length !== 0;
+      const hasPermissionFolder = folder[0]?.userId === BigInt(userId);
+      if (!isExistFolder || !hasPermissionFolder)
+        throw new NotFoundException(
+          "WISHITEM_FOLDER_NOT_FOUND",
+          "대상 위시 아이템 폴더를 찾을 수 없습니다.",
+        );
+    }
+    data.type === "AUTO"
+      ? await this.wishlistRepository.updateAddedItemAuto({
+          where: { id: BigInt(itemId) },
+          data: {
+            folderId: data.folderId ? BigInt(data.folderId) : null,
+          },
+        })
+      : await this.wishlistRepository.updateAddedItemManual({
+          where: { id: BigInt(itemId) },
+          data: { folderId: data.folderId ? BigInt(data.folderId) : null },
+        });
   }
 }
