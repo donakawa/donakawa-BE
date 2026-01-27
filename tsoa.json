@@ -18,10 +18,5 @@
     "routesDir": "src/tsoa",
     "middleware": "express",
     "authenticationModule": "./src/auth/middleware/auth.middleware.ts"
-  },
-  "validation": true,
-  "validationOptions": {
-    "forbidNonWhitelisted": true,
-    "whitelist": true
   }
 }
