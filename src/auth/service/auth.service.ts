@@ -464,7 +464,7 @@ export class AuthService {
 
   // 비밀번호 정책 검증
   private validatePassword(password: string): void {
-    if (password.length < 8 && password.length > 12) {
+    if (password.length < 8 || password.length > 12) {
       throw new UnauthorizedException(
         "A008",
         "비밀번호는 8자 이상, 12자 이하이어야 합니다."

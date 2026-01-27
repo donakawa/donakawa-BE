@@ -278,6 +278,7 @@ export class AuthController {
   */
   @Get("/me")
   @SuccessResponse("200", "내 정보 조회 완료")
+  @Security("jwt")
   public async getMyProfile(
     @Request() req: ExpressRequest
   ): Promise<ApiResponse<UserProfileResponseDto>> {
