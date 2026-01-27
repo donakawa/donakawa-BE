@@ -15,6 +15,7 @@ import {
   RegisterResponseDto,
   UpdateGoalResponseDto,
   UpdateNicknameResponseDto,
+  UserProfileResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthRepository } from "../repository/auth.repository";
 import { compareHash, hashingString } from "../util/encrypt.util";
@@ -562,12 +563,21 @@ export class AuthService {
       await this.authRepository.deleteUser(userId, tx);
     });
 
-  // 세션 정리 (실패해도 자동 만료됨)
-  try {
-    await this.clearUserSession(userId);
-  } catch (error) {
-    // 세션 삭제 실패는 로그만 남김 (TTL로 자동 만료되므로 치명적이지 않음)
-    console.error('Failed to clear user session:', error);
+    // 세션 정리 (실패해도 자동 만료됨)
+    try {
+      await this.clearUserSession(userId);
+    } catch (error) {
+      // 세션 삭제 실패는 로그만 남김 (TTL로 자동 만료되므로 치명적이지 않음)
+      console.error('Failed to clear user session:', error);
+    }
   }
+    async getMyProfile(userId: bigint): Promise<UserProfileResponseDto> {
+      const user = await this.authRepository.findUserById(userId);
+      
+      if (!user) {
+        throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+      }
+      
+      return new UserProfileResponseDto(user);
+    }
   }
-}
