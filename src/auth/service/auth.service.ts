@@ -277,8 +277,8 @@ export class AuthService {
       throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
     }
     // 닉네임 길이 확인
-    if (body.nickname.length < 2 || body.nickname.length > 20) {
-      throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
+    if (body.nickname.length > 10) {
+      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
     }
     if(body.goal.length > 10){
       throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
@@ -464,10 +464,10 @@ export class AuthService {
 
   // 비밀번호 정책 검증
   private validatePassword(password: string): void {
-    if (password.length < 8) {
+    if (password.length < 8 && password.length > 12) {
       throw new UnauthorizedException(
         "A008",
-        "비밀번호는 8자 이상이어야 합니다."
+        "비밀번호는 8자 이상, 12자 이하이어야 합니다."
       );
     }
 
@@ -492,8 +492,8 @@ export class AuthService {
       throw new ConflictException("U008", "현재 닉네임과 동일합니다.");
     }
     // 닉네임 길이 확인
-    if (newNickname.length < 2 || newNickname.length > 20) {
-      throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
+    if (newNickname.length > 10) {
+      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
     }
     const isNicknameAvailable = await this.checkNicknameDuplicate(newNickname);
     if (!isNicknameAvailable) {
