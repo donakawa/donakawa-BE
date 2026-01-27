@@ -21,3 +21,13 @@ export class GoalsResponseDto {
     this.shoppingBudget = entity.shoppingBudget!;
   }
 }
+
+export class BudgetSpendResponseDto {
+  totalSpend!: number;
+  remainingBudget!: number;
+
+  constructor(data: { totalSpend: number; remainingBudget: number }) {
+    this.totalSpend = data.totalSpend;
+    this.remainingBudget = data.remainingBudget;
+  }
+}
