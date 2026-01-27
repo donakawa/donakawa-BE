@@ -32,7 +32,7 @@ import {
 } from "../dto/request/auth.request.dto";
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
-import { UnauthorizedException } from "../../errors/error";
+import { BadRequestException, UnauthorizedException } from "../../errors/error";
 
 @Route("/auth")
 @Tags("Auth")
@@ -228,4 +228,23 @@ export class AuthController {
     
     return success(result);
   }
+
+@Get("/nickname/duplicate")
+@SuccessResponse("200", "닉네임 중복 확인 완료")
+public async checkNicknameDuplicate(
+  @Query() nickname: string,
+  @Request() req: ExpressRequest  // 인증 선택적
+): Promise<ApiResponse<{ isAvailable: boolean }>> {
+  if (!nickname) {
+    throw new BadRequestException("V001", "닉네임을 입력해주세요.");
+  }
+  const excludeUserId = req.user ? BigInt(req.user!.id) : undefined;
+  
+  const isAvailable = await this.authService.checkNicknameDuplicate(
+    nickname, 
+    excludeUserId
+  );
+  
+  return success({ isAvailable });
+}
 }
