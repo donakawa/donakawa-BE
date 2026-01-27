@@ -89,7 +89,7 @@ export class AuthController {
   @SuccessResponse("200", "토큰 갱신 성공")
   public async refresh(
     @Request() req: ExpressRequest,
-  ): Promise<ApiResponse<{ accessToken: string }>> {
+  ): Promise<ApiResponse<null>> {
     // 쿠키에서 refresh token 읽기
     const refreshToken = req.cookies?.refreshToken;
 
@@ -103,7 +103,7 @@ export class AuthController {
     // 새 access token을 쿠키에 저장
     JwtCookieUtil.setAccessTokenCookie(req.res!, accessToken);
 
-    return success({ accessToken });
+    return success(null);
   }
   @Post("/account-recovery/password")
   @SuccessResponse("200", "비밀번호 재설정 성공")
