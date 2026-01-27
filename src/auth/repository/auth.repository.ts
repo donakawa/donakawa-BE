@@ -31,6 +31,7 @@ export class AuthRepository implements AuthRepositoryInterface {
         email: command.email,
         password: command.password,
         nickname: command.nickname,
+        goal: command.goal
       },
     });
   }
@@ -101,6 +102,54 @@ export class AuthRepository implements AuthRepositoryInterface {
           provider,
         },
       },
+    });
+  }
+  async deleteUser(
+  userId: bigint,
+  tx?: Prisma.TransactionClient
+): Promise<void> {
+  const db = tx ?? this.prisma;
+  
+  // OAuth 정보도 함께 삭제
+  // 확장성을 위해 deleteMany 사용
+  await db.oauth.deleteMany({
+    where: { userId }
+  });
+  
+  // 사용자 삭제
+  await db.user.delete({
+    where: { id: userId }
+  });
+}
+ async updateNickname(
+    userId: bigint,
+    nickname: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<User> {
+    const db = tx ?? this.prisma;
+    return await db.user.update({
+      where: { id: userId },
+      data: { nickname },
+    });
+  }
+
+  async findUserByNickname(
+    nickname: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<User | null> {
+    const db = tx ?? this.prisma;
+    return await db.user.findFirst({ where: { nickname } });
+  }
+
+   async updateGoal(
+    userId: bigint,
+    goal: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<User> {
+    const db = tx ?? this.prisma;
+    return await db.user.update({
+      where: { id: userId },
+      data: { goal },
     });
   }
 }

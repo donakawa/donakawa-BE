@@ -14,6 +14,9 @@ import {
   Security,
   Query,
   BodyProp,
+  Delete,
+  SuccessResponse,
+  Patch,
 } from "tsoa";
 import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
@@ -23,14 +26,20 @@ import {
   AddCrawlTaskRequestDto,
   AddWishListFromCacheRequestDto,
   AddWishListRequestDto,
+  ChangeWishitemFolderLocationRequestDto,
+  CreateWishitemFolderRequestDto,
+  DeleteWishitemFolderRequestDto,
+  ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
 } from "../dto/request/wishlist.request.dto";
 import {
   AddCrawlTaskResponseDto,
   AddWishListFromCacheResponseDto,
   AddWishlistResponseDto,
+  CreateWishitemFolderResponseDto,
   GetCrawlResultResponseDto,
   ShowWishitemDetailResponseDto,
+  ShowWishitemFoldersResponseDto,
   ShowWishitemListResponseDto,
 } from "../dto/response/wishlist.response.dto";
 import { validateImageFile } from "../policy/upload.policy";
@@ -194,5 +203,65 @@ export class WishlistController extends Controller {
       take,
     });
     return success(await this.wishlistService.getWishlist(dto));
+  }
+  /**
+   * @summary 위시 리스트 폴더 리스트 가져오기
+   * @description 위시 리스트 폴더 목록을 가져옵니다.
+   */
+  @Get("/folders")
+  @Security("jwt")
+  public async showWishitemFolders(
+    @Request() req: ExpressRequest,
+    @Query("take") take: number,
+    @Query("cursor") cursor?: string,
+  ): Promise<ApiResponse<ShowWishitemFoldersResponseDto>> {
+    const userId = req.user!.id;
+    const dto = new ShowWishitemFoldersRequestDto({ cursor, take, userId });
+    return success(await this.wishlistService.getWishitemFolders(dto));
+  }
+  /**
+   * @summary 위시 리스트 폴더 생성 하기
+   * @description 새로운 위시 리스트 폴더를 생성 합니다.
+   */
+  @Post("/folders")
+  @Security("jwt")
+  @SuccessResponse(201, "Created")
+  public async createWishitemFolder(
+    @BodyProp("name") name: string,
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<CreateWishitemFolderResponseDto>> {
+    const userId = req.user!.id;
+    const dto = new CreateWishitemFolderRequestDto({ name, userId });
+    return success(await this.wishlistService.addWishitemFolders(dto));
+  }
+  /**
+   * @summary 위시 리스트 폴더 삭제 하기
+   * @description 기존 위시 리시트 폴더의 아이템을 해제하고, 폴더를 제거합니다.
+   */
+  @Delete("/folders/:folderId")
+  @Security("jwt")
+  @SuccessResponse(204, "Deleted")
+  public async deleteWishitemFolder(
+    @Path("folderId") folderId: string,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    const dto = new DeleteWishitemFolderRequestDto({ folderId, userId });
+    await this.wishlistService.removeWishitemFolder(dto);
+  }
+  /**
+   * @summary 위시 아이템 폴더 위치 변경
+   * @description 위시 아이템의 폴더 위치를 지정한 폴더로 변경 합니다.
+   */
+  @Patch("/items/:itemId/folder")
+  @Security("jwt")
+  @SuccessResponse(204, "Updated")
+  public async changeWishitemFolderLocation(
+    @Path("itemId") itemId: string,
+    @Body() body: ChangeWishitemFolderLocationRequestDto,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    await this.wishlistService.setWishitemFolder(body, itemId, userId);
   }
 }

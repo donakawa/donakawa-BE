@@ -15,4 +15,21 @@ export interface AuthRepositoryInterface {
     hashedPassword: string,
     tx?: Prisma.TransactionClient
   ): Promise<void>;
+  deleteUser(userId: bigint, tx?: Prisma.TransactionClient): Promise<void>;
+  updateNickname(
+    userId: bigint,
+    nickname: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<User>;
+  
+  findUserByNickname(
+    nickname: string,
+    tx?: Prisma.TransactionClient
+  ): Promise<User | null>;
+
+  updateGoal(
+  userId: bigint,
+  goal: string,
+  tx?: Prisma.TransactionClient
+  ): Promise<User>;
 }

@@ -1,9 +1,7 @@
-import { Request } from "express";
-import { ParamsDictionary } from "express-serve-static-core";
-import { ParsedQs } from "qs";
-import { OauthProvider } from '@prisma/client';
+import { OauthProvider, PrismaClient } from '@prisma/client';
 import { GoogleOAuthService } from './google-oauth.service';
 import {
+  BadRequestException,
   ConflictException,
   NotFoundException,
   UnauthorizedException,
@@ -15,9 +13,12 @@ import {
 } from "../dto/request/auth.request.dto";
 import {
   RegisterResponseDto,
+  UpdateGoalResponseDto,
+  UpdateNicknameResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthRepository } from "../repository/auth.repository";
 import { compareHash, hashingString } from "../util/encrypt.util";
+import { PasswordUtil } from "../util/password.util";
 import jwt from "jsonwebtoken";
 import { v4 as uuid } from "uuid";
 import nodemailer from "nodemailer";
@@ -30,13 +31,14 @@ import { randomBytes } from "node:crypto";
 
 
 export class AuthService {
+  
   private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
+  
   constructor(
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
+    private prisma: PrismaClient
   ) { }
-
-
 
   // JWT 토큰 생성
   private createJwtTokens(user: User): {
@@ -72,8 +74,8 @@ export class AuthService {
     sid: string,
     refreshToken: string
   ): Promise<void> {
-    // 기존 세션 정리
-    await this.clearExistingSession(userId);
+    // 기존 세션 정리 (한 번에 하나의 세션만 유지)
+    await this.clearUserSession(userId);
 
     // 새 세션 저장
     const hashedRefreshToken = await hashingString(refreshToken);
@@ -85,11 +87,12 @@ export class AuthService {
       .exec();
   }
 
-  // 기존 세션 정리
-  private async clearExistingSession(userId: bigint): Promise<void> {
-    const alreadyExistSid = await redis.get(`user:${userId}:sid`);
-    if (alreadyExistSid) {
-      await redis.del(`user:refreshToken:${alreadyExistSid}`);
+  // 사용자의 모든 세션 정리 (userId만으로 삭제)
+  private async clearUserSession(userId: bigint): Promise<void> {
+    const sid = await redis.get(`user:${userId}:sid`);
+    if (sid) {
+      await redis.del(`user:refreshToken:${sid}`);
+      await redis.del(`user:${userId}:sid`);
     }
   }
 
@@ -111,14 +114,14 @@ export class AuthService {
       throw new NotFoundException("U001", "존재하지 않는 계정 입니다.");
     }
 
-    if (!user.password || user.password === '') {
+    if (PasswordUtil.isSocialUser(user.password)) {
       throw new UnauthorizedException(
         "U002",
         "비밀번호로 로그인할 수 없는 계정입니다. 소셜 로그인을 이용하거나 비밀번호를 설정해주세요."
       );
     }
 
-    if (!(await compareHash(body.password, user.password))) {
+    if (!(await compareHash(body.password, user.password!))) {
       throw new UnauthorizedException("U002", "잘못된 패스워드 입니다.");
     }
 
@@ -153,8 +156,9 @@ export class AuthService {
         // 신규 사용자 생성
         const command = new CreateUserCommand({
           email: googleUserInfo.email,
-          password: '', // 소셜 로그인은 비밀번호 없음
+          password: null, // 소셜 로그인은 비밀번호 없음
           nickname: googleUserInfo.nickname,
+          goal: ""
         });
 
         user = await this.authRepository.saveUser(command);
@@ -184,7 +188,7 @@ export class AuthService {
     return this.googleOAuthService.getAuthUrl(state);
   }
 
-  // State 검증 메서드 추가
+  // State 검증
   private async verifyOAuthState(state: string): Promise<void> {
     const stateKey = `oauth:state:${state}`;
     const isValid = await redis.get(stateKey);
@@ -249,6 +253,13 @@ export class AuthService {
 
   // 회원가입
   async createUser(body: RegisterRequestDto): Promise<RegisterResponseDto> {
+    const isExist =
+      (await this.authRepository.findUserByEmail(body.email)) !== null;
+
+    if (isExist) {
+      throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
+    }
+
     const verified = await redis.get(`email:verified:REGISTER:${body.email}`);
 
     if (!verified) {
@@ -260,19 +271,24 @@ export class AuthService {
 
     await redis.del(`email:verified:REGISTER:${body.email}`);
 
+    const isNicknameAvailable = await this.checkNicknameDuplicate(body.nickname);
+    if (!isNicknameAvailable) {
+      throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
+    }
+    // 닉네임 길이 확인
+    if (body.nickname.length < 2 || body.nickname.length > 20) {
+      throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
+    }
+    if(body.goal.length > 10){
+      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
+    }
+    
     const command = new CreateUserCommand({
       email: body.email,
       password: await hashingString(body.password),
       nickname: body.nickname,
+      goal: body.goal
     });
-
-    const isExist =
-      (await this.authRepository.findUserByEmail(command.email)) !== null;
-
-    if (isExist) {
-      throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
-    }
-
     const user = await this.authRepository.saveUser(command);
     return new RegisterResponseDto(user);
   }
@@ -427,7 +443,7 @@ export class AuthService {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
 
-    if (!user.password) {
+    if (PasswordUtil.isSocialUser(user.password)) {
       throw new UnauthorizedException(
         "U007",
         "소셜 로그인 계정은 비밀번호 재설정이 불가능합니다."
@@ -441,6 +457,8 @@ export class AuthService {
     const hashedPassword = await hashingString(newPassword);
     await this.authRepository.updatePassword(user.id, hashedPassword);
 
+    // 비밀번호 변경 시 기존 세션 로그아웃
+    await this.clearUserSession(user.id);
   }
 
   // 비밀번호 정책 검증
@@ -458,5 +476,98 @@ export class AuthService {
         "비밀번호는 영문과 숫자를 포함해야 합니다."
       );
     }
+  }
+  // 닉네임 수정
+  async updateNickname(
+    userId: bigint,
+    newNickname: string
+  ): Promise<UpdateNicknameResponseDto> {
+    // 현재 사용자 조회
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+    if (user.nickname === newNickname) {
+      throw new ConflictException("U008", "현재 닉네임과 동일합니다.");
+    }
+    // 닉네임 길이 확인
+    if (newNickname.length < 2 || newNickname.length > 20) {
+      throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
+    }
+    const isNicknameAvailable = await this.checkNicknameDuplicate(newNickname);
+    if (!isNicknameAvailable) {
+      throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
+    }
+    // 닉네임 업데이트
+    const updatedUser = await this.authRepository.updateNickname(userId, newNickname);
+    
+    return new UpdateNicknameResponseDto(updatedUser);
+  }
+  // 닉네임 중복 확인
+  async checkNicknameDuplicate(
+    nickname: string,
+    excludeUserId?: bigint
+  ): Promise<boolean> {
+    const existingUser = await this.authRepository.findUserByNickname(nickname);
+  
+    if (existingUser && existingUser.id !== excludeUserId) {
+      return false;  // 중복
+    }
+    return true;  // 사용 가능
+  }
+  // 목표 수정
+  async updateGoal(
+    userId: bigint,
+    newGoal: string
+  ): Promise<UpdateGoalResponseDto> {
+    // 현재 사용자 조회
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+    // 현재 목표 동일한지 확인
+    if (user.goal === newGoal) {
+      throw new ConflictException("U008", "현재 목표와 동일합니다.");
+    }
+
+    // 목표 업데이트
+    const updatedUser = await this.authRepository.updateGoal(userId, newGoal);
+    
+    return new UpdateGoalResponseDto(updatedUser);
+  }
+  
+  // 회원탈퇴
+  async deleteAccount(userId: bigint, sid: string, password?: string): Promise<void> {
+    const user = await this.authRepository.findUserById(userId);
+    
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+
+    // 일반 로그인 사용자는 비밀번호 확인
+    if (PasswordUtil.hasPassword(user.password)) {
+      if (!password) {
+        throw new UnauthorizedException(
+          "U008",
+          "비밀번호 확인이 필요합니다."
+        );
+      }
+      
+      if (!(await compareHash(password, user.password!))) {
+        throw new UnauthorizedException("U002", "잘못된 패스워드입니다.");
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.authRepository.deleteUser(userId, tx);
+    });
+
+  // 세션 정리 (실패해도 자동 만료됨)
+  try {
+    await this.clearUserSession(userId);
+  } catch (error) {
+    // 세션 삭제 실패는 로그만 남김 (TTL로 자동 만료되므로 치명적이지 않음)
+    console.error('Failed to clear user session:', error);
+  }
   }
 }
