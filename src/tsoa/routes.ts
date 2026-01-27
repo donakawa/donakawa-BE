@@ -382,16 +382,6 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ApiResponse__accessToken-string__": {
-        "dataType": "refObject",
-        "properties": {
-            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
-            "error": {"dataType":"enum","enums":[null],"required":true},
-            "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"accessToken":{"dataType":"string","required":true}},"required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "PasswordResetConfirmDto": {
         "dataType": "refObject",
         "properties": {
@@ -461,6 +451,16 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "goal": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse__isAvailable-boolean__": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"isAvailable":{"dataType":"boolean","required":true}},"required":true},
         },
         "additionalProperties": false,
     },
@@ -1304,6 +1304,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'updateGoal',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAuthController_checkNicknameDuplicate: Record<string, TsoaRoute.ParameterSchema> = {
+                nickname: {"in":"query","name":"nickname","required":true,"dataType":"string"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/auth/nickname/duplicate',
+            ...(fetchMiddlewares<RequestHandler>(AuthController)),
+            ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.checkNicknameDuplicate)),
+
+            async function AuthController_checkNicknameDuplicate(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAuthController_checkNicknameDuplicate, request, response });
+
+                const controller = new AuthController();
+
+              await templateService.apiHandler({
+                methodName: 'checkNicknameDuplicate',
                 controller,
                 response,
                 next,

@@ -32,13 +32,16 @@ import {
 } from "../dto/request/auth.request.dto";
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
-import { UnauthorizedException } from "../../errors/error";
+import { BadRequestException, UnauthorizedException } from "../../errors/error";
+
 
 @Route("/auth")
 @Tags("Auth")
 export class AuthController {
   private readonly authService: AuthService = container.auth.service;
-
+  /**
+   * @summary 회원가입 API
+    */
   @Post("/register")
   @SuccessResponse("201", "계정 생성 성공")
   @Example<RegisterResponseDto>({
@@ -50,7 +53,9 @@ export class AuthController {
   ): Promise<ApiResponse<RegisterResponseDto>> {
     return success(await this.authService.createUser(body));
   }
-
+  /**
+   * @summary 이메일 인증 코드 전송 API
+  */
   @Post("email/send-code")
   @SuccessResponse("200", "이메일 인증 코드 전송 성공")
   public async sendEmailVerificationCode(
@@ -59,7 +64,9 @@ export class AuthController {
     await this.authService.sendEmailVerificationCode(body.email, body.type);
     return success(null);
   }
-
+  /**
+   * @summary 이메일 인증 코드 검증 API
+  */
   @Post("email/verify-code")
   @SuccessResponse("200", "이메일 인증 코드 검증 성공")
   public async verifyEmailVerificationCode(
@@ -72,7 +79,9 @@ export class AuthController {
     );
     return success(null);
   }
-  //로그인
+  /**
+   * @summary 로그인 API
+  */
   @Post("/login")
   @SuccessResponse("200", "로그인 성공")
   public async login(
@@ -84,12 +93,14 @@ export class AuthController {
     return success(data);
   }
 
-  // 토큰 갱신
+  /**
+   * @summary 토큰 리프레시 API
+  */
   @Post("/refresh")
-  @SuccessResponse("200", "토큰 갱신 성공")
+  @SuccessResponse("200", "토큰 리프레시 성공")
   public async refresh(
     @Request() req: ExpressRequest,
-  ): Promise<ApiResponse<{ accessToken: string }>> {
+  ): Promise<ApiResponse<null>> {
     // 쿠키에서 refresh token 읽기
     const refreshToken = req.cookies?.refreshToken;
 
@@ -103,8 +114,11 @@ export class AuthController {
     // 새 access token을 쿠키에 저장
     JwtCookieUtil.setAccessTokenCookie(req.res!, accessToken);
 
-    return success({ accessToken });
+    return success(null);
   }
+  /**
+   * @summary 비밀번호 재설정 API
+  */
   @Post("/account-recovery/password")
   @SuccessResponse("200", "비밀번호 재설정 성공")
   public async resetPassword(
@@ -113,7 +127,6 @@ export class AuthController {
     await this.authService.resetPassword(body.email, body.newPassword);
     return success(null);
   }
-
   // Google 로그인 시작 - 프론트에서 이 URL로 리다이렉트
   @Get("/google-login")
   @SuccessResponse("302", "Google 로그인 페이지로 리다이렉트")
@@ -148,6 +161,9 @@ export class AuthController {
       );
     }
   }
+  /**
+   * @summary 로그아웃 API
+  */
   @Post("/logout")
   @Security("jwt")
   @SuccessResponse("200", "로그아웃 성공")
@@ -165,9 +181,12 @@ export class AuthController {
       JwtCookieUtil.clearJwtCookies(req.res!);
     }
   }
+  /**
+   * @summary 계정 삭제 API
+  */
   @Delete("/account")
   @Security("jwt")
-  @SuccessResponse("200", "회원탈퇴 성공")
+  @SuccessResponse("200", "회원 탈퇴 성공")
   public async deleteAccount(
     @Body() body: DeleteAccountRequestDto,
     @Request() req: ExpressRequest,
@@ -186,7 +205,9 @@ export class AuthController {
     
     return success(null);
   }
-
+  /**
+   * @summary 닉네임 수정 API
+  */
   @Patch("/profile/nickname")
   @Security("jwt")
   @SuccessResponse("200", "닉네임 수정 성공")
@@ -207,7 +228,9 @@ export class AuthController {
     
     return success(result);
   }
-
+  /**
+   * @summary 목표 수정 API
+  */
   @Patch("/profile/goal")
   @Security("jwt")
   @SuccessResponse("200", "목표 수정 성공")
@@ -228,4 +251,27 @@ export class AuthController {
     
     return success(result);
   }
+  /**
+   * @summary 닉네임 중복 확인 API
+  */
+  @Get("/nickname/duplicate")
+  @SuccessResponse("200", "닉네임 중복 확인 완료")
+  public async checkNicknameDuplicate(
+    @Query() nickname: string,
+    @Request() req: ExpressRequest  // 인증 선택적
+  ): Promise<ApiResponse<{ isAvailable: boolean }>> {
+    if (!nickname) {
+      throw new BadRequestException("V001", "닉네임을 입력해주세요.");
+    }
+    const excludeUserId = req.user ? BigInt(req.user!.id) : undefined;
+    
+    const isAvailable = await this.authService.checkNicknameDuplicate(
+      nickname, 
+      excludeUserId
+    );
+    
+    return success({ isAvailable });
+  }
 }
+
+

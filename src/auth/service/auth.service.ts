@@ -31,6 +31,7 @@ import { randomBytes } from "node:crypto";
 
 
 export class AuthService {
+  
   private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
   
   constructor(
@@ -252,6 +253,13 @@ export class AuthService {
 
   // 회원가입
   async createUser(body: RegisterRequestDto): Promise<RegisterResponseDto> {
+    const isExist =
+      (await this.authRepository.findUserByEmail(body.email)) !== null;
+
+    if (isExist) {
+      throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
+    }
+
     const verified = await redis.get(`email:verified:REGISTER:${body.email}`);
 
     if (!verified) {
@@ -263,22 +271,24 @@ export class AuthService {
 
     await redis.del(`email:verified:REGISTER:${body.email}`);
 
+    const isNicknameAvailable = await this.checkNicknameDuplicate(body.nickname);
+    if (!isNicknameAvailable) {
+      throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
+    }
+    // 닉네임 길이 확인
+    if (body.nickname.length < 2 || body.nickname.length > 20) {
+      throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
+    }
+    if(body.goal.length > 10){
+      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
+    }
+    
     const command = new CreateUserCommand({
       email: body.email,
       password: await hashingString(body.password),
       nickname: body.nickname,
       goal: body.goal
     });
-
-    const isExist =
-      (await this.authRepository.findUserByEmail(command.email)) !== null;
-
-    if (isExist) {
-      throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
-    }
-    if(body.goal.length > 10){
-      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
-    }
     const user = await this.authRepository.saveUser(command);
     return new RegisterResponseDto(user);
   }
@@ -467,7 +477,7 @@ export class AuthService {
       );
     }
   }
-// 닉네임 수정
+  // 닉네임 수정
   async updateNickname(
     userId: bigint,
     newNickname: string
@@ -477,27 +487,33 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
-
-    // 현재 닉네임과 동일한지 확인
     if (user.nickname === newNickname) {
       throw new ConflictException("U008", "현재 닉네임과 동일합니다.");
     }
-
-    // 닉네임 중복 확인
-    const existingUser = await this.authRepository.findUserByNickname(newNickname);
-    if (existingUser && existingUser.id !== userId) {
-      throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
-    }
-
     // 닉네임 길이 확인
     if (newNickname.length < 2 || newNickname.length > 20) {
       throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
     }
-
+    const isNicknameAvailable = await this.checkNicknameDuplicate(newNickname);
+    if (!isNicknameAvailable) {
+      throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
+    }
     // 닉네임 업데이트
     const updatedUser = await this.authRepository.updateNickname(userId, newNickname);
     
     return new UpdateNicknameResponseDto(updatedUser);
+  }
+  // 닉네임 중복 확인
+  async checkNicknameDuplicate(
+    nickname: string,
+    excludeUserId?: bigint
+  ): Promise<boolean> {
+    const existingUser = await this.authRepository.findUserByNickname(nickname);
+  
+    if (existingUser && existingUser.id !== excludeUserId) {
+      return false;  // 중복
+    }
+    return true;  // 사용 가능
   }
   // 목표 수정
   async updateGoal(
