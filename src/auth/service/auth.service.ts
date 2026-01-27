@@ -350,6 +350,12 @@ export class AuthService {
     code: string,
     type: EmailVerifyTypeEnum
   ): Promise<void> {
+    const isExist =
+      (await this.authRepository.findUserByEmail(email)) !== null;
+
+    if (isExist) {
+      throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
+    }
     const savedCode = await redis.get(`email:verify:${type}:${email}`);
 
     if (!savedCode || savedCode !== code) {
