@@ -5,7 +5,8 @@ export interface AuthRepositoryInterface {
     email: string,
     tx?: Prisma.TransactionClient
   ): Promise<User | null>;
-  findUserById(id: bigint, tx?: Prisma.TransactionClient): Promise<User & { oauth: Oauth[] } | null>;  saveUser(
+  findUserById(id: bigint, tx?: Prisma.TransactionClient): Promise<User & { oauth: Oauth[] } | null>;  
+  saveUser(
     command: CreateUserCommand,
     tx?: Prisma.TransactionClient
   ): Promise<User>;
