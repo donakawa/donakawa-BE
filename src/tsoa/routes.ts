@@ -240,21 +240,31 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "BudgetSpendResponseDto": {
+    "CalcShoppingBudgetResponseDto": {
         "dataType": "refObject",
         "properties": {
-            "totalSpend": {"dataType":"double","required":true},
-            "remainingBudget": {"dataType":"double","required":true},
+            "shoppingBudget": {"dataType":"double","required":true},
         },
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ApiResponse_BudgetSpendResponseDto_": {
+    "ApiResponse_CalcShoppingBudgetResponseDto_": {
         "dataType": "refObject",
         "properties": {
             "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
             "error": {"dataType":"enum","enums":[null],"required":true},
-            "data": {"ref":"BudgetSpendResponseDto","required":true},
+            "data": {"ref":"CalcShoppingBudgetResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CalcShoppingBudgetRequestDto": {
+        "dataType": "refObject",
+        "properties": {
+            "monthlyIncome": {"dataType":"double","required":true},
+            "fixedExpense": {"dataType":"double"},
+            "monthlySaving": {"dataType":"double"},
+            "spendStrategy": {"dataType":"double","required":true},
         },
         "additionalProperties": false,
     },
@@ -314,6 +324,25 @@ const models: TsoaRoute.Models = {
             "fixedExpense": {"dataType":"double"},
             "monthlySaving": {"dataType":"double"},
             "shoppingBudget": {"dataType":"double"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BudgetSpendResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "totalSpend": {"dataType":"double","required":true},
+            "remainingBudget": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_BudgetSpendResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"BudgetSpendResponseDto","required":true},
         },
         "additionalProperties": false,
     },
@@ -892,26 +921,26 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsGoalsController_getBudgetSpend: Record<string, TsoaRoute.ParameterSchema> = {
-                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        const argsGoalsController_calcShoppingBudget: Record<string, TsoaRoute.ParameterSchema> = {
+                body: {"in":"body","name":"body","required":true,"ref":"CalcShoppingBudgetRequestDto"},
         };
-        app.get('/goals/spend',
+        app.post('/goals/budget/calc',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(GoalsController)),
-            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.getBudgetSpend)),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.calcShoppingBudget)),
 
-            async function GoalsController_getBudgetSpend(request: ExRequest, response: ExResponse, next: any) {
+            async function GoalsController_calcShoppingBudget(request: ExRequest, response: ExResponse, next: any) {
 
             // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
             let validatedArgs: any[] = [];
             try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_getBudgetSpend, request, response });
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_calcShoppingBudget, request, response });
 
                 const controller = new GoalsController();
 
               await templateService.apiHandler({
-                methodName: 'getBudgetSpend',
+                methodName: 'calcShoppingBudget',
                 controller,
                 response,
                 next,
@@ -1007,6 +1036,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'updateTargetBudget',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsGoalsController_getBudgetSpend: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/goals/spend',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController)),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.getBudgetSpend)),
+
+            async function GoalsController_getBudgetSpend(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_getBudgetSpend, request, response });
+
+                const controller = new GoalsController();
+
+              await templateService.apiHandler({
+                methodName: 'getBudgetSpend',
                 controller,
                 response,
                 next,
@@ -1423,6 +1483,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.get('/auth/me',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(AuthController)),
             ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.getMyProfile)),
 

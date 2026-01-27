@@ -2,16 +2,19 @@ import { GoalsRepository } from "../repository/goals.repository";
 import {
   GoalsRequestDto,
   GoalsUpdateRequestDto,
+  CalcShoppingBudgetRequestDto,
 } from "../dto/request/goals.request.dto";
 import {
   GoalsResponseDto,
   BudgetSpendResponseDto,
+  CalcShoppingBudgetResponseDto,
 } from "../dto/response/goals.response.dto";
 import {
   ConflictException,
   NotFoundException,
   BadRequestException,
 } from "../../errors/error";
+import { ShoppingBudgetCalculator } from "../domain/shopping-budget.calculator";
 
 export class GoalsService {
   constructor(private readonly goalsRepository: GoalsRepository) {}
@@ -165,5 +168,19 @@ export class GoalsService {
       totalSpend: resetSpend,
       remainingBudget,
     });
+  }
+
+  // 온라인 쇼핑 목표액 계산
+  async calcShoppingBudget(
+    body: CalcShoppingBudgetRequestDto,
+  ): Promise<CalcShoppingBudgetResponseDto> {
+    const shoppingBudget = ShoppingBudgetCalculator.calculate({
+      monthlyIncome: body.monthlyIncome,
+      fixedExpense: body.fixedExpense,
+      monthlySaving: body.monthlySaving,
+      spendStrategy: body.spendStrategy,
+    });
+
+    return new CalcShoppingBudgetResponseDto(shoppingBudget);
   }
 }

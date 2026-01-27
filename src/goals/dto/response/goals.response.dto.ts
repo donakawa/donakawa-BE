@@ -31,3 +31,11 @@ export class BudgetSpendResponseDto {
     this.remainingBudget = data.remainingBudget;
   }
 }
+
+export class CalcShoppingBudgetResponseDto {
+  shoppingBudget!: number;
+
+  constructor(shoppingBudget: number) {
+    this.shoppingBudget = shoppingBudget;
+  }
+}

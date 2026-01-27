@@ -64,3 +64,25 @@ export class GoalsUpdateRequestDto {
   @IsInt()
   shoppingBudget?: number;
 }
+
+export class CalcShoppingBudgetRequestDto {
+  @Example(1000000)
+  @IsInt()
+  @IsNotEmpty()
+  monthlyIncome!: number;
+
+  @Example(300000)
+  @IsOptional()
+  @IsInt()
+  fixedExpense?: number;
+
+  @Example(200000)
+  @IsOptional()
+  @IsInt()
+  monthlySaving?: number;
+
+  @Example(1)
+  @IsInt()
+  @IsNotEmpty()
+  spendStrategy!: number;
+}
