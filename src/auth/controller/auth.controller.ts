@@ -18,6 +18,7 @@ import {
   LoginResponseDto,
   UpdateNicknameResponseDto,
   UpdateGoalResponseDto,
+  UserProfileResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthService } from "../service/auth.service";
 import { container } from "../../container";
@@ -271,6 +272,24 @@ export class AuthController {
     );
     
     return success({ isAvailable });
+  }
+  /**
+   * @summary 유저 정보 조회 API
+  */
+  @Get("/me")
+  @SuccessResponse("200", "내 정보 조회 완료")
+  @Security("jwt")
+  public async getMyProfile(
+    @Request() req: ExpressRequest
+  ): Promise<ApiResponse<UserProfileResponseDto>> {
+    const user = req.user;
+    if (!user?.id) {
+      throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
+    }
+    
+    const result = await this.authService.getMyProfile(BigInt(user.id));
+    
+    return success(result);
   }
 }
 

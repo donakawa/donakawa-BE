@@ -15,6 +15,7 @@ import {
   RegisterResponseDto,
   UpdateGoalResponseDto,
   UpdateNicknameResponseDto,
+  UserProfileResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthRepository } from "../repository/auth.repository";
 import { compareHash, hashingString } from "../util/encrypt.util";
@@ -276,8 +277,8 @@ export class AuthService {
       throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
     }
     // 닉네임 길이 확인
-    if (body.nickname.length < 2 || body.nickname.length > 20) {
-      throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
+    if (body.nickname.length > 10) {
+      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
     }
     if(body.goal.length > 10){
       throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
@@ -463,10 +464,10 @@ export class AuthService {
 
   // 비밀번호 정책 검증
   private validatePassword(password: string): void {
-    if (password.length < 8) {
+    if (password.length < 8 || password.length > 12) {
       throw new UnauthorizedException(
         "A008",
-        "비밀번호는 8자 이상이어야 합니다."
+        "비밀번호는 8자 이상, 12자 이하이어야 합니다."
       );
     }
 
@@ -491,8 +492,8 @@ export class AuthService {
       throw new ConflictException("U008", "현재 닉네임과 동일합니다.");
     }
     // 닉네임 길이 확인
-    if (newNickname.length < 2 || newNickname.length > 20) {
-      throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
+    if (newNickname.length > 10) {
+      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
     }
     const isNicknameAvailable = await this.checkNicknameDuplicate(newNickname);
     if (!isNicknameAvailable) {
@@ -562,12 +563,21 @@ export class AuthService {
       await this.authRepository.deleteUser(userId, tx);
     });
 
-  // 세션 정리 (실패해도 자동 만료됨)
-  try {
-    await this.clearUserSession(userId);
-  } catch (error) {
-    // 세션 삭제 실패는 로그만 남김 (TTL로 자동 만료되므로 치명적이지 않음)
-    console.error('Failed to clear user session:', error);
+    // 세션 정리 (실패해도 자동 만료됨)
+    try {
+      await this.clearUserSession(userId);
+    } catch (error) {
+      // 세션 삭제 실패는 로그만 남김 (TTL로 자동 만료되므로 치명적이지 않음)
+      console.error('Failed to clear user session:', error);
+    }
   }
+    async getMyProfile(userId: bigint): Promise<UserProfileResponseDto> {
+      const user = await this.authRepository.findUserById(userId);
+      
+      if (!user) {
+        throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+      }
+      
+      return new UserProfileResponseDto(user);
+    }
   }
-}

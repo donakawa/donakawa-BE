@@ -17,7 +17,7 @@ model User {
   id        BigInt    @id @default(autoincrement())
   email     String    @unique @db.VarChar(100)
   password  String?   @db.VarChar(100)
-  nickname  String    @db.VarChar(20)
+  nickname  String    @db.VarChar(10)
   goal      String    @db.VarChar(10) @default("")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
