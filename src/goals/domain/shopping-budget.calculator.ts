@@ -50,7 +50,7 @@ export class ShoppingBudgetCalculator {
 
     // 고정비 있는 경우
     if (fixedExpense !== undefined) {
-      return Math.floor(monthlyIncome - fixedExpense);
+      return Math.max(0, Math.floor(monthlyIncome - fixedExpense));
     }
 
     // 고정비 없는 경우
@@ -65,13 +65,13 @@ export class ShoppingBudgetCalculator {
     if (fixedExpense !== undefined) {
       switch (spendStrategy) {
         case 1:
-          return Math.floor(monthlyIncome * 0.5 - fixedExpense);
+          return Math.max(0, Math.floor(monthlyIncome * 0.5 - fixedExpense));
 
         case 2:
-          return Math.floor(monthlyIncome * 0.7 - fixedExpense);
+          return Math.max(0, Math.floor(monthlyIncome * 0.7 - fixedExpense));
 
         case 3:
-          return Math.floor(monthlyIncome * 0.8 - fixedExpense);
+          return Math.max(0, Math.floor(monthlyIncome * 0.8 - fixedExpense));
 
         default:
           return 0;
