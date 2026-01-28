@@ -269,8 +269,7 @@ export class AuthService {
         "이메일 인증이 필요합니다."
       );
     }
-
-    await redis.del(`email:verified:REGISTER:${body.email}`);
+    this.validatePassword(body.password);
 
     const isNicknameAvailable = await this.checkNicknameDuplicate(body.nickname);
     if (!isNicknameAvailable) {
@@ -283,7 +282,9 @@ export class AuthService {
     if(body.goal.length > 10){
       throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
-    
+
+    await redis.del(`email:verified:REGISTER:${body.email}`);
+
     const command = new CreateUserCommand({
       email: body.email,
       password: await hashingString(body.password),
@@ -335,7 +336,7 @@ export class AuthService {
 
     const code = this.generateEmailCode();
 
-    await redis.set(`email:verify:${type}:${email}`, code, { EX: 60 * 3 });
+    await redis.set(`email:verify:${type}:${email}`, code, { EX: 60 * 5 });
 
     const newCount = await redis.incr(attemptKey);
     if (newCount === 1) {
@@ -525,6 +526,10 @@ export class AuthService {
     const user = await this.authRepository.findUserById(userId);
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+    // 목표 길이 검사
+    if(newGoal.length > 10){
+      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
     // 현재 목표 동일한지 확인
     if (user.goal === newGoal) {

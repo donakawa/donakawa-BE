@@ -128,7 +128,9 @@ export class AuthController {
     await this.authService.resetPassword(body.email, body.newPassword);
     return success(null);
   }
-  // Google 로그인 시작 - 프론트에서 이 URL로 리다이렉트
+  /**
+   * @summary Google 로그인 API
+  */
   @Get("/google-login")
   @SuccessResponse("302", "Google 로그인 페이지로 리다이렉트")
   public async initiateGoogleLogin(@Request() req: ExpressRequest): Promise<void> {
