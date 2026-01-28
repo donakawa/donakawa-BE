@@ -28,13 +28,16 @@ import { LoginRequestDto } from "../dto/request/auth.request.dto";
 import { LoginResult } from "../../types/login-result.type";
 import { LoginResponseDto } from "../dto/response/auth.response.dto";
 import { User } from "@prisma/client";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 
 
 export class AuthService {
   
   private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
-  
+  private readonly EMAIL_VERIFICATION_CODE_TTL = 60 * 5; // 5분
+  private readonly EMAIL_VERIFIED_SIGNUP_EXPIRES_IN = 60 * 10; // 10분
+  private readonly ACCESS_TOKEN_EXPIRES_IN = "15m";
+
   constructor(
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
@@ -57,7 +60,7 @@ export class AuthService {
     const accessToken = jwt.sign(
       payload,
       process.env.ACCESS_TOKEN_SECRET_KEY!,
-      { expiresIn: "1h" }
+      { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN }
     );
 
     const refreshToken = jwt.sign(
@@ -173,7 +176,7 @@ export class AuthService {
       }
     }
 
-    // 로그인 결과 생성 (JWT 발급 + 세션 저장)
+  // 로그인 결과 생성 (JWT 발급 + 세션 저장)
     return await this.generateLoginResult(user);
   }
 
@@ -231,7 +234,7 @@ export class AuthService {
       const accessToken = jwt.sign(
         payload,
         process.env.ACCESS_TOKEN_SECRET_KEY!,
-        { expiresIn: "1h" }
+        { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN }
       );
 
       return { accessToken };
@@ -269,8 +272,7 @@ export class AuthService {
         "이메일 인증이 필요합니다."
       );
     }
-
-    await redis.del(`email:verified:REGISTER:${body.email}`);
+    this.validatePassword(body.password);
 
     const isNicknameAvailable = await this.checkNicknameDuplicate(body.nickname);
     if (!isNicknameAvailable) {
@@ -283,7 +285,7 @@ export class AuthService {
     if(body.goal.length > 10){
       throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
-    
+
     const command = new CreateUserCommand({
       email: body.email,
       password: await hashingString(body.password),
@@ -291,12 +293,15 @@ export class AuthService {
       goal: body.goal
     });
     const user = await this.authRepository.saveUser(command);
+
+    await redis.del(`email:verified:REGISTER:${body.email}`);
+
     return new RegisterResponseDto(user);
   }
 
   // 이메일 인증 코드 생성
   private generateEmailCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return randomInt(100000, 1000000).toString(); // 6자리 숫자
   }
 
   // 이메일 인증 코드 전송
@@ -335,7 +340,7 @@ export class AuthService {
 
     const code = this.generateEmailCode();
 
-    await redis.set(`email:verify:${type}:${email}`, code, { EX: 60 * 3 });
+    await redis.set(`email:verify:${type}:${email}`, code, { EX: this.EMAIL_VERIFICATION_CODE_TTL });
 
     const newCount = await redis.incr(attemptKey);
     if (newCount === 1) {
@@ -362,7 +367,7 @@ export class AuthService {
 
     await redis.del(`email:verify:${type}:${email}`);
     await redis.set(`email:verified:${type}:${email}`, "true", {
-      EX: 60 * 10,
+      EX: this.EMAIL_VERIFIED_SIGNUP_EXPIRES_IN,
     });
   }
 
@@ -422,11 +427,8 @@ export class AuthService {
         ">
           ${code}
         </div>
-        <p>인증 코드는 <strong>3분</strong> 동안 유효합니다.</p>
-        ${type === "RESET_PASSWORD"
-          ? '<p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>'
-          : ""
-        }
+        <p>인증 코드는 <strong>${this.EMAIL_VERIFICATION_CODE_TTL / 60}분</strong> 동안 유효합니다.</p>
+        <p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>
       </div>
     `,
     });
@@ -525,6 +527,10 @@ export class AuthService {
     const user = await this.authRepository.findUserById(userId);
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+    // 목표 길이 검사
+    if(newGoal.length > 10){
+      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
     // 현재 목표 동일한지 확인
     if (user.goal === newGoal) {
