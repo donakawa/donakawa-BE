@@ -637,7 +637,7 @@ export class WishlistService {
       );
     if (alreadyDropped)
       throw new ConflictException(
-        "ALREADY_PURCHASED",
+        "ALREADY_DROPPED",
         "이미 구매 포기된 위시 아이템 입니다.",
       );
     await this.dbRepository.transaction(async (tx) => {
@@ -741,22 +741,24 @@ export class WishlistService {
             tx,
           );
         // TODO : 이 사이에 후기 도 삭제하는 코드 추가하기
-        await this.wishlistRepository.deleteAddedItemManual({
-          where: {
-            id: BigInt(data.itemId),
+        await this.wishlistRepository.deleteAddedItemManual(
+          {
+            where: {
+              id: BigInt(data.itemId),
+            },
           },
-        });
+          tx,
+        );
       }
     });
   }
   async getWishitemsInFolder(data: ShowWishitemsInFolderRequestDto) {
-    const isExistFolder =
-      (
-        await this.wishlistRepository.findWishitemFolders({
-          where: { id: BigInt(data.folderId) },
-        })
-      ).length !== 0;
-    if (!isExistFolder)
+    const folder = await this.wishlistRepository.findWishitemFolders({
+      where: { id: BigInt(data.folderId) },
+    });
+    const isExistFolder = folder.length !== 0;
+    const hasPermission = folder[0].userId === BigInt(data.userId);
+    if (!isExistFolder || !hasPermission)
       throw new NotFoundException(
         "FOLDER_NOT_FOUND",
         "해당 ID를 가진 폴더를 찾을 수 없습니다.",
