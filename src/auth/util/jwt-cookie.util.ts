@@ -12,7 +12,7 @@ export class JwtCookieUtil {
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
       path: "/",
-      maxAge: 1000 * 60 * 60, // 1시간
+      maxAge: 1000 * 60 * 15, // 15분
     });
     res.cookie("refreshToken", tokens.refreshToken, {
       httpOnly: true,
@@ -40,7 +40,7 @@ export class JwtCookieUtil {
       secure: isProd,
       sameSite: isProd ? 'none' : 'lax',
       path: '/',
-      maxAge: 60 * 60 * 1000, // 1시간
+      maxAge: 60 * 15 * 1000, // 15분
      });
    }
 }

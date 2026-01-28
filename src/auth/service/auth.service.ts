@@ -34,7 +34,9 @@ import { randomBytes } from "node:crypto";
 export class AuthService {
   
   private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
-  
+  private readonly EMAIL_VERIFICATION_CODE_TTL = 60 * 5; // 5분
+  private readonly EMAIL_VERIFIED_SIGNUP_EXPIRES_IN = 60 * 10; // 10분
+
   constructor(
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
@@ -57,7 +59,7 @@ export class AuthService {
     const accessToken = jwt.sign(
       payload,
       process.env.ACCESS_TOKEN_SECRET_KEY!,
-      { expiresIn: "1h" }
+      { expiresIn: "15m" }
     );
 
     const refreshToken = jwt.sign(
@@ -336,7 +338,7 @@ export class AuthService {
 
     const code = this.generateEmailCode();
 
-    await redis.set(`email:verify:${type}:${email}`, code, { EX: 60 * 5 });
+    await redis.set(`email:verify:${type}:${email}`, code, { EX: this.EMAIL_VERIFICATION_CODE_TTL });
 
     const newCount = await redis.incr(attemptKey);
     if (newCount === 1) {
@@ -363,7 +365,7 @@ export class AuthService {
 
     await redis.del(`email:verify:${type}:${email}`);
     await redis.set(`email:verified:${type}:${email}`, "true", {
-      EX: 60 * 10,
+      EX: this.EMAIL_VERIFIED_SIGNUP_EXPIRES_IN,
     });
   }
 
@@ -423,11 +425,8 @@ export class AuthService {
         ">
           ${code}
         </div>
-        <p>인증 코드는 <strong>3분</strong> 동안 유효합니다.</p>
-        ${type === "RESET_PASSWORD"
-          ? '<p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>'
-          : ""
-        }
+        <p>인증 코드는 <strong>${this.EMAIL_VERIFICATION_CODE_TTL}</strong> 동안 유효합니다.</p>
+        <p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>
       </div>
     `,
     });
