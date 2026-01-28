@@ -36,6 +36,7 @@ export class AuthService {
   private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
   private readonly EMAIL_VERIFICATION_CODE_TTL = 60 * 5; // 5분
   private readonly EMAIL_VERIFIED_SIGNUP_EXPIRES_IN = 60 * 10; // 10분
+  private readonly ACCESS_TOKEN_EXPIRES_IN = "15m";
 
   constructor(
     private authRepository: AuthRepository,
@@ -59,7 +60,7 @@ export class AuthService {
     const accessToken = jwt.sign(
       payload,
       process.env.ACCESS_TOKEN_SECRET_KEY!,
-      { expiresIn: "15m" }
+      { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN }
     );
 
     const refreshToken = jwt.sign(
@@ -175,7 +176,7 @@ export class AuthService {
       }
     }
 
-    // 로그인 결과 생성 (JWT 발급 + 세션 저장)
+  // 로그인 결과 생성 (JWT 발급 + 세션 저장)
     return await this.generateLoginResult(user);
   }
 
@@ -233,7 +234,7 @@ export class AuthService {
       const accessToken = jwt.sign(
         payload,
         process.env.ACCESS_TOKEN_SECRET_KEY!,
-        { expiresIn: "1h" }
+        { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN }
       );
 
       return { accessToken };
