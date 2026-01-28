@@ -16,9 +16,13 @@ export class AuthRepository implements AuthRepositoryInterface {
   async findUserById(
     id: bigint,
     tx?: Prisma.TransactionClient
-  ): Promise<User | null> {
+  ): Promise<User & { oauth: Oauth[] } | null> {
     const db = tx ?? this.prisma;
-    return await db.user.findUnique({ where: { id } });
+    return await db.user.findUnique({ where: { id },
+    include: {
+      oauth: true  // 추가
+    }
+   });
   }
 
   async saveUser(

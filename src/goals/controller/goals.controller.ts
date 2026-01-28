@@ -17,8 +17,13 @@ import { Request as ExpressRequest } from "express";
 import {
   GoalsRequestDto,
   GoalsUpdateRequestDto,
+  CalcShoppingBudgetRequestDto,
 } from "../dto/request/goals.request.dto";
-import { GoalsResponseDto } from "../dto/response/goals.response.dto";
+import {
+  GoalsResponseDto,
+  BudgetSpendResponseDto,
+  CalcShoppingBudgetResponseDto,
+} from "../dto/response/goals.response.dto";
 import { container } from "../../container";
 import { GoalsService } from "../service/goals.service";
 
@@ -27,6 +32,19 @@ import { GoalsService } from "../service/goals.service";
 @Security("jwt")
 export class GoalsController {
   private readonly goalsService: GoalsService = container.goals.service;
+
+  /**
+   * @summary 온라인 쇼핑 목표액 계산 API
+   */
+  @Post("/budget/calculate")
+  @SuccessResponse("200", "온라인 쇼핑 목표액 계산 성공")
+  public async calcShoppingBudget(
+    @Body() body: CalcShoppingBudgetRequestDto,
+  ): Promise<ApiResponse<CalcShoppingBudgetResponseDto>> {
+    const data = await this.goalsService.calcShoppingBudget(body);
+
+    return success(data);
+  }
 
   /**
    * @summary 목표 예산 설정 API
@@ -68,6 +86,20 @@ export class GoalsController {
   ): Promise<ApiResponse<GoalsResponseDto>> {
     const userId = req.user!.id;
     const data = await this.goalsService.updateTargetBudget(userId, body);
+
+    return success(data);
+  }
+
+  /**
+   * @summary 소비, 남은 예산 값 조회 API
+   */
+  @Get("/spend")
+  @SuccessResponse("200", "소비, 남은 예산 값 조회 성공")
+  public async getBudgetSpend(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<BudgetSpendResponseDto>> {
+    const userId = req.user!.id;
+    const data = await this.goalsService.getBudgetSpend(userId);
 
     return success(data);
   }

@@ -258,6 +258,10 @@ const models: TsoaRoute.Models = {
             "purchasedAt": {"ref":"PurchasedAt","required":true},
             "reasonId": {"dataType":"double"},
             "reason": {"dataType":"string"},
+    "CalcShoppingBudgetResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "shoppingBudget": {"dataType":"double","required":true},
         },
         "additionalProperties": false,
     },
@@ -267,6 +271,12 @@ const models: TsoaRoute.Models = {
         "properties": {
             "nextCursor": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "wishitems": {"dataType":"array","array":{"dataType":"refObject","ref":"WishItemPreviewPayload"},"required":true},
+    "ApiResponse_CalcShoppingBudgetResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"CalcShoppingBudgetResponseDto","required":true},
         },
         "additionalProperties": false,
     },
@@ -277,6 +287,13 @@ const models: TsoaRoute.Models = {
             "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
             "error": {"dataType":"enum","enums":[null],"required":true},
             "data": {"ref":"ShowWishitemsInFolderResponseDto","required":true},
+    "CalcShoppingBudgetRequestDto": {
+        "dataType": "refObject",
+        "properties": {
+            "monthlyIncome": {"dataType":"double","required":true},
+            "fixedExpense": {"dataType":"double"},
+            "monthlySaving": {"dataType":"double"},
+            "spendStrategy": {"dataType":"double","required":true},
         },
         "additionalProperties": false,
     },
@@ -336,6 +353,25 @@ const models: TsoaRoute.Models = {
             "fixedExpense": {"dataType":"double"},
             "monthlySaving": {"dataType":"double"},
             "shoppingBudget": {"dataType":"double"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BudgetSpendResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "totalSpend": {"dataType":"double","required":true},
+            "remainingBudget": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_BudgetSpendResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"BudgetSpendResponseDto","required":true},
         },
         "additionalProperties": false,
     },
@@ -423,16 +459,6 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ApiResponse__accessToken-string__": {
-        "dataType": "refObject",
-        "properties": {
-            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
-            "error": {"dataType":"enum","enums":[null],"required":true},
-            "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"accessToken":{"dataType":"string","required":true}},"required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "PasswordResetConfirmDto": {
         "dataType": "refObject",
         "properties": {
@@ -502,6 +528,39 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "goal": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse__isAvailable-boolean__": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"isAvailable":{"dataType":"boolean","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "UserProfileResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "email": {"dataType":"string","required":true},
+            "nickname": {"dataType":"string","required":true},
+            "goal": {"dataType":"string","required":true},
+            "hasPassword": {"dataType":"boolean","required":true},
+            "provider": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_UserProfileResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"UserProfileResponseDto","required":true},
         },
         "additionalProperties": false,
     },
@@ -902,6 +961,15 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.markItemAsPurchased)),
 
             async function WishlistController_markItemAsPurchased(request: ExRequest, response: ExResponse, next: any) {
+        const argsGoalsController_calcShoppingBudget: Record<string, TsoaRoute.ParameterSchema> = {
+                body: {"in":"body","name":"body","required":true,"ref":"CalcShoppingBudgetRequestDto"},
+        };
+        app.post('/goals/budget/calculate',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController)),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.calcShoppingBudget)),
+
+            async function GoalsController_calcShoppingBudget(request: ExRequest, response: ExResponse, next: any) {
 
             // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
@@ -913,6 +981,12 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'markItemAsPurchased',
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_calcShoppingBudget, request, response });
+
+                const controller = new GoalsController();
+
+              await templateService.apiHandler({
+                methodName: 'calcShoppingBudget',
                 controller,
                 response,
                 next,
@@ -1052,6 +1126,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 204,
+                successStatus: 200,
               });
             } catch (err) {
                 return next(err);
@@ -1142,6 +1217,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'updateTargetBudget',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsGoalsController_getBudgetSpend: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/goals/spend',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController)),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.getBudgetSpend)),
+
+            async function GoalsController_getBudgetSpend(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_getBudgetSpend, request, response });
+
+                const controller = new GoalsController();
+
+              await templateService.apiHandler({
+                methodName: 'getBudgetSpend',
                 controller,
                 response,
                 next,
@@ -1512,6 +1618,68 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'updateGoal',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAuthController_checkNicknameDuplicate: Record<string, TsoaRoute.ParameterSchema> = {
+                nickname: {"in":"query","name":"nickname","required":true,"dataType":"string"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/auth/nickname/duplicate',
+            ...(fetchMiddlewares<RequestHandler>(AuthController)),
+            ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.checkNicknameDuplicate)),
+
+            async function AuthController_checkNicknameDuplicate(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAuthController_checkNicknameDuplicate, request, response });
+
+                const controller = new AuthController();
+
+              await templateService.apiHandler({
+                methodName: 'checkNicknameDuplicate',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAuthController_getMyProfile: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/auth/me',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AuthController)),
+            ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.getMyProfile)),
+
+            async function AuthController_getMyProfile(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAuthController_getMyProfile, request, response });
+
+                const controller = new AuthController();
+
+              await templateService.apiHandler({
+                methodName: 'getMyProfile',
                 controller,
                 response,
                 next,
