@@ -28,7 +28,7 @@ import { LoginRequestDto } from "../dto/request/auth.request.dto";
 import { LoginResult } from "../../types/login-result.type";
 import { LoginResponseDto } from "../dto/response/auth.response.dto";
 import { User } from "@prisma/client";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 
 
 export class AuthService {
@@ -301,7 +301,7 @@ export class AuthService {
 
   // 이메일 인증 코드 생성
   private generateEmailCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return randomInt(100000, 1000000).toString(); // 6자리 숫자
   }
 
   // 이메일 인증 코드 전송
@@ -427,7 +427,7 @@ export class AuthService {
         ">
           ${code}
         </div>
-        <p>인증 코드는 <strong>${this.EMAIL_VERIFICATION_CODE_TTL}</strong> 동안 유효합니다.</p>
+        <p>인증 코드는 <strong>${this.EMAIL_VERIFICATION_CODE_TTL / 60}분</strong> 동안 유효합니다.</p>
         <p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>
       </div>
     `,
