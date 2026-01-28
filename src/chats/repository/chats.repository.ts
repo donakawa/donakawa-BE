@@ -6,16 +6,16 @@ export class ChatsRepository {
   createChat(userId: number, title: string, addedItemAutoId: number) {
     return this.prisma.aiChatHeader.create({
       data: {
-        userId,
+        userId: BigInt(userId),
         title,
-        addedItemAutoId,
+        addedItemAutoId: BigInt(addedItemAutoId),
       },
     });
   }
 
   findChatsByUser(userId: number) {
     return this.prisma.aiChatHeader.findMany({
-      where: { userId },
+      where: { userId: BigInt(userId) },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -54,7 +54,7 @@ export class ChatsRepository {
   createMessage(headerId: number, sender: "AI" | "USER", content: string) {
     return this.prisma.aiChatMessage.create({
       data: {
-        headerId,
+        headerId: BigInt(headerId),
         sender,
         content,
       },

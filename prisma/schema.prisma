@@ -247,10 +247,13 @@ model AiChatResult {
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamp()
 
   @@map("ai_chat_result")
+}
+
 enum FileType {
   AUTO_ADDED_PRODUCT_PHOTO
   MANUAL_ADDED_PRODUCT_PHOTO
 }
+
 model Files {
   id            BigInt        @id @default(autoincrement())
   type          FileType

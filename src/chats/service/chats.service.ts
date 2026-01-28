@@ -108,6 +108,13 @@ export class ChatsService {
     const chat = await this.chatsRepository.findChatDetail(chatId);
     if (!chat) throw new Error("Chat not found");
 
+    const answeredCount = chat.aiChatMessage.filter(
+      (m) => m.sender === "USER",
+    ).length;
+    if (body.step !== answeredCount + 1) {
+      throw new Error("Invalid step order");
+    }
+
     const question = QUESTIONS.find((q) => q.step === body.step);
     if (!question) throw new Error("Invalid step");
 
