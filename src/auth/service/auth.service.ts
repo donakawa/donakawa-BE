@@ -285,8 +285,6 @@ export class AuthService {
       throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
 
-    await redis.del(`email:verified:REGISTER:${body.email}`);
-
     const command = new CreateUserCommand({
       email: body.email,
       password: await hashingString(body.password),
@@ -294,6 +292,9 @@ export class AuthService {
       goal: body.goal
     });
     const user = await this.authRepository.saveUser(command);
+
+    await redis.del(`email:verified:REGISTER:${body.email}`);
+
     return new RegisterResponseDto(user);
   }
 

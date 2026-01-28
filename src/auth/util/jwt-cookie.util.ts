@@ -40,7 +40,7 @@ export class JwtCookieUtil {
       secure: isProd,
       sameSite: isProd ? 'none' : 'lax',
       path: '/',
-      maxAge: 60 * 15 * 1000, // 15분
+      maxAge: 1000 * 60 * 15, // 15분
      });
    }
 }
