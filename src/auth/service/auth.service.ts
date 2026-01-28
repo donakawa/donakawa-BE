@@ -162,13 +162,20 @@ async handleGoogleCallback(
       );
     } else {
       isNewUser = true;
+      const rawNickname = (googleUserInfo.nickname ?? "").trim();
+      let nickname = rawNickname.slice(0, 10);
+
+      // 닉네임이 비어있거나 중복이면 UUID 사용
+      if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
+        // UUID 앞 8자 사용 (예: user_a3f8e2b9)
+        nickname = `user_${uuid().slice(0, 8)}`;
+      }
       const command = new CreateUserCommand({
         email: googleUserInfo.email,
         password: null,
-        nickname: googleUserInfo.nickname,
+        nickname,
         goal: ""
       });
-
       user = await this.authRepository.saveUser(command);
       await this.authRepository.createOauth(
         user.id,
