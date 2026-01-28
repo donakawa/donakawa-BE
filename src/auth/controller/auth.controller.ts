@@ -148,14 +148,19 @@ export class AuthController {
   ): Promise<void> {
     try {
       // state도 함께 전달
-      const { data, tokens } = await this.authService.handleGoogleCallback(
+      const { tokens, isNewUser } = await this.authService.handleGoogleCallback(
         code,
         state,
       );
 
       JwtCookieUtil.setJwtCookies(req.res!, tokens);
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
+      // 신규 가입이면 프로필 완성 필요 ( 목표, 닉네임 설정 등 )
+      if (isNewUser) {
+        req.res!.redirect(`${frontendUrl}/auth/complete-profile?success=true`);
+      } else {
+        req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
+      }
     } catch (error) {
       console.error("Google Login Error:", error);
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
