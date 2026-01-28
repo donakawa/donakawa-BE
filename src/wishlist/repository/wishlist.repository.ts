@@ -201,4 +201,39 @@ left join store_platform s on p.store_platform_id = s.id where user_id = ${userI
     const db = tx ?? this.prisma;
     return db.wishItemFolder.delete({ where: { id: BigInt(folderId) } });
   }
+  async savePurchasedHistory<T extends Prisma.PurchasedHistoryCreateInput>(
+    data: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.purchasedHistory.create({ data });
+  }
+  async findPurchasedHistories<T extends Prisma.PurchasedHistoryFindManyArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.purchasedHistory.findMany(args);
+  }
+  async deletePurchasedHistory<T extends Prisma.PurchasedHistoryDeleteArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.purchasedHistory.delete(args);
+  }
+  async deleteAddedItemAuto<T extends Prisma.AddedItemAutoDeleteArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.addedItemAuto.delete(args);
+  }
+  async deleteAddedItemManual<T extends Prisma.AddedItemManualDeleteArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.addedItemManual.delete(args);
+  }
 }

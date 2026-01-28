@@ -132,13 +132,23 @@ model Product {
 
 enum PurchasedAt {
   MORNING
-  NOON
   EVENING
   NIGHT
 }
 
+model PurchasedReason {
+  id              Int           @id @default(autoincrement())
+  reason          String        @db.VarChar(20)
+
+  purchasedHistory PurchasedHistory[]
+  @@map("purchased_reason")
+}
+
 model PurchasedHistory {
   id              BigInt           @id @default(autoincrement())
+  reasonId        Int?             @map("reason_id")
+  purchasedReason PurchasedReason? @relation(fields: [reasonId], references: [id])
+  reason          String?          @db.VarChar(10)
   autoItemId      BigInt?          @map("auto_item_id")
   addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id])
   manualItemId    BigInt?          @map("manual_item_id")
@@ -148,6 +158,8 @@ model PurchasedHistory {
 
   @@map("purchased_history")
 }
+
+
 
 model AddedItemManual {
   id             BigInt          @id @default(autoincrement())
