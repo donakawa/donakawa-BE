@@ -15,6 +15,7 @@ import {
   RegisterResponseDto,
   UpdateGoalResponseDto,
   UpdateNicknameResponseDto,
+  UserProfileResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthRepository } from "../repository/auth.repository";
 import { compareHash, hashingString } from "../util/encrypt.util";
@@ -27,12 +28,16 @@ import { LoginRequestDto } from "../dto/request/auth.request.dto";
 import { LoginResult } from "../../types/login-result.type";
 import { LoginResponseDto } from "../dto/response/auth.response.dto";
 import { User } from "@prisma/client";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 
 
 export class AuthService {
-  private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
   
+  private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
+  private readonly EMAIL_VERIFICATION_CODE_TTL = 60 * 5; // 5분
+  private readonly EMAIL_VERIFIED_SIGNUP_EXPIRES_IN = 60 * 10; // 10분
+  private readonly ACCESS_TOKEN_EXPIRES_IN = "15m";
+
   constructor(
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
@@ -55,7 +60,7 @@ export class AuthService {
     const accessToken = jwt.sign(
       payload,
       process.env.ACCESS_TOKEN_SECRET_KEY!,
-      { expiresIn: "1h" }
+      { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN }
     );
 
     const refreshToken = jwt.sign(
@@ -128,52 +133,67 @@ export class AuthService {
   }
 
   // Google OAuth 로그인 처리
-  async handleGoogleCallback(code: string, state: string): Promise<LoginResult> {
-    await this.verifyOAuthState(state);
+  // auth.service.ts
+async handleGoogleCallback(
+  code: string, 
+  state: string
+): Promise<{ 
+  tokens: { accessToken: string; refreshToken: string };
+  isNewUser: boolean;
+}> {
+  await this.verifyOAuthState(state);
+  const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
 
-    // Google에서 사용자 정보 가져오기
-    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+  let user = await this.authRepository.findUserBySocialProvider(
+    OauthProvider.GOOGLE,
+    googleUserInfo.googleUid
+  );
 
-    // 기존 소셜 로그인 사용자 확인
-    let user = await this.authRepository.findUserBySocialProvider(
-      OauthProvider.GOOGLE,
-      googleUserInfo.googleUid
-    );
+  let isNewUser = false;
 
-    // 없으면 이메일로 기존 사용자 확인
-    if (!user) {
-      user = await this.authRepository.findUserByEmail(googleUserInfo.email);
+  if (!user) {
+    user = await this.authRepository.findUserByEmail(googleUserInfo.email);
 
-      if (user) {
-        // 기존 계정에 Google 연동
-        await this.authRepository.createOauth(
-          user.id,
-          OauthProvider.GOOGLE,
-          googleUserInfo.googleUid
-        );
-      } else {
-        // 신규 사용자 생성
-        const command = new CreateUserCommand({
-          email: googleUserInfo.email,
-          password: null, // 소셜 로그인은 비밀번호 없음
-          nickname: googleUserInfo.nickname,
-          goal: ""
-        });
+    if (user) {
+      await this.authRepository.createOauth(
+        user.id,
+        OauthProvider.GOOGLE,
+        googleUserInfo.googleUid
+      );
+    } else {
+      isNewUser = true;
+      const rawNickname = (googleUserInfo.nickname ?? "").trim();
+      let nickname = rawNickname.slice(0, 10);
 
-        user = await this.authRepository.saveUser(command);
-
-        // OAuth 정보 저장
-        await this.authRepository.createOauth(
-          user.id,
-          OauthProvider.GOOGLE,
-          googleUserInfo.googleUid
-        );
+      // 닉네임이 비어있거나 중복이면 UUID 사용
+      if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
+        // UUID 앞 8자 사용 (예: user_a3f8e2b9)
+        nickname = `user_${uuid().slice(0, 8)}`;
       }
+      const command = new CreateUserCommand({
+        email: googleUserInfo.email,
+        password: null,
+        nickname,
+        goal: ""
+      });
+      user = await this.authRepository.saveUser(command);
+      await this.authRepository.createOauth(
+        user.id,
+        OauthProvider.GOOGLE,
+        googleUserInfo.googleUid
+      );
     }
-
-    // 로그인 결과 생성 (JWT 발급 + 세션 저장)
-    return await this.generateLoginResult(user);
   }
+
+  // JWT 토큰만 생성 (LoginResponseDto 생성 안함!)
+  const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
+  await this.saveSession(user.id, sid, refreshToken);
+
+  return {
+    tokens: { accessToken, refreshToken },
+    isNewUser
+  };
+}
 
   // Google Auth URL 가져오기 (state 생성 및 저장)
   async getGoogleAuthUrl(): Promise<string> {
@@ -229,7 +249,7 @@ export class AuthService {
       const accessToken = jwt.sign(
         payload,
         process.env.ACCESS_TOKEN_SECRET_KEY!,
-        { expiresIn: "1h" }
+        { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN }
       );
 
       return { accessToken };
@@ -252,6 +272,13 @@ export class AuthService {
 
   // 회원가입
   async createUser(body: RegisterRequestDto): Promise<RegisterResponseDto> {
+    const isExist =
+      (await this.authRepository.findUserByEmail(body.email)) !== null;
+
+    if (isExist) {
+      throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
+    }
+
     const verified = await redis.get(`email:verified:REGISTER:${body.email}`);
 
     if (!verified) {
@@ -260,8 +287,19 @@ export class AuthService {
         "이메일 인증이 필요합니다."
       );
     }
+    this.validatePassword(body.password);
 
-    await redis.del(`email:verified:REGISTER:${body.email}`);
+    const isNicknameAvailable = await this.checkNicknameDuplicate(body.nickname);
+    if (!isNicknameAvailable) {
+      throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
+    }
+    // 닉네임 길이 확인
+    if (body.nickname.length > 10) {
+      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
+    }
+    if(body.goal.length > 10){
+      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
+    }
 
     const command = new CreateUserCommand({
       email: body.email,
@@ -269,23 +307,16 @@ export class AuthService {
       nickname: body.nickname,
       goal: body.goal
     });
-
-    const isExist =
-      (await this.authRepository.findUserByEmail(command.email)) !== null;
-
-    if (isExist) {
-      throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
-    }
-    if(body.goal.length > 10){
-      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
-    }
     const user = await this.authRepository.saveUser(command);
+
+    await redis.del(`email:verified:REGISTER:${body.email}`);
+
     return new RegisterResponseDto(user);
   }
 
   // 이메일 인증 코드 생성
   private generateEmailCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return randomInt(100000, 1000000).toString(); // 6자리 숫자
   }
 
   // 이메일 인증 코드 전송
@@ -324,7 +355,7 @@ export class AuthService {
 
     const code = this.generateEmailCode();
 
-    await redis.set(`email:verify:${type}:${email}`, code, { EX: 60 * 3 });
+    await redis.set(`email:verify:${type}:${email}`, code, { EX: this.EMAIL_VERIFICATION_CODE_TTL });
 
     const newCount = await redis.incr(attemptKey);
     if (newCount === 1) {
@@ -351,7 +382,7 @@ export class AuthService {
 
     await redis.del(`email:verify:${type}:${email}`);
     await redis.set(`email:verified:${type}:${email}`, "true", {
-      EX: 60 * 10,
+      EX: this.EMAIL_VERIFIED_SIGNUP_EXPIRES_IN,
     });
   }
 
@@ -411,11 +442,8 @@ export class AuthService {
         ">
           ${code}
         </div>
-        <p>인증 코드는 <strong>3분</strong> 동안 유효합니다.</p>
-        ${type === "RESET_PASSWORD"
-          ? '<p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>'
-          : ""
-        }
+        <p>인증 코드는 <strong>${Math.floor(this.EMAIL_VERIFICATION_CODE_TTL / 60)}분</strong> 동안 유효합니다.</p>
+        <p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>
       </div>
     `,
     });
@@ -453,10 +481,10 @@ export class AuthService {
 
   // 비밀번호 정책 검증
   private validatePassword(password: string): void {
-    if (password.length < 8) {
+    if (password.length < 8 || password.length > 12) {
       throw new UnauthorizedException(
         "A008",
-        "비밀번호는 8자 이상이어야 합니다."
+        "비밀번호는 8자 이상, 12자 이하이어야 합니다."
       );
     }
 
@@ -467,7 +495,7 @@ export class AuthService {
       );
     }
   }
-// 닉네임 수정
+  // 닉네임 수정
   async updateNickname(
     userId: bigint,
     newNickname: string
@@ -477,27 +505,33 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
-
-    // 현재 닉네임과 동일한지 확인
     if (user.nickname === newNickname) {
       throw new ConflictException("U008", "현재 닉네임과 동일합니다.");
     }
-
-    // 닉네임 중복 확인
-    const existingUser = await this.authRepository.findUserByNickname(newNickname);
-    if (existingUser && existingUser.id !== userId) {
+    // 닉네임 길이 확인
+    if (newNickname.length > 10) {
+      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
+    }
+    const isNicknameAvailable = await this.checkNicknameDuplicate(newNickname);
+    if (!isNicknameAvailable) {
       throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
     }
-
-    // 닉네임 길이 확인
-    if (newNickname.length < 2 || newNickname.length > 20) {
-      throw new BadRequestException("V001", "닉네임은 2자 이상, 20자 이하이어야 합니다.");
-    }
-
     // 닉네임 업데이트
     const updatedUser = await this.authRepository.updateNickname(userId, newNickname);
     
     return new UpdateNicknameResponseDto(updatedUser);
+  }
+  // 닉네임 중복 확인
+  async checkNicknameDuplicate(
+    nickname: string,
+    excludeUserId?: bigint
+  ): Promise<boolean> {
+    const existingUser = await this.authRepository.findUserByNickname(nickname);
+  
+    if (existingUser && existingUser.id !== excludeUserId) {
+      return false;  // 중복
+    }
+    return true;  // 사용 가능
   }
   // 목표 수정
   async updateGoal(
@@ -508,6 +542,10 @@ export class AuthService {
     const user = await this.authRepository.findUserById(userId);
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+    // 목표 길이 검사
+    if(newGoal.length > 10){
+      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
     // 현재 목표 동일한지 확인
     if (user.goal === newGoal) {
@@ -546,12 +584,21 @@ export class AuthService {
       await this.authRepository.deleteUser(userId, tx);
     });
 
-  // 세션 정리 (실패해도 자동 만료됨)
-  try {
-    await this.clearUserSession(userId);
-  } catch (error) {
-    // 세션 삭제 실패는 로그만 남김 (TTL로 자동 만료되므로 치명적이지 않음)
-    console.error('Failed to clear user session:', error);
+    // 세션 정리 (실패해도 자동 만료됨)
+    try {
+      await this.clearUserSession(userId);
+    } catch (error) {
+      // 세션 삭제 실패는 로그만 남김 (TTL로 자동 만료되므로 치명적이지 않음)
+      console.error('Failed to clear user session:', error);
+    }
   }
+    async getMyProfile(userId: bigint): Promise<UserProfileResponseDto> {
+      const user = await this.authRepository.findUserById(userId);
+      
+      if (!user) {
+        throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+      }
+      
+      return new UserProfileResponseDto(user);
+    }
   }
-}

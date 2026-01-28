@@ -12,13 +12,13 @@ export class RegisterRequestDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(8, { message: "비밀번호는 8자 이상이어야 합니다." })
+  @MaxLength(12, { message: "비밀번호는 12자 이하이어야 합니다." })
   @Matches(/(?=.*[a-zA-Z])(?=.*\d)/, { message: "비밀번호는 영문과 숫자를 포함해야 합니다." })
   password!: string;
   @Example("UMC")
   @IsString()
   @IsNotEmpty()
-  @MinLength(2, { message: "닉네임은 2자 이상이어야 합니다." })
-  @MaxLength(20, { message: "닉네임은 20자 이하여야 합니다." })
+  @MaxLength(20, { message: "닉네임은 10자 이하여야 합니다." })
   nickname!: string;
   @Example("new-goal")
   @IsString()
@@ -59,6 +59,7 @@ export class LoginRequestDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(8, { message: "비밀번호는 8자 이상이어야 합니다." })
+  @MaxLength(12, { message: "비밀번호는 12자 이하이어야 합니다." })
   @Matches(/(?=.*[a-zA-Z])(?=.*\d)/, { message: "비밀번호는 영문과 숫자를 포함해야 합니다." })
    newPassword!: string;
  }
@@ -74,8 +75,7 @@ export class UpdateNicknameRequestDto {
   @Example("new-nickname")
   @IsString()
   @IsNotEmpty()
-  @MinLength(2, { message: "닉네임은 2자 이상이어야 합니다." })
-  @MaxLength(20, { message: "닉네임은 20자 이하여야 합니다." })
+  @MaxLength(10, { message: "닉네임은 10자 이하여야 합니다." })
   nickname!: string;
 }
 
