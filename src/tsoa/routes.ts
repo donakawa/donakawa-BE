@@ -924,7 +924,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         const argsGoalsController_calcShoppingBudget: Record<string, TsoaRoute.ParameterSchema> = {
                 body: {"in":"body","name":"body","required":true,"ref":"CalcShoppingBudgetRequestDto"},
         };
-        app.post('/goals/budget/calc',
+        app.post('/goals/budget/calculate',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(GoalsController)),
             ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.calcShoppingBudget)),
