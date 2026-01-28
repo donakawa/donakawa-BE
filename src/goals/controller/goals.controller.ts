@@ -36,7 +36,7 @@ export class GoalsController {
   /**
    * @summary 온라인 쇼핑 목표액 계산 API
    */
-  @Post("/budget/calc")
+  @Post("/budget/calculate")
   @SuccessResponse("200", "온라인 쇼핑 목표액 계산 성공")
   public async calcShoppingBudget(
     @Body() body: CalcShoppingBudgetRequestDto,
