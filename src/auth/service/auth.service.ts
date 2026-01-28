@@ -133,52 +133,67 @@ export class AuthService {
   }
 
   // Google OAuth 로그인 처리
-  async handleGoogleCallback(code: string, state: string): Promise<LoginResult> {
-    await this.verifyOAuthState(state);
+  // auth.service.ts
+async handleGoogleCallback(
+  code: string, 
+  state: string
+): Promise<{ 
+  tokens: { accessToken: string; refreshToken: string };
+  isNewUser: boolean;
+}> {
+  await this.verifyOAuthState(state);
+  const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
 
-    // Google에서 사용자 정보 가져오기
-    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+  let user = await this.authRepository.findUserBySocialProvider(
+    OauthProvider.GOOGLE,
+    googleUserInfo.googleUid
+  );
 
-    // 기존 소셜 로그인 사용자 확인
-    let user = await this.authRepository.findUserBySocialProvider(
-      OauthProvider.GOOGLE,
-      googleUserInfo.googleUid
-    );
+  let isNewUser = false;
 
-    // 없으면 이메일로 기존 사용자 확인
-    if (!user) {
-      user = await this.authRepository.findUserByEmail(googleUserInfo.email);
+  if (!user) {
+    user = await this.authRepository.findUserByEmail(googleUserInfo.email);
 
-      if (user) {
-        // 기존 계정에 Google 연동
-        await this.authRepository.createOauth(
-          user.id,
-          OauthProvider.GOOGLE,
-          googleUserInfo.googleUid
-        );
-      } else {
-        // 신규 사용자 생성
-        const command = new CreateUserCommand({
-          email: googleUserInfo.email,
-          password: null, // 소셜 로그인은 비밀번호 없음
-          nickname: googleUserInfo.nickname,
-          goal: ""
-        });
+    if (user) {
+      await this.authRepository.createOauth(
+        user.id,
+        OauthProvider.GOOGLE,
+        googleUserInfo.googleUid
+      );
+    } else {
+      isNewUser = true;
+      const rawNickname = (googleUserInfo.nickname ?? "").trim();
+      let nickname = rawNickname.slice(0, 10);
 
-        user = await this.authRepository.saveUser(command);
-
-        // OAuth 정보 저장
-        await this.authRepository.createOauth(
-          user.id,
-          OauthProvider.GOOGLE,
-          googleUserInfo.googleUid
-        );
+      // 닉네임이 비어있거나 중복이면 UUID 사용
+      if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
+        // UUID 앞 8자 사용 (예: user_a3f8e2b9)
+        nickname = `user_${uuid().slice(0, 8)}`;
       }
+      const command = new CreateUserCommand({
+        email: googleUserInfo.email,
+        password: null,
+        nickname,
+        goal: ""
+      });
+      user = await this.authRepository.saveUser(command);
+      await this.authRepository.createOauth(
+        user.id,
+        OauthProvider.GOOGLE,
+        googleUserInfo.googleUid
+      );
     }
-
-  // 로그인 결과 생성 (JWT 발급 + 세션 저장)
-    return await this.generateLoginResult(user);
   }
+
+  // JWT 토큰만 생성 (LoginResponseDto 생성 안함!)
+  const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
+  await this.saveSession(user.id, sid, refreshToken);
+
+  return {
+    tokens: { accessToken, refreshToken },
+    isNewUser
+  };
+}
 
   // Google Auth URL 가져오기 (state 생성 및 저장)
   async getGoogleAuthUrl(): Promise<string> {
@@ -427,7 +442,7 @@ export class AuthService {
         ">
           ${code}
         </div>
-        <p>인증 코드는 <strong>${this.EMAIL_VERIFICATION_CODE_TTL / 60}분</strong> 동안 유효합니다.</p>
+        <p>인증 코드는 <strong>${Math.floor(this.EMAIL_VERIFICATION_CODE_TTL / 60)}분</strong> 동안 유효합니다.</p>
         <p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>
       </div>
     `,
