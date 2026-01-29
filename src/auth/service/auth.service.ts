@@ -167,9 +167,15 @@ export class AuthService {
 
         // 닉네임이 비어있거나 중복이면 UUID 사용
         if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
-          // UUID 앞 8자 사용 (예: user_a3f8e)
-          nickname = `user_${uuid().slice(0, 5)}`;
+          // UUID 앞 10자 사용
+          nickname = uuid().replace(/-/g, '').slice(0, 10);
+          
+          // 만약의 경우를 위한 단일 체크
+          if (!(await this.checkNicknameDuplicate(nickname))) {
+            throw new ConflictException("U011", "닉네임 생성에 실패했습니다. 다시 시도해주세요.");
+          }
         }
+
         const command = new CreateUserCommand({
           email: googleUserInfo.email,
           password: null,
@@ -570,7 +576,7 @@ export class AuthService {
     if (attempts && parseInt(attempts) >= 10) {
       throw new UnauthorizedException(
         "A014",
-        "비밀번호 확인 시도 횟수를 초과했습니다. 1분 후 다시 시도해주세요."
+        "비밀번호 확인 시도 횟수를 초과했습니다. 5분 후 다시 시도해주세요."
       );
     }
 
@@ -587,17 +593,15 @@ export class AuthService {
       "소셜 로그인 계정은 비밀번호가 설정되지 않았습니다."
     );
   }
-
   const isValid = await compareHash(password, user.password!);
-  
-  // 시도 횟수 증가
-  const newCount = await redis.incr(key);
-  if (newCount === 1) {
-    await redis.expire(key, 300); // 5분
-  }
   
   // 실패 로그
   if (!isValid) {
+    // 시도 횟수 증가
+    const newCount = await redis.incr(key);
+    if (newCount === 1) {
+      await redis.expire(key, 300); // 5분
+    }
     console.log({
       event: 'password_verify_failed',
       userId: user.id.toString(),
