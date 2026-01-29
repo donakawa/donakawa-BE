@@ -15,6 +15,7 @@ import {
   RegisterResponseDto,
   UpdateGoalResponseDto,
   UpdateNicknameResponseDto,
+  UpdatePasswordResponseDto,
   UserProfileResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthRepository } from "../repository/auth.repository";
@@ -166,9 +167,15 @@ export class AuthService {
 
         // 닉네임이 비어있거나 중복이면 UUID 사용
         if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
-          // UUID 앞 8자 사용 (예: user_a3f8e2b9)
-          nickname = `user_${uuid().slice(0, 8)}`;
+          // UUID 앞 10자 사용
+          nickname = uuid().replace(/-/g, '').slice(0, 10);
+          
+          // 만약의 경우를 위한 단일 체크
+          if (!(await this.checkNicknameDuplicate(nickname))) {
+            throw new ConflictException("U011", "닉네임 생성에 실패했습니다. 다시 시도해주세요.");
+          }
         }
+
         const command = new CreateUserCommand({
           email: googleUserInfo.email,
           password: null,
@@ -555,7 +562,107 @@ export class AuthService {
     
     return new UpdateGoalResponseDto(updatedUser);
   }
+  /**
+ * 비밀번호 확인 (rate limiting 적용)
+ */
+  async verifyPassword(
+    userId: bigint,
+    password: string
+  ): Promise<boolean> {
+    // Rate limiting 체크
+    const key = `password-verify:${userId}`;
+    const attempts = await redis.get(key);
+    
+    if (attempts && parseInt(attempts) >= 10) {
+      throw new UnauthorizedException(
+        "A014",
+        "비밀번호 확인 시도 횟수를 초과했습니다. 5분 후 다시 시도해주세요."
+      );
+    }
+
+  const user = await this.authRepository.findUserById(userId);
   
+  if (!user) {
+    throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+  }
+
+  // 소셜 로그인 사용자 체크
+  if (PasswordUtil.isSocialUser(user.password)) {
+    throw new UnauthorizedException(
+      "U010",
+      "소셜 로그인 계정은 비밀번호가 설정되지 않았습니다."
+    );
+  }
+  const isValid = await compareHash(password, user.password!);
+  
+  // 실패 로그
+  if (!isValid) {
+    // 시도 횟수 증가
+    const newCount = await redis.incr(key);
+    if (newCount === 1) {
+      await redis.expire(key, 300); // 5분
+    }
+    console.log({
+      event: 'password_verify_failed',
+      userId: user.id.toString(),
+      timestamp: new Date()
+    });
+  }
+  // 검증 성공 시 상태 저장
+  if (isValid) {
+    await redis.set(
+      `password-verified:${userId}`, 
+      'true', 
+      { EX: 300 }  // 5분
+    );
+  }
+  return isValid;
+}
+
+/**
+ * 비밀번호 설정/변경 (통합)
+ * - 소셜 로그인 사용자: 비밀번호 설정
+ * - 일반 사용자: 비밀번호 변경 (프론트에서 verify-password 먼저 호출 필요)
+ */
+async updatePassword(
+  userId: bigint,
+  newPassword: string
+): Promise<UpdatePasswordResponseDto> {
+  const user = await this.authRepository.findUserById(userId);
+  
+  if (!user) {
+    throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+  }
+
+  const isSocialUser = PasswordUtil.isSocialUser(user.password);
+  
+  // 일반 사용자: 검증 상태 확인
+  if (!isSocialUser) {
+    const verified = await redis.get(`password-verified:${userId}`);
+    
+    if (!verified) {
+      throw new UnauthorizedException(
+        "A015",
+        "현재 비밀번호 확인이 필요합니다."
+      );
+    }
+    
+    // 일회용: 사용 후 삭제
+    await redis.del(`password-verified:${userId}`);
+  }
+
+  // 새 비밀번호 유효성 검사
+  this.validatePassword(newPassword);
+
+  // 비밀번호 변경
+  const hashedPassword = await hashingString(newPassword);
+  await this.authRepository.updatePassword(userId, hashedPassword);
+  await this.clearUserSession(userId);
+
+  const updatedUser = await this.authRepository.findUserById(userId);
+  return new UpdatePasswordResponseDto(updatedUser!);
+}
+
   // 회원탈퇴
   async deleteAccount(userId: bigint, sid: string, password?: string): Promise<void> {
     const user = await this.authRepository.findUserById(userId);
