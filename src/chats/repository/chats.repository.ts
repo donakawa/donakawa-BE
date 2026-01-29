@@ -78,7 +78,9 @@ export class ChatsRepository {
   }
 
   createChatResult(input: { headerId: number; decision: string }) {
-    return this.prisma.aiChatResult.create({
+    return this.prisma.aiChatResult.upsert({
+      where: { headerId: BigInt(input.headerId) },
+      update: { decision: input.decision },
       data: {
         headerId: BigInt(input.headerId),
         decision: input.decision,
