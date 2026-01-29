@@ -8,6 +8,7 @@ import {
   GoalsResponseDto,
   BudgetSpendResponseDto,
   CalcShoppingBudgetResponseDto,
+  SpendSummaryResponseDto,
 } from "../dto/response/goals.response.dto";
 import {
   ConflictException,
@@ -63,6 +64,12 @@ export class GoalsService {
         "incomeDate는 1에서 31 사이의 값이어야 합니다.",
       );
     }
+  }
+
+  private getS3Url(fileName?: string | null) {
+    if (!fileName) return null;
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    return `https://${bucketName}.s3.amazonaws.com/${fileName}`;
   }
 
   // 목표 예산 등록
@@ -182,5 +189,108 @@ export class GoalsService {
     });
 
     return new CalcShoppingBudgetResponseDto(shoppingBudget);
+  }
+
+  // 만족 소비 조회
+  async getSatisfiedSpend(
+    userId: string,
+    cursor?: string,
+  ): Promise<SpendSummaryResponseDto> {
+    return this.getSpendSummary(userId, true, cursor);
+  }
+
+  // 후회 소비 조회
+  async getRegretSpend(
+    userId: string,
+    cursor?: string,
+  ): Promise<SpendSummaryResponseDto> {
+    return this.getSpendSummary(userId, false, cursor);
+  }
+
+  // 만족 소비, 후회 소비 공통 로직
+  async getSpendSummary(
+    userId: string,
+    isSatisfied: boolean,
+    cursor?: string,
+  ): Promise<SpendSummaryResponseDto> {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const reviews = await this.goalsRepository.findSpendItems(
+      userId,
+      oneMonthAgo,
+      isSatisfied,
+      cursor,
+      10,
+    );
+
+    reviews.sort((a, b) => {
+      const aDate =
+        a.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
+        a.addedItemManual?.purchasedHistory[0]?.purchasedDate!;
+      const bDate =
+        b.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
+        b.addedItemManual?.purchasedHistory[0]?.purchasedDate!;
+      return bDate.getTime() - aDate.getTime();
+    });
+
+    const items = reviews.slice(0, 10).map((r) => {
+      const purchased =
+        r.addedItemAuto?.purchasedHistory[0] ??
+        r.addedItemManual?.purchasedHistory[0]!;
+
+      // 수동 추가 아이템
+      if (r.addedItemManual) {
+        return {
+          id: purchased.id.toString(),
+          name: r.addedItemManual.name,
+          price: r.addedItemManual.price,
+          imageUrl: r.addedItemManual.url,
+        };
+      }
+
+      // 자동 추가 아이템
+      const fileName = r.addedItemAuto?.product.files?.name ?? null;
+      const imageUrl = this.getS3Url(fileName);
+
+      return {
+        id: purchased.id.toString(),
+        name: r.addedItemAuto!.product.name,
+        price: r.addedItemAuto!.product.price,
+        imageUrl,
+      };
+    });
+
+    // 평균 구매 결정 시간
+    const decisionDaysList = reviews.slice(0, 10).map((r) => {
+      const wishCreated =
+        r.addedItemAuto?.createdAt ?? r.addedItemManual?.createdAt!;
+      const purchasedAt =
+        r.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
+        r.addedItemManual?.purchasedHistory[0]?.purchasedDate!;
+      return Math.floor(
+        (purchasedAt.getTime() - wishCreated.getTime()) / (1000 * 60 * 60 * 24),
+      );
+    });
+
+    const averageDecisionDays =
+      decisionDaysList.length === 0
+        ? 0
+        : Math.floor(
+            decisionDaysList.reduce((sum, d) => sum + d, 0) /
+              decisionDaysList.length,
+          );
+
+    // 최근 한 달 내 만족 소비/후회 소비 개수
+    const recentMonthCount = await this.goalsRepository.countRecentMonth(
+      userId,
+      oneMonthAgo,
+      isSatisfied,
+    );
+
+    const hasNext = reviews.length > 10;
+    const nextCursor = hasNext ? reviews[10].id.toString() : undefined;
+
+    return { averageDecisionDays, recentMonthCount, items, nextCursor };
   }
 }
