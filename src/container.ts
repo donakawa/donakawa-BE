@@ -9,6 +9,9 @@ import { HistoriesRepository } from "./histories/repository/histories.repository
 import { HistoriesService } from "./histories/service/histories.service";
 import { WishlistRepository } from "./wishlist/repository/wishlist.repository";
 import { WishlistService } from "./wishlist/service/wishlist.service";
+import { ChatsRepository } from "./chats/repository/chats.repository";
+import { ChatsService } from "./chats/service/chats.service";
+import { GptService } from "./chats/service/gpt.service";
 import { SQSClient } from "@aws-sdk/client-sqs";
 import { CrawlQueueClient } from "./wishlist/infra/crawl-queue.client";
 import { ValkeyClient } from "./infra/valkey.client";
@@ -97,4 +100,15 @@ const wishlist = {
     eventEmitterClient,
   },
 };
-export const container = { prisma, auth, goals, histories, wishlist, files };
+
+// Chats 도메인
+const chatsRepository = new ChatsRepository(prisma);
+const gptService = new GptService();
+const chatsService = new ChatsService(chatsRepository, gptService);
+const chats = {
+  service: chatsService,
+  repository: chatsRepository,
+};
+
+
+export const container = { prisma, auth, goals, histories, wishlist, chats, files };

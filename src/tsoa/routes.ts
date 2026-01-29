@@ -10,6 +10,8 @@ import { HistoriesController } from './../histories/controller/histories.control
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { GoalsController } from './../goals/controller/goals.controller';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { ChatsController } from './../chats/controller/chats.controller';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AuthController } from './../auth/controller/auth.controller';
 import { expressAuthentication } from './../auth/middleware/auth.middleware';
 // @ts-ignore - no great way to install types from subpackage
