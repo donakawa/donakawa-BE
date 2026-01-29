@@ -14,7 +14,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from "../../errors/error";
-import { ShoppingBudgetCalculator } from "../domain/shopping-budget.calculator";
+import { ShoppingBudgetCalculator } from "./shopping-budget-calculator.service";
 
 export class GoalsService {
   constructor(private readonly goalsRepository: GoalsRepository) {}

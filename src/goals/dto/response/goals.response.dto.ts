@@ -12,9 +12,7 @@ export class GoalsResponseDto {
   constructor(entity: TargetBudget) {
     this.id = entity.id.toString();
     this.monthlyIncome = entity.monthlyIncome!;
-    this.incomeDate = entity.incomeDate
-      ? entity.incomeDate.getDate()
-      : undefined;
+    this.incomeDate = entity.incomeDay ?? 1;
     this.fixedExpense = entity.fixedExpense ?? undefined;
     this.monthlySaving = entity.monthlySaving ?? undefined;
     this.spendStrategy = entity.spendStrategy!;

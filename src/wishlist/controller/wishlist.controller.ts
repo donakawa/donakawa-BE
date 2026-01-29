@@ -28,9 +28,14 @@ import {
   AddWishListRequestDto,
   ChangeWishitemFolderLocationRequestDto,
   CreateWishitemFolderRequestDto,
+  DeleteItemRequestDto,
   DeleteWishitemFolderRequestDto,
+  MarkItemAsDroppedRequestDto,
+  MarkItemAsPurchasedRequestDto,
+  ModifyWishitemReasonRequestDto,
   ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
+  ShowWishitemsInFolderRequestDto,
 } from "../dto/request/wishlist.request.dto";
 import {
   AddCrawlTaskResponseDto,
@@ -41,10 +46,12 @@ import {
   ShowWishitemDetailResponseDto,
   ShowWishitemFoldersResponseDto,
   ShowWishitemListResponseDto,
+  ShowWishitemsInFolderResponseDto,
 } from "../dto/response/wishlist.response.dto";
 import { validateImageFile } from "../policy/upload.policy";
 import { BadRequestException } from "../../errors/error";
 import { IsOptional } from "class-validator";
+import { WishitemType } from "../types/wishitem.types";
 
 @Route("/wishlist")
 @Tags("Wishlist")
@@ -263,5 +270,100 @@ export class WishlistController extends Controller {
   ) {
     const userId = req.user!.id;
     await this.wishlistService.setWishitemFolder(body, itemId, userId);
+  }
+  /**
+   * @summary 위시 아이템 구매 결정
+   * @description 위시 아이템의 상태를 구매 결정으로 변경 합니다.
+   */
+  @Post("/items/:itemId/status")
+  @Security("jwt")
+  @SuccessResponse(204, "Updated")
+  public async markItemAsPurchased(
+    @Body() body: MarkItemAsPurchasedRequestDto,
+    @Path("itemId") itemId: string,
+    @Request() req: ExpressRequest,
+  ) {
+    if (!/^\d+$/.exec(itemId))
+      throw new BadRequestException(
+        "INVALID_ITEM_ID",
+        "올바르지 않은 아이템 ID 입니다.",
+      );
+    const userId = req.user!.id;
+    await this.wishlistService.markWishitemAsPurchased(body, itemId, userId);
+  }
+  /**
+   * @summary 위시 아이템 구매 포기
+   * @description 위시 아이템의 상태를 구매 포기로 변경 합니다.
+   */
+  @Post("/items/:itemId/drop")
+  @Security("jwt")
+  @SuccessResponse(204, "Updated")
+  public async markItemAsDropped(
+    @Path("itemId") itemId: string,
+    @BodyProp("type") type: WishitemType,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    const dto = new MarkItemAsDroppedRequestDto({ itemId, userId, type });
+    await this.wishlistService.markWishitemAsDropped(dto);
+  }
+  /**
+   * @summary 위시 아이템 삭제 (⚠️ TODO 확인후 수정 필요 / 미 완성)
+   * @description 위시 아이템을 삭제합니다.
+   */
+  @Delete("/items/:itemId")
+  @Security("jwt")
+  @SuccessResponse(204, "Deleted")
+  public async deleteItem(
+    @Path("itemId") itemId: string,
+    @Query("type") type: WishitemType,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    const dto = new DeleteItemRequestDto({ itemId, type, userId });
+    await this.wishlistService.deleteWishitem(dto);
+  }
+  /**
+   * @summary 폴더별 위시 아이템 조회하기 (WISHLISTED만)
+   * @description 폴더별로 위시 아이템 목록을 가져옵니다.
+   */
+  @Get("/folders/:folderId/items")
+  @Security("jwt")
+  public async showWishitemsInFolder(
+    @Request() req: ExpressRequest,
+    @Path("folderId") folderId: string,
+    @Query("take") take: number,
+    @Query("cursor") cursor?: string,
+  ): Promise<ApiResponse<ShowWishitemsInFolderResponseDto>> {
+    const userId = req.user!.id;
+    const dto = new ShowWishitemsInFolderRequestDto({
+      userId,
+      folderId,
+      cursor,
+      take,
+    });
+    return success(await this.wishlistService.getWishitemsInFolder(dto));
+  }
+  /**
+   * @summary 위시 아이템 추가 이유 수정
+   * @description 위시 아이템으로 추가한 이유를 수정합니다.
+   */
+  @Patch("/items/:itemId/reason")
+  @Security("jwt")
+  @SuccessResponse(204, "Updated")
+  public async modifyWishitemReason(
+    @Path("itemId") itemId: string,
+    @BodyProp("reason") reason: string,
+    @BodyProp("type") type: WishitemType,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    const dto = new ModifyWishitemReasonRequestDto({
+      itemId,
+      userId,
+      reason,
+      type,
+    });
+    await this.wishlistService.setWishitemReason(dto);
   }
 }

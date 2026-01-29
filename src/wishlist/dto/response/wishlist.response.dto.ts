@@ -149,3 +149,28 @@ export class CreateWishitemFolderResponseDto {
     this.createdAt = new Date().toISOString();
   }
 }
+export class ShowWishitemsInFolderResponseDto {
+  nextCursor!: string | null;
+  wishitems!: WishItemPreviewPayload[];
+  constructor(
+    wishitems: WishlistRecordInterface[],
+    nextCursor: string | null,
+    photoUrls: Record<string, string | null>,
+  ) {
+    this.nextCursor = nextCursor;
+    this.wishitems = wishitems.reduce<WishItemPreviewPayload[]>(
+      (acc, wishitem) => {
+        acc.push({
+          id: wishitem.id.toString(),
+          name: wishitem.name,
+          price: wishitem.price,
+          photoUrl: photoUrls[wishitem.cursor],
+          type: wishitem.type,
+          status: wishitem.status,
+        });
+        return acc;
+      },
+      [],
+    );
+  }
+}
