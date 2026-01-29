@@ -12,12 +12,28 @@ export class GoalsResponseDto {
   constructor(entity: TargetBudget) {
     this.id = entity.id.toString();
     this.monthlyIncome = entity.monthlyIncome!;
-    this.incomeDate = entity.incomeDate
-      ? entity.incomeDate.getDate()
-      : undefined;
+    this.incomeDate = entity.incomeDay ?? 1;
     this.fixedExpense = entity.fixedExpense ?? undefined;
     this.monthlySaving = entity.monthlySaving ?? undefined;
     this.spendStrategy = entity.spendStrategy!;
     this.shoppingBudget = entity.shoppingBudget!;
+  }
+}
+
+export class BudgetSpendResponseDto {
+  totalSpend!: number;
+  remainingBudget!: number;
+
+  constructor(data: { totalSpend: number; remainingBudget: number }) {
+    this.totalSpend = data.totalSpend;
+    this.remainingBudget = data.remainingBudget;
+  }
+}
+
+export class CalcShoppingBudgetResponseDto {
+  shoppingBudget!: number;
+
+  constructor(shoppingBudget: number) {
+    this.shoppingBudget = shoppingBudget;
   }
 }

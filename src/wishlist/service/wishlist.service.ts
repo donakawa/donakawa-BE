@@ -11,9 +11,14 @@ import {
   AddWishListRequestDto,
   ChangeWishitemFolderLocationRequestDto,
   CreateWishitemFolderRequestDto,
+  DeleteItemRequestDto,
   DeleteWishitemFolderRequestDto,
+  MarkItemAsDroppedRequestDto,
+  MarkItemAsPurchasedRequestDto,
+  ModifyWishitemReasonRequestDto,
   ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
+  ShowWishitemsInFolderRequestDto,
 } from "../dto/request/wishlist.request.dto";
 import {
   AddCrawlTaskResponseDto,
@@ -24,6 +29,7 @@ import {
   ShowWishitemDetailResponseDto,
   ShowWishitemFoldersResponseDto,
   ShowWishitemListResponseDto,
+  ShowWishitemsInFolderResponseDto,
 } from "../dto/response/wishlist.response.dto";
 import { CrawlQueueClient } from "../infra/crawl-queue.client";
 import { CrawlRequestMessage } from "../messages/crawl-request.message";
@@ -385,12 +391,12 @@ export class WishlistService {
         "유효하지 않은 입력 값 입니다.",
       );
     const rows: WishlistRecordInterface[] =
-      (await this.wishlistRepository.findAllAddedItem(
+      await this.wishlistRepository.findAllAddedItem(
         data.userId,
         data.take,
         data.status,
         data.cursor,
-      )) as unknown as WishlistRecordInterface[];
+      );
     const nextCursor =
       rows.length > data.take ? rows[rows.length - 2].cursor : null;
     if (rows.length > data.take) rows.pop();
@@ -531,6 +537,283 @@ export class WishlistService {
       : await this.wishlistRepository.updateAddedItemManual({
           where: { id: BigInt(itemId) },
           data: { folderId: data.folderId ? BigInt(data.folderId) : null },
+        });
+  }
+  async markWishitemAsPurchased(
+    data: MarkItemAsPurchasedRequestDto,
+    itemId: string,
+    userId: string,
+  ) {
+    if (!isWishitemType(data.type))
+      throw new BadRequestException(
+        "INVALID_TYPE",
+        "올바른 아이템 타입을 입력해 주세요.",
+      );
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const inputDate = new Date(data.date);
+    inputDate.setHours(0, 0, 0, 0);
+    if (inputDate > today)
+      throw new BadRequestException(
+        "INVALID_DATE",
+        "현재보다 미래 시점을 구매 일자로 설정할 수 없습니다.",
+      );
+    const item =
+      data.type === "AUTO"
+        ? await this.wishlistRepository.findAddedItemAutoById(itemId)
+        : await this.wishlistRepository.findAddedItemManualById(itemId);
+    const isExistItem = item !== null;
+    const hasPermission = item?.userId === BigInt(userId);
+    const alreadyBought = item?.status === "BOUGHT";
+    if (!isExistItem || !hasPermission)
+      throw new NotFoundException(
+        "WISHITEM_NOT_FOUND",
+        "대상 위시 아이템을 찾을 수 없습니다.",
+      );
+    if (alreadyBought)
+      throw new ConflictException(
+        "ALREADY_PURCHASED",
+        "이미 구매 확정된 위시 아이템 입니다.",
+      );
+    if ((!data.reason && !data.reasonId) || (data.reason && data.reasonId))
+      throw new BadRequestException(
+        "INVALID_REASON",
+        "이유 템플릿 ID 또는 이유 값중 하나가 입력되어 있어야 합니다.",
+      );
+    await this.dbRepository.transaction(async (tx) => {
+      await this.wishlistRepository.savePurchasedHistory(
+        {
+          ...(data.type === "AUTO" && {
+            addedItemAuto: { connect: { id: BigInt(itemId) } },
+          }),
+          ...(data.type === "MANUAL" && {
+            addedItemManual: { connect: { id: BigInt(itemId) } },
+          }),
+          ...(data.reasonId && {
+            purchasedReason: { connect: { id: +data.reasonId } },
+          }),
+          ...(data.reason && { reason: data.reason }),
+          purchasedDate: new Date(data.date + "T00:00:00+09:00"),
+          purchasedAt: data.purchasedAt,
+        },
+        tx,
+      );
+      data.type === "AUTO"
+        ? await this.wishlistRepository.updateAddedItemAuto(
+            {
+              where: { id: BigInt(itemId) },
+              data: {
+                status: "BOUGHT",
+              },
+            },
+            tx,
+          )
+        : await this.wishlistRepository.updateAddedItemManual(
+            {
+              where: { id: BigInt(itemId) },
+              data: { status: "BOUGHT" },
+            },
+            tx,
+          );
+    });
+  }
+  async markWishitemAsDropped(data: MarkItemAsDroppedRequestDto) {
+    if (!isWishitemType(data.type))
+      throw new BadRequestException(
+        "INVALID_TYPE",
+        "올바른 아이템 타입을 입력해 주세요.",
+      );
+    const item =
+      data.type === "AUTO"
+        ? await this.wishlistRepository.findAddedItemAutoById(data.itemId)
+        : await this.wishlistRepository.findAddedItemManualById(data.itemId);
+    const isExist = item !== null;
+    const hasPermission = item?.userId === BigInt(data.userId);
+    const alreadyDropped = item?.status === "DROPPED";
+    if (!isExist || !hasPermission)
+      throw new NotFoundException(
+        "WISHITEM_NOT_FOUND",
+        "대상 위시 아이템을 찾을 수 없습니다.",
+      );
+    if (alreadyDropped)
+      throw new ConflictException(
+        "ALREADY_DROPPED",
+        "이미 구매 포기된 위시 아이템 입니다.",
+      );
+    await this.dbRepository.transaction(async (tx) => {
+      if (data.type === "AUTO") {
+        await this.wishlistRepository.updateAddedItemAuto(
+          {
+            where: { id: BigInt(data.itemId) },
+            data: { status: "DROPPED" },
+          },
+          tx,
+        );
+        const result = await this.wishlistRepository.findPurchasedHistories(
+          {
+            where: { autoItemId: BigInt(data.itemId) },
+          },
+          tx,
+        );
+        if (result.length !== 0)
+          await this.wishlistRepository.deletePurchasedHistory(
+            {
+              where: { id: result[0].id },
+            },
+            tx,
+          );
+      } else {
+        await this.wishlistRepository.updateAddedItemManual(
+          {
+            where: { id: BigInt(data.itemId) },
+            data: { status: "DROPPED" },
+          },
+          tx,
+        );
+        const result = await this.wishlistRepository.findPurchasedHistories(
+          {
+            where: { manualItemId: BigInt(data.itemId) },
+          },
+          tx,
+        );
+        if (result.length !== 0)
+          await this.wishlistRepository.deletePurchasedHistory(
+            { where: { id: result[0].id } },
+            tx,
+          );
+      }
+    });
+  }
+  async deleteWishitem(data: DeleteItemRequestDto) {
+    if (!isWishitemType(data.type))
+      throw new BadRequestException(
+        "INVALID_TYPE",
+        "올바른 아이템 타입을 입력해 주세요.",
+      );
+    const item =
+      data.type === "AUTO"
+        ? await this.wishlistRepository.findAddedItemAutoById(data.itemId)
+        : await this.wishlistRepository.findAddedItemManualById(data.itemId);
+    const isExist = item !== null;
+    const hasPermission = item?.userId === BigInt(data.userId);
+    if (!isExist || !hasPermission)
+      throw new NotFoundException(
+        "WISHITEM_NOT_FOUND",
+        "대상 위시 아이템을 찾을 수 없습니다.",
+      );
+    await this.dbRepository.transaction(async (tx) => {
+      if (data.type === "AUTO") {
+        const result = await this.wishlistRepository.findPurchasedHistories(
+          {
+            where: {
+              autoItemId: BigInt(data.itemId),
+            },
+          },
+          tx,
+        );
+        if (result.length !== 0)
+          await this.wishlistRepository.deletePurchasedHistory(
+            {
+              where: { id: result[0].id },
+            },
+            tx,
+          );
+        // TODO : 이 사이에 후기 도 삭제하는 코드 추가하기
+        await this.wishlistRepository.deleteAddedItemAuto(
+          {
+            where: {
+              id: BigInt(data.itemId),
+            },
+          },
+          tx,
+        );
+      } else {
+        const result = await this.wishlistRepository.findPurchasedHistories({
+          where: {
+            manualItemId: BigInt(data.itemId),
+          },
+        });
+        if (result.length !== 0)
+          await this.wishlistRepository.deletePurchasedHistory(
+            {
+              where: { id: result[0].id },
+            },
+            tx,
+          );
+        // TODO : 이 사이에 후기 도 삭제하는 코드 추가하기
+        await this.wishlistRepository.deleteAddedItemManual(
+          {
+            where: {
+              id: BigInt(data.itemId),
+            },
+          },
+          tx,
+        );
+      }
+    });
+  }
+  async getWishitemsInFolder(data: ShowWishitemsInFolderRequestDto) {
+    const folder = await this.wishlistRepository.findWishitemFolders({
+      where: { id: BigInt(data.folderId) },
+    });
+    const isExistFolder = folder.length !== 0;
+    const hasPermission = folder[0].userId === BigInt(data.userId);
+    if (!isExistFolder || !hasPermission)
+      throw new NotFoundException(
+        "FOLDER_NOT_FOUND",
+        "해당 ID를 가진 폴더를 찾을 수 없습니다.",
+      );
+    const rows: WishlistRecordInterface[] =
+      await this.wishlistRepository.findAllAddedItem(
+        data.userId,
+        data.take,
+        "WISHLISTED",
+        data.cursor,
+        data.folderId,
+      );
+    const nextCursor =
+      rows.length > data.take ? rows[rows.length - 2].cursor : null;
+    if (rows.length > data.take) rows.pop();
+    const entries = await Promise.all(
+      rows.map(async (row) => {
+        const url = row.photoFileId
+          ? await this.filesService.generateUrl(
+              row.photoFileId.toString(),
+              60 * 10,
+            )
+          : null;
+        return [row.cursor, url] as const;
+      }),
+    );
+    const photoUrls: Record<string, string | null> =
+      Object.fromEntries(entries);
+    return new ShowWishitemsInFolderResponseDto(rows, nextCursor, photoUrls);
+  }
+  async setWishitemReason(data: ModifyWishitemReasonRequestDto) {
+    if (!isWishitemType(data.type))
+      throw new BadRequestException(
+        "INVALID_TYPE",
+        "올바른 아이템 타입을 입력해 주세요.",
+      );
+    const item =
+      data.type === "AUTO"
+        ? await this.wishlistRepository.findAddedItemAutoById(data.itemId)
+        : await this.wishlistRepository.findAddedItemManualById(data.itemId);
+    const isExist = item !== null;
+    const hasPermission = item?.userId === BigInt(data.userId);
+    if (!isExist || !hasPermission)
+      throw new NotFoundException(
+        "WISHITEM_NOT_FOUND",
+        "대상 위시 아이템을 찾을 수 없습니다.",
+      );
+    data.type === "AUTO"
+      ? await this.wishlistRepository.updateAddedItemAuto({
+          where: { id: BigInt(data.itemId) },
+          data: { reason: data.reason },
+        })
+      : await this.wishlistRepository.updateAddedItemManual({
+          where: { id: BigInt(data.itemId) },
+          data: { reason: data.reason },
         });
   }
 }
