@@ -16,9 +16,13 @@ import {
   BadRequestException,
 } from "../../errors/error";
 import { ShoppingBudgetCalculator } from "./shopping-budget-calculator.service";
+import { FilesService } from "../../files/service/files.service";
 
 export class GoalsService {
-  constructor(private readonly goalsRepository: GoalsRepository) {}
+  constructor(
+    private readonly goalsRepository: GoalsRepository,
+    private readonly filesService: FilesService,
+  ) {}
 
   // 갱신일 등록 계산
   private makeNextIncomeDate(day: number): Date {
@@ -64,12 +68,6 @@ export class GoalsService {
         "incomeDate는 1에서 31 사이의 값이어야 합니다.",
       );
     }
-  }
-
-  private getS3Url(fileName?: string | null) {
-    if (!fileName) return null;
-    const bucketName = process.env.AWS_S3_BUCKET_NAME;
-    return `https://${bucketName}.s3.amazonaws.com/${fileName}`;
   }
 
   // 목표 예산 등록
@@ -234,32 +232,41 @@ export class GoalsService {
       return bDate.getTime() - aDate.getTime();
     });
 
-    const items = reviews.slice(0, 10).map((r) => {
-      const purchased =
-        r.addedItemAuto?.purchasedHistory[0] ??
-        r.addedItemManual?.purchasedHistory[0]!;
+    const items = await Promise.all(
+      reviews.slice(0, 10).map(async (r) => {
+        const purchased =
+          r.addedItemAuto?.purchasedHistory[0] ??
+          r.addedItemManual?.purchasedHistory[0]!;
 
-      // 수동 추가 아이템
-      if (r.addedItemManual) {
+        // 수동 추가
+        if (r.addedItemManual) {
+          const fileId = r.addedItemManual.files?.id;
+          const imageUrl = fileId
+            ? await this.filesService.generateUrl(fileId.toString(), 60 * 10)
+            : null;
+
+          return {
+            id: purchased.id.toString(),
+            name: r.addedItemManual.name,
+            price: r.addedItemManual.price,
+            imageUrl,
+          };
+        }
+
+        // 자동 추가
+        const fileId = r.addedItemAuto?.product.files?.id;
+        const imageUrl = fileId
+          ? await this.filesService.generateUrl(fileId.toString(), 60 * 10)
+          : null;
+
         return {
           id: purchased.id.toString(),
-          name: r.addedItemManual.name,
-          price: r.addedItemManual.price,
-          imageUrl: r.addedItemManual.url,
+          name: r.addedItemAuto!.product.name,
+          price: r.addedItemAuto!.product.price,
+          imageUrl,
         };
-      }
-
-      // 자동 추가 아이템
-      const fileName = r.addedItemAuto?.product.files?.name ?? null;
-      const imageUrl = this.getS3Url(fileName);
-
-      return {
-        id: purchased.id.toString(),
-        name: r.addedItemAuto!.product.name,
-        price: r.addedItemAuto!.product.price,
-        imageUrl,
-      };
-    });
+      }),
+    );
 
     // 평균 구매 결정 시간
     const decisionDaysList = reviews.map((r) => {

@@ -121,7 +121,7 @@ export class GoalsRepository {
               select: {
                 name: true,
                 price: true,
-                files: true,
+                files: { select: { id: true } },
               },
             },
             purchasedHistory: { orderBy: { purchasedDate: "desc" }, take: 1 },
@@ -132,8 +132,11 @@ export class GoalsRepository {
             createdAt: true,
             name: true,
             price: true,
-            url: true,
-            purchasedHistory: { orderBy: { purchasedDate: "desc" }, take: 1 },
+            files: { select: { id: true } },
+            purchasedHistory: {
+              orderBy: { purchasedDate: "desc" },
+              take: 1,
+            },
           },
         },
       },
