@@ -1,4 +1,15 @@
-import { Body, Delete, Get, Path, Post, Route, Tags, Res } from "tsoa";
+import {
+  Body,
+  Delete,
+  Get,
+  Path,
+  Post,
+  Route,
+  Tags,
+  Security,
+  Request,
+} from "tsoa";
+import { Request as ExpressRequest } from "express";
 
 import { container } from "../../container";
 import { ChatsService } from "../service/chats.service";
@@ -8,6 +19,7 @@ import {
 } from "../dto/request/chats.request.dto";
 
 @Route("/chats")
+@Security("jwt")
 @Tags("Chats")
 export class ChatsController {
   private readonly chatsService: ChatsService = container.chats.service;
@@ -18,16 +30,23 @@ export class ChatsController {
    * 위시 아이템을 기준으로 새로운 채팅 세션을 생성한다. (1개의 위시 아이템 당 1개의 채팅)
    */
   @Post()
-  async createChat(@Body() body: CreateChatRequest) {
-    return this.chatsService.createChat(1, body.wishItemId);
+  async createChat(
+    @Body() body: CreateChatRequest,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = Number(req.user!.id);
+
+    return this.chatsService.createChat(userId, body.wishItemId);
   }
 
   /**
    * 사용자의 채팅 목록 조회
    */
   @Get()
-  async getChats() {
-    return this.chatsService.getChats(1);
+  async getChats(@Request() req: ExpressRequest) {
+    const userId = Number(req.user!.id);
+
+    return this.chatsService.getChats(userId);
   }
 
   /**
