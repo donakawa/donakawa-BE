@@ -217,8 +217,8 @@ model AiChatHeader {
 
   title String
 
-  createdAt       DateTime      `@default`(now()) `@map`("created_at") `@db.Timestamp`()
-  updatedAt       DateTime?     `@updatedAt` `@map`("updated_at") `@db.Timestamp`()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime? @updatedAt      @map("updated_at") @db.Timestamp()
 
   aiChatMessage   AiChatMessage[]
   aiChatSelection AiChatSelection[] @relation("HeaderSelections")
