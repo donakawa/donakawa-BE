@@ -71,4 +71,43 @@ export class HistoriesRepository {
       },
     });
   }
+
+  async findMonthlyPurchasedItems(
+    userId: bigint,
+    start: Date,
+    end: Date
+  ) {
+    return this.prisma.purchasedHistory.findMany({
+      where: {
+        purchasedDate: {
+          gte: start,
+          lt: end,
+        },
+        OR: [
+          {
+            addedItemAuto: { userId },
+          },
+          {
+            addedItemManual: { userId },
+          },
+        ],
+      },
+      include: {
+        addedItemAuto: {
+          include: {
+            product: true,
+            review: true,
+          },
+        },
+        addedItemManual: {
+          include: {
+            review: true,
+          },
+        },
+      },
+      orderBy: {
+        purchasedDate: "asc",
+      },
+    });
+  }
 }

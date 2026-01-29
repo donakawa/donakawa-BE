@@ -1,5 +1,6 @@
 import { HistoriesRepository } from "../repository/histories.repository";
 import { AppError } from "../../errors/app.error";
+import { MonthlyCalendarResponseDto } from "../dto/response/histories.response.dto";
 
 export class HistoriesService {
   constructor(private readonly historiesRepository: HistoriesRepository) {}
@@ -88,6 +89,86 @@ export class HistoriesService {
     return {
       reviewCount: mapped.length,
       reviews: mapped,
+    };
+  }
+
+  async getMonthlyCalendar(
+    userId: bigint,
+    year: number,
+    month: number
+  ): Promise<MonthlyCalendarResponseDto> {
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 1);
+
+    const histories =
+      await this.historiesRepository.findMonthlyPurchasedItems(
+        userId,
+        start,
+        end
+      );
+
+    const itemsByDate: Record<string, any[]> = {};
+    let totalAmount = 0;
+
+    histories.forEach((h) => {
+      const date = h.purchasedDate.toISOString().split("T")[0];
+
+      if (!itemsByDate[date]) {
+        itemsByDate[date] = [];
+      }
+
+      if (h.addedItemAuto) {
+        const item = h.addedItemAuto;
+        const price = item.product.price;
+        const review = item.review[0];
+
+        totalAmount += price;
+
+        itemsByDate[date].push({
+          itemId: Number(item.id),
+          itemType: "AUTO",
+          name: item.product.name,
+          price,
+          thumbnailUrl: null,
+          purchasedAt: h.purchasedAt,
+          satisfaction: review?.satisfaction ?? null,
+        });
+      }
+
+      if (h.addedItemManual) {
+        const item = h.addedItemManual;
+        const price = item.price;
+        const review = item.review[0];
+
+        totalAmount += price;
+
+        itemsByDate[date].push({
+          itemId: Number(item.id),
+          itemType: "MANUAL",
+          name: item.name,
+          price,
+          thumbnailUrl: null,
+          purchasedAt: h.purchasedAt,
+          satisfaction: review?.satisfaction ?? null,
+        });
+      }
+    });
+
+    const calendar = Object.entries(itemsByDate).map(([date, items]) => ({
+      date,
+      purchaseCount: items.length,
+      totalAmount: items.reduce((sum, i) => sum + i.price, 0),
+    }));
+
+    return {
+      year,
+      month,
+      summary: {
+        totalAmount,
+        purchaseCount: histories.length,
+      },
+      calendar,
+      itemsByDate,
     };
   }
 }

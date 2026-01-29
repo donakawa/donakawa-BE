@@ -283,6 +283,131 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CreateReviewResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "reviewId": {"dataType":"double","required":true},
+            "itemId": {"dataType":"double","required":true},
+            "satisfaction": {"dataType":"double","required":true},
+            "frequency": {"dataType":"double","required":true},
+            "createdAt": {"dataType":"datetime","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_CreateReviewResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"CreateReviewResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CreateReviewRequestDto": {
+        "dataType": "refObject",
+        "properties": {
+            "satisfaction": {"dataType":"double","required":true},
+            "frequency": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ReviewItemResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "reviewId": {"dataType":"double","required":true},
+            "itemId": {"dataType":"double","required":true},
+            "itemName": {"dataType":"string","required":true},
+            "price": {"dataType":"double","required":true},
+            "imageUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "purchaseReasons": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "satisfactionScore": {"dataType":"double","required":true},
+            "purchasedAt": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GetMyReviewsResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "reviewCount": {"dataType":"double","required":true},
+            "reviews": {"dataType":"array","array":{"dataType":"refObject","ref":"ReviewItemResponseDto"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_GetMyReviewsResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"GetMyReviewsResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CalendarSummaryDto": {
+        "dataType": "refObject",
+        "properties": {
+            "totalAmount": {"dataType":"double","required":true},
+            "purchaseCount": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CalendarDayDto": {
+        "dataType": "refObject",
+        "properties": {
+            "date": {"dataType":"string","required":true},
+            "purchaseCount": {"dataType":"double","required":true},
+            "totalAmount": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CalendarItemDto": {
+        "dataType": "refObject",
+        "properties": {
+            "itemId": {"dataType":"double","required":true},
+            "itemType": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["MANUAL"]}],"required":true},
+            "name": {"dataType":"string","required":true},
+            "price": {"dataType":"double","required":true},
+            "thumbnailUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "purchasedAt": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["MORNING"]},{"dataType":"enum","enums":["EVENING"]},{"dataType":"enum","enums":["NIGHT"]}],"required":true},
+            "satisfaction": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "Record_string.CalendarItemDto-Array_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{},"additionalProperties":{"dataType":"array","array":{"dataType":"refObject","ref":"CalendarItemDto"}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "MonthlyCalendarResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "year": {"dataType":"double","required":true},
+            "month": {"dataType":"double","required":true},
+            "summary": {"ref":"CalendarSummaryDto","required":true},
+            "calendar": {"dataType":"array","array":{"dataType":"refObject","ref":"CalendarDayDto"},"required":true},
+            "itemsByDate": {"ref":"Record_string.CalendarItemDto-Array_","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_MonthlyCalendarResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"MonthlyCalendarResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "CalcShoppingBudgetResponseDto": {
         "dataType": "refObject",
         "properties": {
@@ -1278,6 +1403,103 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 204,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsHistoriesController_createReview: Record<string, TsoaRoute.ParameterSchema> = {
+                itemId: {"in":"path","name":"itemId","required":true,"dataType":"double"},
+                body: {"in":"body","name":"body","required":true,"ref":"CreateReviewRequestDto"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.post('/histories/items/:itemId/review',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController)),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController.prototype.createReview)),
+
+            async function HistoriesController_createReview(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsHistoriesController_createReview, request, response });
+
+                const controller = new HistoriesController();
+
+              await templateService.apiHandler({
+                methodName: 'createReview',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsHistoriesController_getMyReviews: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/histories/reviews',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController)),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController.prototype.getMyReviews)),
+
+            async function HistoriesController_getMyReviews(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsHistoriesController_getMyReviews, request, response });
+
+                const controller = new HistoriesController();
+
+              await templateService.apiHandler({
+                methodName: 'getMyReviews',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsHistoriesController_getMonthlyCalendar: Record<string, TsoaRoute.ParameterSchema> = {
+                year: {"in":"query","name":"year","required":true,"dataType":"double"},
+                month: {"in":"query","name":"month","required":true,"dataType":"double"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/histories/calendar',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController)),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController.prototype.getMonthlyCalendar)),
+
+            async function HistoriesController_getMonthlyCalendar(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsHistoriesController_getMonthlyCalendar, request, response });
+
+                const controller = new HistoriesController();
+
+              await templateService.apiHandler({
+                methodName: 'getMonthlyCalendar',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
               });
             } catch (err) {
                 return next(err);
