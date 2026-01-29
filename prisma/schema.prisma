@@ -152,9 +152,9 @@ model PurchasedHistory {
   purchasedReason PurchasedReason? @relation(fields: [reasonId], references: [id])
   reason          String?          @db.VarChar(10)
   autoItemId      BigInt?          @map("auto_item_id")
-  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id])
+  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id], onDelete: Cascade)
   manualItemId    BigInt?          @map("manual_item_id")
-  addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id])
+  addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id], onDelete: Cascade)
   purchasedDate   DateTime         @map("purchased_date")
   purchasedAt     PurchasedAt
 
@@ -190,9 +190,9 @@ model AddedItemManual {
 model Review {
   id              BigInt           @id @default(autoincrement())
   autoItemId      BigInt?          @map("auto_item_id")
-  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id])
+  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id], onDelete: Cascade)
   manualItemId    BigInt?          @map("manual_item_id")
-  addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id])
+  addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id], onDelete: Cascade)
   satisfaction    Float?
   frequency       Int?
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp()
@@ -213,7 +213,7 @@ model AiChatHeader {
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   addedItemAutoId BigInt        @map("added_item_auto_id")
-  addedItemAuto   AddedItemAuto @relation(fields: [addedItemAutoId], references: [id])
+  addedItemAuto   AddedItemAuto @relation(fields: [addedItemAutoId], references: [id], onDelete: Cascade)
 
   title String
 

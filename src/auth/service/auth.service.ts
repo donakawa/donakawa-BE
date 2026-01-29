@@ -182,22 +182,27 @@ export class AuthService {
           nickname,
           goal: ""
         });
-        user = await this.authRepository.saveUser(command);
+      user = await this.prisma.$transaction(async (tx) => {
+        const newUser = await this.authRepository.saveUser(command, tx);
         await this.authRepository.createOauth(
-          user.id,
+          newUser.id,
           OauthProvider.GOOGLE,
-          googleUserInfo.googleUid
+          googleUserInfo.googleUid,
+          tx
         );
-      }
+        return newUser;
+      });
     }
-    // JWT 토큰만 생성 (LoginResponseDto 생성 안함)
-    const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
-    await this.saveSession(user.id, sid, refreshToken);
+  }
 
-    return {
-      tokens: { accessToken, refreshToken },
-      isNewUser
-    };
+  // JWT 토큰만 생성 (LoginResponseDto 생성 안함)
+  const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
+  await this.saveSession(user.id, sid, refreshToken);
+
+  return {
+    tokens: { accessToken, refreshToken },
+    isNewUser
+  };
   }
 
   // Google Auth URL 가져오기 (state 생성 및 저장)
