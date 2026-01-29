@@ -1,6 +1,6 @@
 import { HistoriesRepository } from "../repository/histories.repository";
 import { AppError } from "../../errors/app.error";
-import { MonthlyCalendarResponseDto } from "../dto/response/histories.response.dto";
+import { MonthlyCalendarResponseDto, GetDailyHistoriesResponseDto } from "../dto/response/histories.response.dto";
 
 export class HistoriesService {
   constructor(private readonly historiesRepository: HistoriesRepository) {}
@@ -176,6 +176,76 @@ export class HistoriesService {
       },
       calendar,
       itemsByDate,
+    };
+  }
+
+  async getDailyHistories(
+    userId: bigint,
+    date: string
+  ): Promise<GetDailyHistoriesResponseDto> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new AppError({
+        errorCode: "H003",
+        message: "날짜 형식이 올바르지 않습니다.",
+        statusCode: 400,
+      });
+    }
+
+    const start = new Date(`${date}T00:00:00.000Z`);
+    const end = new Date(`${date}T23:59:59.999Z`);
+
+    const histories =
+      await this.historiesRepository.findDailyPurchasedItems(
+        userId,
+        start,
+        end
+      );
+
+    let totalAmount = 0;
+
+    const items = histories.map((h) => {
+      if (h.addedItemAuto) {
+        const item = h.addedItemAuto;
+        const review = item.review[0];
+        const price = item.product.price;
+
+        totalAmount += price;
+
+        return {
+          itemId: Number(item.id),
+          itemType: "AUTO" as const,
+          name: item.product.name,
+          price,
+          thumbnailUrl: null,
+          purchasedAt: h.purchasedAt,
+          satisfaction: review?.satisfaction ?? null,
+        };
+      }
+
+      const item = h.addedItemManual!;
+      const review = item.review[0];
+      const price = item.price;
+
+      totalAmount += price;
+
+      return {
+        itemId: Number(item.id),
+        itemType: "MANUAL" as const,
+        name: item.name,
+        price,
+        thumbnailUrl: null,
+        purchasedAt: h.purchasedAt,
+        satisfaction: review?.satisfaction ?? null,
+      };
+    });
+
+    return {
+      date,
+      summary: {
+        totalAmount,
+        purchaseCount: items.length,
+      },
+      items,
     };
   }
 }

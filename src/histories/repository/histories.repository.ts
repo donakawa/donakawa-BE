@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 export class HistoriesRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) { }
 
   async findAutoItem(itemId: number, userId: bigint) {
     return this.prisma.addedItemAuto.findFirst({
@@ -102,6 +102,47 @@ export class HistoriesRepository {
         addedItemManual: {
           include: {
             review: { orderBy: { createdAt: "desc" }, take: 1 },
+          },
+        },
+      },
+      orderBy: {
+        purchasedDate: "asc",
+      },
+    });
+  }
+
+  async findDailyPurchasedItems(
+    userId: bigint,
+    start: Date,
+    end: Date
+  ) {
+    return this.prisma.purchasedHistory.findMany({
+      where: {
+        purchasedDate: {
+          gte: start,
+          lt: end,
+        },
+        OR: [
+          { addedItemAuto: { userId } },
+          { addedItemManual: { userId } },
+        ],
+      },
+      include: {
+        addedItemAuto: {
+          include: {
+            product: true,
+            review: {
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        },
+        addedItemManual: {
+          include: {
+            review: {
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
           },
         },
       },
