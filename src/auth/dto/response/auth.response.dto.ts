@@ -63,3 +63,12 @@ export class UserProfileResponseDto {
       : "email";	
     }
 }
+export class UpdatePasswordResponseDto {
+  readonly id: string;
+  readonly updatedAt: string;
+  
+  constructor(entity: User) {
+    this.id = entity.id.toString();
+    this.updatedAt = (entity.updatedAt || new Date()).toISOString();
+  }
+}
