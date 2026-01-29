@@ -97,8 +97,15 @@ export class HistoriesService {
     year: number,
     month: number
   ): Promise<MonthlyCalendarResponseDto> {
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 1);
+    if (month < 1 || month > 12) {
+       throw new AppError({
+         errorCode: "H003",
+         message: "month는 1~12 범위여야 합니다.",
+         statusCode: 400,
+       });
+     }
+    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month, 1, 0, 0, 0));
 
     const histories =
       await this.historiesRepository.findMonthlyPurchasedItems(

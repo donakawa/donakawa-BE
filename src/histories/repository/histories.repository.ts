@@ -96,12 +96,12 @@ export class HistoriesRepository {
         addedItemAuto: {
           include: {
             product: true,
-            review: true,
+            review: { orderBy: { createdAt: "desc" }, take: 1 },
           },
         },
         addedItemManual: {
           include: {
-            review: true,
+            review: { orderBy: { createdAt: "desc" }, take: 1 },
           },
         },
       },
