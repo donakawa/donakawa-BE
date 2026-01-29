@@ -13,7 +13,11 @@ import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
 import { ApiResponse, success } from "../../common/response";
 import { CreateReviewRequestDto } from "../dto/request/histories.request.dto";
-import { CreateReviewResponseDto, GetMyReviewsResponseDto, MonthlyCalendarResponseDto } from "../dto/response/histories.response.dto";
+import { 
+  CreateReviewResponseDto, 
+  GetMyReviewsResponseDto, 
+  MonthlyCalendarResponseDto, 
+  GetDailyHistoriesResponseDto } from "../dto/response/histories.response.dto";
 import { HistoriesService } from "../service/histories.service";
 
 @Route("/histories")
@@ -65,6 +69,22 @@ export class HistoriesController {
       userId,
       year,
       month
+    );
+
+    return success(result);
+  }
+
+  @Security("jwt")
+  @Get()
+  public async getDailyHistories(
+    @Query() date: string,
+    @Request() req: ExpressRequest
+  ): Promise<ApiResponse<GetDailyHistoriesResponseDto>> {
+    const userId = BigInt(req.user!.id);
+
+    const result = await this.historiesService.getDailyHistories(
+      userId,
+      date
     );
 
     return success(result);

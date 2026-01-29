@@ -67,3 +67,24 @@ export interface MonthlyCalendarResponseDto {
   calendar: CalendarDayDto[];
   itemsByDate: Record<string, CalendarItemDto[]>;
 }
+
+export interface DailyHistoryItemDto {
+  itemId: number;
+  itemType: "AUTO" | "MANUAL";
+  name: string;
+  price: number;
+  thumbnailUrl: string | null;
+  purchasedAt: "MORNING" | "EVENING" | "NIGHT";
+  satisfaction: number | null;
+}
+
+export interface DailyHistorySummaryDto {
+  totalAmount: number;
+  purchaseCount: number;
+}
+
+export interface GetDailyHistoriesResponseDto {
+  date: string;
+  summary: DailyHistorySummaryDto;
+  items: DailyHistoryItemDto[];
+}

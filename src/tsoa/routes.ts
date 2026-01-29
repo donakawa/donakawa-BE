@@ -408,6 +408,49 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DailyHistorySummaryDto": {
+        "dataType": "refObject",
+        "properties": {
+            "totalAmount": {"dataType":"double","required":true},
+            "purchaseCount": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DailyHistoryItemDto": {
+        "dataType": "refObject",
+        "properties": {
+            "itemId": {"dataType":"double","required":true},
+            "itemType": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["MANUAL"]}],"required":true},
+            "name": {"dataType":"string","required":true},
+            "price": {"dataType":"double","required":true},
+            "thumbnailUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "purchasedAt": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["MORNING"]},{"dataType":"enum","enums":["EVENING"]},{"dataType":"enum","enums":["NIGHT"]}],"required":true},
+            "satisfaction": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GetDailyHistoriesResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "date": {"dataType":"string","required":true},
+            "summary": {"ref":"DailyHistorySummaryDto","required":true},
+            "items": {"dataType":"array","array":{"dataType":"refObject","ref":"DailyHistoryItemDto"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_GetDailyHistoriesResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"GetDailyHistoriesResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "CalcShoppingBudgetResponseDto": {
         "dataType": "refObject",
         "properties": {
@@ -1495,6 +1538,38 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'getMonthlyCalendar',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsHistoriesController_getDailyHistories: Record<string, TsoaRoute.ParameterSchema> = {
+                date: {"in":"query","name":"date","required":true,"dataType":"string"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/histories',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController)),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController.prototype.getDailyHistories)),
+
+            async function HistoriesController_getDailyHistories(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsHistoriesController_getDailyHistories, request, response });
+
+                const controller = new HistoriesController();
+
+              await templateService.apiHandler({
+                methodName: 'getDailyHistories',
                 controller,
                 response,
                 next,
