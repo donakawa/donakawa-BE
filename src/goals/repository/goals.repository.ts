@@ -83,4 +83,93 @@ export class GoalsRepository {
       return sum;
     }, 0);
   }
+
+  // 만족 소비, 후회 소비 조회
+  async findSpendItems(
+    userId: string,
+    since: Date,
+    isSatisfied: boolean,
+    cursor?: string,
+    take: number = 10,
+  ) {
+    const cursorBigInt = cursor ? BigInt(cursor) : undefined;
+    const satisfactionCondition = isSatisfied ? { gte: 4 } : { lte: 3 };
+
+    return this.prisma.review.findMany({
+      where: {
+        satisfaction: satisfactionCondition,
+        OR: [
+          {
+            addedItemAuto: {
+              userId: BigInt(userId),
+              purchasedHistory: { some: { purchasedDate: { gte: since } } },
+            },
+          },
+          {
+            addedItemManual: {
+              userId: BigInt(userId),
+              purchasedHistory: { some: { purchasedDate: { gte: since } } },
+            },
+          },
+        ],
+      },
+      include: {
+        addedItemAuto: {
+          select: {
+            createdAt: true,
+            product: {
+              select: {
+                name: true,
+                price: true,
+                files: { select: { id: true } },
+              },
+            },
+            purchasedHistory: { orderBy: { purchasedDate: "desc" }, take: 1 },
+          },
+        },
+        addedItemManual: {
+          select: {
+            createdAt: true,
+            name: true,
+            price: true,
+            files: { select: { id: true } },
+            purchasedHistory: {
+              orderBy: { purchasedDate: "desc" },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: take + 1,
+      cursor: cursorBigInt ? { id: cursorBigInt } : undefined,
+    });
+  }
+
+  // 만족 소비, 후회 소비 개수
+  async countRecentMonth(userId: string, since: Date, isSatisfied: boolean) {
+    const satisfactionCondition = isSatisfied ? { gte: 4 } : { lte: 3 };
+
+    return this.prisma.review.count({
+      where: {
+        satisfaction: satisfactionCondition,
+        OR: [
+          {
+            addedItemAuto: {
+              userId: BigInt(userId),
+              purchasedHistory: { some: { purchasedDate: { gte: since } } },
+            },
+          },
+          {
+            addedItemManual: {
+              userId: BigInt(userId),
+              purchasedHistory: { some: { purchasedDate: { gte: since } } },
+            },
+          },
+        ],
+      },
+    });
+  }
 }
