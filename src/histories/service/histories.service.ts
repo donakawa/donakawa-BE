@@ -185,15 +185,26 @@ export class HistoriesService {
   ): Promise<GetDailyHistoriesResponseDto> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new AppError({
-        errorCode: "H003",
+        errorCode: "H004",
         message: "날짜 형식이 올바르지 않습니다.",
         statusCode: 400,
       });
     }
-
-    const start = new Date(`${date}T00:00:00.000Z`);
-    const end = new Date(`${date}T23:59:59.999Z`);
-
+    const [y, m, d] = date.split("-").map(Number);
+    const start = new Date(Date.UTC(y, m - 1, d));
+    if (
+      Number.isNaN(start.getTime()) ||
+      start.getUTCFullYear() !== y ||
+      start.getUTCMonth() !== m - 1 ||
+      start.getUTCDate() !== d
+    ) {
+      throw new AppError({
+        errorCode: "H004",
+        message: "날짜 형식이 올바르지 않습니다.",
+        statusCode: 400,
+      });
+    }
+    const end = new Date(Date.UTC(y, m - 1, d + 1)); // 다음 날 00:00:00Z (exclusive)
     const histories =
       await this.historiesRepository.findDailyPurchasedItems(
         userId,
