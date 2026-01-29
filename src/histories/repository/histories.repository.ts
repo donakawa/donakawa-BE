@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 export class HistoriesRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async findAutoItem(itemId: number, userId: number) {
+  async findAutoItem(itemId: number, userId: bigint) {
     return this.prisma.addedItemAuto.findFirst({
       where: {
         id: itemId,
@@ -12,7 +12,7 @@ export class HistoriesRepository {
     });
   }
 
-  async findManualItem(itemId: number, userId: number) {
+  async findManualItem(itemId: number, userId: bigint) {
     return this.prisma.addedItemManual.findFirst({
       where: {
         id: itemId,
@@ -37,7 +37,7 @@ export class HistoriesRepository {
     });
   }
 
-  async findMyReviews(userId: number) {
+  async findMyReviews(userId: bigint) {
     return this.prisma.review.findMany({
       where: {
         OR: [
@@ -57,12 +57,12 @@ export class HistoriesRepository {
         addedItemAuto: {
           include: {
             product: true,
-            purchasedHistory: true,
+            purchasedHistory: { orderBy: { purchasedDate: "desc" }, take: 1 },
           },
         },
         addedItemManual: {
           include: {
-            purchasedHistory: true,
+            purchasedHistory: { orderBy: { purchasedDate: "desc" }, take: 1 },
           },
         },
       },

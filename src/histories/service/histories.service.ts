@@ -5,7 +5,7 @@ export class HistoriesService {
   constructor(private readonly historiesRepository: HistoriesRepository) {}
 
   async createReview(
-    userId: number,
+    userId: bigint,
     itemId: number,
     satisfaction: number,
     frequency: number
@@ -43,7 +43,7 @@ export class HistoriesService {
     });
   }
 
-  async getMyReviews(userId: number) {
+  async getMyReviews(userId: bigint) {
     const reviews = await this.historiesRepository.findMyReviews(userId);
 
     const mapped = reviews.map((review) => {

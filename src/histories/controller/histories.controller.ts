@@ -28,7 +28,7 @@ export class HistoriesController {
     @Body() body: CreateReviewRequestDto,
     @Request() req: ExpressRequest
   ): Promise<ApiResponse<CreateReviewResponseDto>> {
-    const userId = Number(req.user!.id);
+    const userId = BigInt(req.user!.id);
 
     const review = await this.historiesService.createReview(
       userId,
@@ -45,7 +45,7 @@ export class HistoriesController {
   public async getMyReviews(
     @Request() req: ExpressRequest
   ): Promise<ApiResponse<GetMyReviewsResponseDto>> {
-    const userId = Number(req.user!.id);
+    const userId = BigInt(req.user!.id);
 
     const result = await this.historiesService.getMyReviews(userId);
     return success(result);
