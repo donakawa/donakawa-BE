@@ -225,10 +225,12 @@ export class GoalsService {
     reviews.sort((a, b) => {
       const aDate =
         a.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
-        a.addedItemManual?.purchasedHistory[0]?.purchasedDate!;
+        a.addedItemManual?.purchasedHistory[0]?.purchasedDate ??
+        new Date(0);
       const bDate =
         b.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
-        b.addedItemManual?.purchasedHistory[0]?.purchasedDate!;
+        b.addedItemManual?.purchasedHistory[0]?.purchasedDate ??
+        new Date(0);
       return bDate.getTime() - aDate.getTime();
     });
 
@@ -269,16 +271,20 @@ export class GoalsService {
     );
 
     // 평균 구매 결정 시간
-    const decisionDaysList = reviews.map((r) => {
-      const wishCreated =
-        r.addedItemAuto?.createdAt ?? r.addedItemManual?.createdAt!;
-      const purchasedAt =
-        r.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
-        r.addedItemManual?.purchasedHistory[0]?.purchasedDate!;
-      return Math.floor(
-        (purchasedAt.getTime() - wishCreated.getTime()) / (1000 * 60 * 60 * 24),
-      );
-    });
+    const decisionDaysList = reviews
+      .map((r) => {
+        const wishCreated =
+          r.addedItemAuto?.createdAt ?? r.addedItemManual?.createdAt;
+        const purchasedAt =
+          r.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
+          r.addedItemManual?.purchasedHistory[0]?.purchasedDate;
+        if (!wishCreated || !purchasedAt) return null;
+        return Math.floor(
+          (purchasedAt.getTime() - wishCreated.getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
+      })
+      .filter((d): d is number => d !== null);
 
     const averageDecisionDays =
       decisionDaysList.length === 0
