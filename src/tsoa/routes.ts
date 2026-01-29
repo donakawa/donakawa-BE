@@ -258,10 +258,6 @@ const models: TsoaRoute.Models = {
             "purchasedAt": {"ref":"PurchasedAt","required":true},
             "reasonId": {"dataType":"double"},
             "reason": {"dataType":"string"},
-    "CalcShoppingBudgetResponseDto": {
-        "dataType": "refObject",
-        "properties": {
-            "shoppingBudget": {"dataType":"double","required":true},
         },
         "additionalProperties": false,
     },
@@ -271,12 +267,6 @@ const models: TsoaRoute.Models = {
         "properties": {
             "nextCursor": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "wishitems": {"dataType":"array","array":{"dataType":"refObject","ref":"WishItemPreviewPayload"},"required":true},
-    "ApiResponse_CalcShoppingBudgetResponseDto_": {
-        "dataType": "refObject",
-        "properties": {
-            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
-            "error": {"dataType":"enum","enums":[null],"required":true},
-            "data": {"ref":"CalcShoppingBudgetResponseDto","required":true},
         },
         "additionalProperties": false,
     },
@@ -287,6 +277,28 @@ const models: TsoaRoute.Models = {
             "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
             "error": {"dataType":"enum","enums":[null],"required":true},
             "data": {"ref":"ShowWishitemsInFolderResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CalcShoppingBudgetResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "shoppingBudget": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_CalcShoppingBudgetResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"CalcShoppingBudgetResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "CalcShoppingBudgetRequestDto": {
         "dataType": "refObject",
         "properties": {
@@ -961,15 +973,6 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.markItemAsPurchased)),
 
             async function WishlistController_markItemAsPurchased(request: ExRequest, response: ExResponse, next: any) {
-        const argsGoalsController_calcShoppingBudget: Record<string, TsoaRoute.ParameterSchema> = {
-                body: {"in":"body","name":"body","required":true,"ref":"CalcShoppingBudgetRequestDto"},
-        };
-        app.post('/goals/budget/calculate',
-            authenticateMiddleware([{"jwt":[]}]),
-            ...(fetchMiddlewares<RequestHandler>(GoalsController)),
-            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.calcShoppingBudget)),
-
-            async function GoalsController_calcShoppingBudget(request: ExRequest, response: ExResponse, next: any) {
 
             // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
@@ -981,12 +984,6 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'markItemAsPurchased',
-                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_calcShoppingBudget, request, response });
-
-                const controller = new GoalsController();
-
-              await templateService.apiHandler({
-                methodName: 'calcShoppingBudget',
                 controller,
                 response,
                 next,
@@ -1126,6 +1123,36 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 204,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsGoalsController_calcShoppingBudget: Record<string, TsoaRoute.ParameterSchema> = {
+                body: {"in":"body","name":"body","required":true,"ref":"CalcShoppingBudgetRequestDto"},
+        };
+        app.post('/goals/budget/calculate',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController)),
+            ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.calcShoppingBudget)),
+
+            async function GoalsController_calcShoppingBudget(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoalsController_calcShoppingBudget, request, response });
+
+                const controller = new GoalsController();
+
+              await templateService.apiHandler({
+                methodName: 'calcShoppingBudget',
+                controller,
+                response,
+                next,
+                validatedArgs,
                 successStatus: 200,
               });
             } catch (err) {
