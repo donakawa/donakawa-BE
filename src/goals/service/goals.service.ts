@@ -262,7 +262,7 @@ export class GoalsService {
     });
 
     // 평균 구매 결정 시간
-    const decisionDaysList = reviews.slice(0, 10).map((r) => {
+    const decisionDaysList = reviews.map((r) => {
       const wishCreated =
         r.addedItemAuto?.createdAt ?? r.addedItemManual?.createdAt!;
       const purchasedAt =
