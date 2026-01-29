@@ -3,6 +3,7 @@ import {
   Path,
   Post,
   Get,
+  Query,
   Route,
   Tags,
   Security,
@@ -12,7 +13,7 @@ import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
 import { ApiResponse, success } from "../../common/response";
 import { CreateReviewRequestDto } from "../dto/request/histories.request.dto";
-import { CreateReviewResponseDto, GetMyReviewsResponseDto } from "../dto/response/histories.response.dto";
+import { CreateReviewResponseDto, GetMyReviewsResponseDto, MonthlyCalendarResponseDto } from "../dto/response/histories.response.dto";
 import { HistoriesService } from "../service/histories.service";
 
 @Route("/histories")
@@ -48,6 +49,24 @@ export class HistoriesController {
     const userId = BigInt(req.user!.id);
 
     const result = await this.historiesService.getMyReviews(userId);
+    return success(result);
+  }
+
+  @Security("jwt")
+  @Get("/calendar")
+  public async getMonthlyCalendar(
+    @Query() year: number,
+    @Query() month: number,
+    @Request() req: ExpressRequest
+  ): Promise<ApiResponse<MonthlyCalendarResponseDto>> {
+    const userId = BigInt(req.user!.id);
+
+    const result = await this.historiesService.getMonthlyCalendar(
+      userId,
+      year,
+      month
+    );
+
     return success(result);
   }
 }
