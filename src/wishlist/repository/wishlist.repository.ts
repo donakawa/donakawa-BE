@@ -170,4 +170,70 @@ from added_item_auto left join public.product p on added_item_auto.product_id = 
 left join store_platform s on p.store_platform_id = s.id where user_id = ${userId}) as t ${whereClause} order by cursor desc limit ${take + 1};`;
     return this.prisma.$queryRaw<WishlistRecordInterface[]>(query);
   }
+  async findWishitemFolders<T extends Prisma.WishItemFolderFindManyArgs>(
+    args: T,
+  ) {
+    return this.prisma.wishItemFolder.findMany(args);
+  }
+  async saveWishitemFolder(
+    userId: string,
+    name: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.wishItemFolder.create({ data: { userId: BigInt(userId), name } });
+  }
+  async updateAddedItemAuto<T extends Prisma.AddedItemAutoUpdateManyArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.addedItemAuto.updateMany(args);
+  }
+  async updateAddedItemManual<T extends Prisma.AddedItemManualUpdateManyArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.addedItemManual.updateMany(args);
+  }
+  async deleteWishitemFolder(folderId: string, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    return db.wishItemFolder.delete({ where: { id: BigInt(folderId) } });
+  }
+  async savePurchasedHistory<T extends Prisma.PurchasedHistoryCreateInput>(
+    data: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.purchasedHistory.create({ data });
+  }
+  async findPurchasedHistories<T extends Prisma.PurchasedHistoryFindManyArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.purchasedHistory.findMany(args);
+  }
+  async deletePurchasedHistory<T extends Prisma.PurchasedHistoryDeleteArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.purchasedHistory.delete(args);
+  }
+  async deleteAddedItemAuto<T extends Prisma.AddedItemAutoDeleteArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.addedItemAuto.delete(args);
+  }
+  async deleteAddedItemManual<T extends Prisma.AddedItemManualDeleteArgs>(
+    args: T,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.addedItemManual.delete(args);
+  }
 }

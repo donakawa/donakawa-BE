@@ -17,6 +17,7 @@ import { GoogleOAuthService } from "./auth/service/google-oauth.service";
 import { FilesRepository } from "./files/repository/files.repository";
 import { FilesService } from "./files/service/files.service";
 import { S3StorageAdapter } from "./files/storage/s3.storage";
+import { DbRepository } from "./infra/db.repository";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 const googleOAuthService = new GoogleOAuthService();
@@ -45,10 +46,11 @@ const valkeyClient = ValkeyClient.init(eventEmitterClient);
 // Prisma Client
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
+const dbRepository = new DbRepository(prisma);
 
 // Auth 도메인
 const authRepository = new AuthRepository(prisma);
-const authService = new AuthService(authRepository, googleOAuthService);
+const authService = new AuthService(authRepository, googleOAuthService, prisma);
 const auth = {
   service: authService,
   repository: authRepository,
@@ -80,6 +82,7 @@ const files = {
 const crawlQueueClient = new CrawlQueueClient(sqsClient);
 const wishlistRepository = new WishlistRepository(prisma);
 const wishlistService = new WishlistService(
+  dbRepository,
   wishlistRepository,
   crawlQueueClient,
   valkeyClient,
@@ -94,5 +97,4 @@ const wishlist = {
     eventEmitterClient,
   },
 };
-
 export const container = { prisma, auth, goals, histories, wishlist, files };

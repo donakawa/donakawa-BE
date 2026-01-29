@@ -13,6 +13,10 @@ import {
   Middlewares,
   Security,
   Query,
+  BodyProp,
+  Delete,
+  SuccessResponse,
+  Patch,
 } from "tsoa";
 import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
@@ -22,19 +26,32 @@ import {
   AddCrawlTaskRequestDto,
   AddWishListFromCacheRequestDto,
   AddWishListRequestDto,
+  ChangeWishitemFolderLocationRequestDto,
+  CreateWishitemFolderRequestDto,
+  DeleteItemRequestDto,
+  DeleteWishitemFolderRequestDto,
+  MarkItemAsDroppedRequestDto,
+  MarkItemAsPurchasedRequestDto,
+  ModifyWishitemReasonRequestDto,
+  ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
+  ShowWishitemsInFolderRequestDto,
 } from "../dto/request/wishlist.request.dto";
 import {
   AddCrawlTaskResponseDto,
   AddWishListFromCacheResponseDto,
   AddWishlistResponseDto,
+  CreateWishitemFolderResponseDto,
   GetCrawlResultResponseDto,
   ShowWishitemDetailResponseDto,
+  ShowWishitemFoldersResponseDto,
   ShowWishitemListResponseDto,
+  ShowWishitemsInFolderResponseDto,
 } from "../dto/response/wishlist.response.dto";
 import { validateImageFile } from "../policy/upload.policy";
 import { BadRequestException } from "../../errors/error";
 import { IsOptional } from "class-validator";
+import { WishitemType } from "../types/wishitem.types";
 
 @Route("/wishlist")
 @Tags("Wishlist")
@@ -46,6 +63,7 @@ export class WishlistController extends Controller {
    * @description 위시리스트 추가를 위한 크롤링 작업을 요청합니다.
    */
   @Post("/crawl-tasks")
+  @Security("jwt")
   public async addCrawlTask(
     @Body() body: AddCrawlTaskRequestDto,
   ): Promise<ApiResponse<AddCrawlTaskResponseDto>> {
@@ -56,6 +74,7 @@ export class WishlistController extends Controller {
    * @description SSE(Server-Sent Events)를 통해 위시리스트 크롤링 작업의 진행 상황을 실시간으로 수신합니다.
    */
   @Get("/crawl-tasks/:jobId/events")
+  @Security("jwt")
   @Produces("text/event-stream")
   public async listenCrawlEvents(
     @Request() req: ExpressRequest,
@@ -98,6 +117,7 @@ export class WishlistController extends Controller {
    * @description 위시리스트 크롤링 작업의 결과를 조회합니다.
    */
   @Get("/crawl-tasks/:cacheId/result")
+  @Security("jwt")
   public async getCrawlResult(
     @Path("cacheId") cacheId: string,
   ): Promise<ApiResponse<GetCrawlResultResponseDto>> {
@@ -109,17 +129,21 @@ export class WishlistController extends Controller {
    * @description 캐시에 저장된 상품 정보를 기반으로 위시리스트에 아이템을 추가합니다.
    */
   @Post("/items/from-cache")
+  @Security("jwt")
   public async addWishListFromCache(
-    @Body() body: AddWishListFromCacheRequestDto,
+    @BodyProp("cacheId") cacheId: string,
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<AddWishListFromCacheResponseDto>> {
-    body.userId = "1"; // TODO: 임시 유저 아이디 하드코딩, 추후 인증 구현시 변경 필요
-    return success(await this.wishlistService.addWishListFromCache(body));
+    const userId = req.user!.id;
+    const dto = new AddWishListFromCacheRequestDto({ cacheId, userId });
+    return success(await this.wishlistService.addWishListFromCache(dto));
   }
   /**
    * @summary 위시 아이템 수동 등록
    * @description 위시 아이템을 수동으로 등록합니다.
    */
   @Post("/items")
+  @Security("jwt")
   @Middlewares(validateImageFile)
   public async addWishList(
     @FormField() productName: string,
@@ -128,9 +152,10 @@ export class WishlistController extends Controller {
     @FormField() brandName: string,
     @FormField() reason: string,
     @FormField() url: string,
+    @Request() req: ExpressRequest,
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<ApiResponse<AddWishlistResponseDto>> {
-    const userId = "1"; // TODO: 임시 유저 아이디 하드코딩, 추후 인증 구현시 변경 필요
+    const userId = req.user!.id;
     const dto = new AddWishListRequestDto({
       productName,
       price,
@@ -185,5 +210,160 @@ export class WishlistController extends Controller {
       take,
     });
     return success(await this.wishlistService.getWishlist(dto));
+  }
+  /**
+   * @summary 위시 리스트 폴더 리스트 가져오기
+   * @description 위시 리스트 폴더 목록을 가져옵니다.
+   */
+  @Get("/folders")
+  @Security("jwt")
+  public async showWishitemFolders(
+    @Request() req: ExpressRequest,
+    @Query("take") take: number,
+    @Query("cursor") cursor?: string,
+  ): Promise<ApiResponse<ShowWishitemFoldersResponseDto>> {
+    const userId = req.user!.id;
+    const dto = new ShowWishitemFoldersRequestDto({ cursor, take, userId });
+    return success(await this.wishlistService.getWishitemFolders(dto));
+  }
+  /**
+   * @summary 위시 리스트 폴더 생성 하기
+   * @description 새로운 위시 리스트 폴더를 생성 합니다.
+   */
+  @Post("/folders")
+  @Security("jwt")
+  @SuccessResponse(201, "Created")
+  public async createWishitemFolder(
+    @BodyProp("name") name: string,
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<CreateWishitemFolderResponseDto>> {
+    const userId = req.user!.id;
+    const dto = new CreateWishitemFolderRequestDto({ name, userId });
+    return success(await this.wishlistService.addWishitemFolders(dto));
+  }
+  /**
+   * @summary 위시 리스트 폴더 삭제 하기
+   * @description 기존 위시 리시트 폴더의 아이템을 해제하고, 폴더를 제거합니다.
+   */
+  @Delete("/folders/:folderId")
+  @Security("jwt")
+  @SuccessResponse(204, "Deleted")
+  public async deleteWishitemFolder(
+    @Path("folderId") folderId: string,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    const dto = new DeleteWishitemFolderRequestDto({ folderId, userId });
+    await this.wishlistService.removeWishitemFolder(dto);
+  }
+  /**
+   * @summary 위시 아이템 폴더 위치 변경
+   * @description 위시 아이템의 폴더 위치를 지정한 폴더로 변경 합니다.
+   */
+  @Patch("/items/:itemId/folder")
+  @Security("jwt")
+  @SuccessResponse(204, "Updated")
+  public async changeWishitemFolderLocation(
+    @Path("itemId") itemId: string,
+    @Body() body: ChangeWishitemFolderLocationRequestDto,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    await this.wishlistService.setWishitemFolder(body, itemId, userId);
+  }
+  /**
+   * @summary 위시 아이템 구매 결정
+   * @description 위시 아이템의 상태를 구매 결정으로 변경 합니다.
+   */
+  @Post("/items/:itemId/status")
+  @Security("jwt")
+  @SuccessResponse(204, "Updated")
+  public async markItemAsPurchased(
+    @Body() body: MarkItemAsPurchasedRequestDto,
+    @Path("itemId") itemId: string,
+    @Request() req: ExpressRequest,
+  ) {
+    if (!/^\d+$/.exec(itemId))
+      throw new BadRequestException(
+        "INVALID_ITEM_ID",
+        "올바르지 않은 아이템 ID 입니다.",
+      );
+    const userId = req.user!.id;
+    await this.wishlistService.markWishitemAsPurchased(body, itemId, userId);
+  }
+  /**
+   * @summary 위시 아이템 구매 포기
+   * @description 위시 아이템의 상태를 구매 포기로 변경 합니다.
+   */
+  @Post("/items/:itemId/drop")
+  @Security("jwt")
+  @SuccessResponse(204, "Updated")
+  public async markItemAsDropped(
+    @Path("itemId") itemId: string,
+    @BodyProp("type") type: WishitemType,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    const dto = new MarkItemAsDroppedRequestDto({ itemId, userId, type });
+    await this.wishlistService.markWishitemAsDropped(dto);
+  }
+  /**
+   * @summary 위시 아이템 삭제 (⚠️ TODO 확인후 수정 필요 / 미 완성)
+   * @description 위시 아이템을 삭제합니다.
+   */
+  @Delete("/items/:itemId")
+  @Security("jwt")
+  @SuccessResponse(204, "Deleted")
+  public async deleteItem(
+    @Path("itemId") itemId: string,
+    @Query("type") type: WishitemType,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    const dto = new DeleteItemRequestDto({ itemId, type, userId });
+    await this.wishlistService.deleteWishitem(dto);
+  }
+  /**
+   * @summary 폴더별 위시 아이템 조회하기 (WISHLISTED만)
+   * @description 폴더별로 위시 아이템 목록을 가져옵니다.
+   */
+  @Get("/folders/:folderId/items")
+  @Security("jwt")
+  public async showWishitemsInFolder(
+    @Request() req: ExpressRequest,
+    @Path("folderId") folderId: string,
+    @Query("take") take: number,
+    @Query("cursor") cursor?: string,
+  ): Promise<ApiResponse<ShowWishitemsInFolderResponseDto>> {
+    const userId = req.user!.id;
+    const dto = new ShowWishitemsInFolderRequestDto({
+      userId,
+      folderId,
+      cursor,
+      take,
+    });
+    return success(await this.wishlistService.getWishitemsInFolder(dto));
+  }
+  /**
+   * @summary 위시 아이템 추가 이유 수정
+   * @description 위시 아이템으로 추가한 이유를 수정합니다.
+   */
+  @Patch("/items/:itemId/reason")
+  @Security("jwt")
+  @SuccessResponse(204, "Updated")
+  public async modifyWishitemReason(
+    @Path("itemId") itemId: string,
+    @BodyProp("reason") reason: string,
+    @BodyProp("type") type: WishitemType,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = req.user!.id;
+    const dto = new ModifyWishitemReasonRequestDto({
+      itemId,
+      userId,
+      reason,
+      type,
+    });
+    await this.wishlistService.setWishitemReason(dto);
   }
 }

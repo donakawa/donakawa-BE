@@ -3,8 +3,12 @@ import {
   AddedItemManual,
   Product,
   StorePlatform,
+  WishItemFolder,
 } from "@prisma/client";
-import { WishItemPreviewPayload } from "../../payload/wishlist.payload";
+import {
+  WishItemFolderPayload,
+  WishItemPreviewPayload,
+} from "../../payload/wishlist.payload";
 import { WishlistRecordInterface } from "../../interface/wishlist.interface";
 
 export class AddCrawlTaskResponseDto {
@@ -102,6 +106,50 @@ export class ShowWishitemDetailResponseDto {
   }
 }
 export class ShowWishitemListResponseDto {
+  nextCursor!: string | null;
+  wishitems!: WishItemPreviewPayload[];
+  constructor(
+    wishitems: WishlistRecordInterface[],
+    nextCursor: string | null,
+    photoUrls: Record<string, string | null>,
+  ) {
+    this.nextCursor = nextCursor;
+    this.wishitems = wishitems.reduce<WishItemPreviewPayload[]>(
+      (acc, wishitem) => {
+        acc.push({
+          id: wishitem.id.toString(),
+          name: wishitem.name,
+          price: wishitem.price,
+          photoUrl: photoUrls[wishitem.cursor],
+          type: wishitem.type,
+          status: wishitem.status,
+        });
+        return acc;
+      },
+      [],
+    );
+  }
+}
+export class ShowWishitemFoldersResponseDto {
+  folders!: WishItemFolderPayload[];
+  nextCursor!: string | null;
+  constructor(param: { folders: WishItemFolder[]; nextCursor: string | null }) {
+    this.folders = param.folders.map<WishItemFolderPayload>((folder) => ({
+      id: folder.id.toString(),
+      name: folder.name,
+    }));
+    this.nextCursor = param.nextCursor;
+  }
+}
+export class CreateWishitemFolderResponseDto {
+  folderId!: string;
+  createdAt!: string;
+  constructor(id: string) {
+    this.folderId = id;
+    this.createdAt = new Date().toISOString();
+  }
+}
+export class ShowWishitemsInFolderResponseDto {
   nextCursor!: string | null;
   wishitems!: WishItemPreviewPayload[];
   constructor(

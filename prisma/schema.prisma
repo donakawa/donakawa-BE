@@ -18,6 +18,7 @@ model User {
   email     String    @unique @db.VarChar(100)
   password  String?   @db.VarChar(100)
   nickname  String    @db.VarChar(10)
+  goal      String    @db.VarChar(10) @default("")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
   deletedAt DateTime? @map("deleted_at") @db.Timestamp()
@@ -40,7 +41,7 @@ enum OauthProvider {
 model Oauth {
   id       BigInt        @id @default(autoincrement())
   userId   BigInt        @map("user_id")
-  user     User          @relation(fields: [userId], references: [id])
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   uid      String        @db.VarChar(200)
   provider OauthProvider
 
@@ -56,6 +57,7 @@ model TargetBudget {
   user            User      @relation(fields: [userId], references: [id])
   monthlyIncome   Int?      @map("monthly_income")
   incomeDate      DateTime? @map("income_date")
+  incomeDay       Int?       @map("income_day")
   fixedExpense    Int?      @map("fixed_expense")
   monthlySaving   Int?      @map("monthly_saving")
   recommendSaving Int?      @map("recommend_saving")
@@ -131,13 +133,23 @@ model Product {
 
 enum PurchasedAt {
   MORNING
-  NOON
   EVENING
   NIGHT
 }
 
+model PurchasedReason {
+  id              Int           @id @default(autoincrement())
+  reason          String        @db.VarChar(20)
+
+  purchasedHistory PurchasedHistory[]
+  @@map("purchased_reason")
+}
+
 model PurchasedHistory {
   id              BigInt           @id @default(autoincrement())
+  reasonId        Int?             @map("reason_id")
+  purchasedReason PurchasedReason? @relation(fields: [reasonId], references: [id])
+  reason          String?          @db.VarChar(10)
   autoItemId      BigInt?          @map("auto_item_id")
   addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id])
   manualItemId    BigInt?          @map("manual_item_id")
@@ -147,6 +159,8 @@ model PurchasedHistory {
 
   @@map("purchased_history")
 }
+
+
 
 model AddedItemManual {
   id             BigInt          @id @default(autoincrement())
