@@ -139,7 +139,7 @@ export class AuthController {
   }
 
   // Google OAuth 콜백 - Google이 여기로 리다이렉트
-  @Get("/google/callback")
+  @Get("/oauth/google/callback")
   @SuccessResponse("302", "로그인 성공")
   public async googleCallback(
     @Query() code: string,

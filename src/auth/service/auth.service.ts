@@ -133,67 +133,65 @@ export class AuthService {
   }
 
   // Google OAuth 로그인 처리
-  // auth.service.ts
-async handleGoogleCallback(
-  code: string, 
-  state: string
-): Promise<{ 
-  tokens: { accessToken: string; refreshToken: string };
-  isNewUser: boolean;
-}> {
-  await this.verifyOAuthState(state);
-  const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+  async handleGoogleCallback(
+    code: string, 
+    state: string
+  ): Promise<{ 
+    tokens: { accessToken: string; refreshToken: string };
+    isNewUser: boolean;
+  }> {
+    await this.verifyOAuthState(state);
+    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
 
-  let user = await this.authRepository.findUserBySocialProvider(
-    OauthProvider.GOOGLE,
-    googleUserInfo.googleUid
-  );
+    let user = await this.authRepository.findUserBySocialProvider(
+      OauthProvider.GOOGLE,
+      googleUserInfo.googleUid
+    );
 
-  let isNewUser = false;
+    let isNewUser = false;
 
-  if (!user) {
-    user = await this.authRepository.findUserByEmail(googleUserInfo.email);
+    if (!user) {
+      user = await this.authRepository.findUserByEmail(googleUserInfo.email);
 
-    if (user) {
-      await this.authRepository.createOauth(
-        user.id,
-        OauthProvider.GOOGLE,
-        googleUserInfo.googleUid
-      );
-    } else {
-      isNewUser = true;
-      const rawNickname = (googleUserInfo.nickname ?? "").trim();
-      let nickname = rawNickname.slice(0, 10);
+      if (user) {
+        await this.authRepository.createOauth(
+          user.id,
+          OauthProvider.GOOGLE,
+          googleUserInfo.googleUid
+        );
+      } else {
+        isNewUser = true;
+        const rawNickname = (googleUserInfo.nickname ?? "").trim();
+        let nickname = rawNickname.slice(0, 10);
 
-      // 닉네임이 비어있거나 중복이면 UUID 사용
-      if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
-        // UUID 앞 8자 사용 (예: user_a3f8e2b9)
-        nickname = `user_${uuid().slice(0, 8)}`;
+        // 닉네임이 비어있거나 중복이면 UUID 사용
+        if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
+          // UUID 앞 8자 사용 (예: user_a3f8e2b9)
+          nickname = `user_${uuid().slice(0, 8)}`;
+        }
+        const command = new CreateUserCommand({
+          email: googleUserInfo.email,
+          password: null,
+          nickname,
+          goal: ""
+        });
+        user = await this.authRepository.saveUser(command);
+        await this.authRepository.createOauth(
+          user.id,
+          OauthProvider.GOOGLE,
+          googleUserInfo.googleUid
+        );
       }
-      const command = new CreateUserCommand({
-        email: googleUserInfo.email,
-        password: null,
-        nickname,
-        goal: ""
-      });
-      user = await this.authRepository.saveUser(command);
-      await this.authRepository.createOauth(
-        user.id,
-        OauthProvider.GOOGLE,
-        googleUserInfo.googleUid
-      );
     }
+    // JWT 토큰만 생성 (LoginResponseDto 생성 안함)
+    const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
+    await this.saveSession(user.id, sid, refreshToken);
+
+    return {
+      tokens: { accessToken, refreshToken },
+      isNewUser
+    };
   }
-
-  // JWT 토큰만 생성 (LoginResponseDto 생성 안함!)
-  const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
-  await this.saveSession(user.id, sid, refreshToken);
-
-  return {
-    tokens: { accessToken, refreshToken },
-    isNewUser
-  };
-}
 
   // Google Auth URL 가져오기 (state 생성 및 저장)
   async getGoogleAuthUrl(): Promise<string> {
