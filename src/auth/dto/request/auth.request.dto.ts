@@ -65,7 +65,7 @@ export class LoginRequestDto {
  }
 
 export class UpdateNicknameRequestDto {
-  @Example("new-nickname")
+  @Example("newNickname")
   @IsString()
   @IsNotEmpty()
   @Matches(/^[a-zA-Z0-9가-힣]+$/, {message: '닉네임은 영문, 숫자, 한글만 사용할 수 있습니다.'})
@@ -98,4 +98,11 @@ export class UpdatePasswordRequestDto {
   @MaxLength(12, { message: "비밀번호는 12자 이하이어야 합니다." })
   @Matches(/(?=.*[a-zA-Z])(?=.*\d)/, { message: "비밀번호는 영문과 숫자를 포함해야 합니다." })
   newPassword!: string;
+}
+
+export class VerifyEmailCodeRequestDto extends SendEmailCodeRequestDto {
+  @Example("123456")
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
 }

@@ -33,6 +33,7 @@ import {
   UpdateGoalRequestDto,
   VerifyPasswordRequestDto,
   UpdatePasswordRequestDto,
+  VerifyEmailCodeRequestDto,
 } from "../dto/request/auth.request.dto";
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
@@ -76,9 +77,9 @@ export class AuthController {
   */
   @Post("email/verify-code")
   @SuccessResponse("200", "이메일 인증 코드 검증 성공")
-  @Middlewares(validateBody(SendEmailCodeRequestDto))
+  @Middlewares(validateBody(VerifyEmailCodeRequestDto))
   public async verifyEmailVerificationCode(
-    @Body() body: SendEmailCodeRequestDto & { code: string },
+    @Body() body: VerifyEmailCodeRequestDto,
   ): Promise<ApiResponse<null>> {
     await this.authService.verifyEmailVerificationCode(
       body.email,
