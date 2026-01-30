@@ -47,7 +47,7 @@ export class UserProfileResponseDto {
 	readonly id: string;
 	readonly email: string;
 	readonly nickname: string;
-	readonly goal: string; 
+	readonly goal: string | null; 
 	readonly hasPassword: boolean; 
   readonly provider: string;
 

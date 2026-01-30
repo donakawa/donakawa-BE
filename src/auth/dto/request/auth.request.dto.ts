@@ -1,7 +1,6 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MinLength, IsOptional, MaxLength } from "class-validator";
 import { Example } from "tsoa";
 import { EmailVerifyTypeEnum } from "../../enums/send-email.enum";
-import { User } from "@prisma/client";
 
 export class RegisterRequestDto {
   @Example("example@example.com")
@@ -18,13 +17,12 @@ export class RegisterRequestDto {
   @Example("UMC")
   @IsString()
   @IsNotEmpty()
-  @MaxLength(20, { message: "닉네임은 10자 이하여야 합니다." })
+  @MaxLength(10, { message: "닉네임은 10자 이하여야 합니다." })
   nickname!: string;
-  @Example("new-goal")
+  @Example("goal")
   @IsString()
-  @IsNotEmpty()
   @MaxLength(10, { message: "목표는 10자 이하여야 합니다." })
-  goal!: string;
+  goal?: string;
 }
 
 export class SendEmailCodeRequestDto {
@@ -64,19 +62,12 @@ export class LoginRequestDto {
    newPassword!: string;
  }
 
- export class DeleteAccountRequestDto {
-  @Example("p@ssword123!")
-  @IsString()
-  @IsOptional()
-  password?: string;
-}
-
 export class UpdateNicknameRequestDto {
   @Example("new-nickname")
   @IsString()
   @IsNotEmpty()
   @MaxLength(10, { message: "닉네임은 10자 이하여야 합니다." })
-  nickname!: string;
+  newNickname!: string;
 }
 
 export class UpdateGoalRequestDto {
@@ -84,7 +75,7 @@ export class UpdateGoalRequestDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(10, { message: "목표는 10자 이하여야 합니다." })
-  goal!: string;
+  newGoal!: string;
 }
 
 // 비밀번호 확인용
