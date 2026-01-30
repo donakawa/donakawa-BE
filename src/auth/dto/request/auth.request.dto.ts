@@ -18,6 +18,7 @@ export class RegisterRequestDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(10, { message: "닉네임은 10자 이하여야 합니다." })
+  @Matches(/^[a-zA-Z0-9가-힣]+$/, {message: '닉네임은 영문, 숫자, 한글만 사용할 수 있습니다.'})
   nickname!: string;
   @Example("goal")
   @IsString()
@@ -33,7 +34,7 @@ export class SendEmailCodeRequestDto {
   email!: string;
 
   @Example("REGISTER")
-  @IsEnum(EmailVerifyTypeEnum)
+  @IsEnum(EmailVerifyTypeEnum, { message: "유효하지 않은 이메일 인증 타입입니다." })
   @IsNotEmpty()
   type!: EmailVerifyTypeEnum;
 }
@@ -64,9 +65,10 @@ export class LoginRequestDto {
  }
 
 export class UpdateNicknameRequestDto {
-  @Example("new-nickname")
+  @Example("newNickname")
   @IsString()
   @IsNotEmpty()
+  @Matches(/^[a-zA-Z0-9가-힣]+$/, {message: '닉네임은 영문, 숫자, 한글만 사용할 수 있습니다.'})
   @MaxLength(10, { message: "닉네임은 10자 이하여야 합니다." })
   newNickname!: string;
 }
@@ -96,4 +98,11 @@ export class UpdatePasswordRequestDto {
   @MaxLength(12, { message: "비밀번호는 12자 이하이어야 합니다." })
   @Matches(/(?=.*[a-zA-Z])(?=.*\d)/, { message: "비밀번호는 영문과 숫자를 포함해야 합니다." })
   newPassword!: string;
+}
+
+export class VerifyEmailCodeRequestDto extends SendEmailCodeRequestDto {
+  @Example("123456")
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
 }

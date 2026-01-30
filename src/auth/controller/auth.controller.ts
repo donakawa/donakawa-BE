@@ -10,7 +10,8 @@ import {
   Get,
   Query,
   Delete,
-  Patch
+  Patch,
+  Middlewares
 } from "tsoa";
 import { ApiResponse, success } from "../../common/response";
 import {
@@ -32,10 +33,12 @@ import {
   UpdateGoalRequestDto,
   VerifyPasswordRequestDto,
   UpdatePasswordRequestDto,
+  VerifyEmailCodeRequestDto,
 } from "../dto/request/auth.request.dto";
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
 import { BadRequestException, UnauthorizedException } from "../../errors/error";
+import { validateBody } from "../middleware/validation.middleware";
 
 
 @Route("/auth")
@@ -47,6 +50,7 @@ export class AuthController {
     */
   @Post("/register")
   @SuccessResponse("201", "계정 생성 성공")
+  @Middlewares(validateBody(RegisterRequestDto))
   @Example<RegisterResponseDto>({
     id: "1",
     createdAt: "2026-01-12T10:30:00.000Z",
@@ -61,6 +65,7 @@ export class AuthController {
   */
   @Post("email/send-code")
   @SuccessResponse("200", "이메일 인증 코드 전송 성공")
+  @Middlewares(validateBody(SendEmailCodeRequestDto))
   public async sendEmailVerificationCode(
     @Body() body: SendEmailCodeRequestDto,
   ): Promise<ApiResponse<null>> {
@@ -72,8 +77,9 @@ export class AuthController {
   */
   @Post("email/verify-code")
   @SuccessResponse("200", "이메일 인증 코드 검증 성공")
+  @Middlewares(validateBody(VerifyEmailCodeRequestDto))
   public async verifyEmailVerificationCode(
-    @Body() body: SendEmailCodeRequestDto & { code: string },
+    @Body() body: VerifyEmailCodeRequestDto,
   ): Promise<ApiResponse<null>> {
     await this.authService.verifyEmailVerificationCode(
       body.email,
@@ -87,6 +93,7 @@ export class AuthController {
   */
   @Post("/login")
   @SuccessResponse("200", "로그인 성공")
+  @Middlewares(validateBody(LoginRequestDto))
   public async login(
     @Body() body: LoginRequestDto,
     @Request() req: ExpressRequest,
@@ -124,6 +131,7 @@ export class AuthController {
   */
   @Post("/account-recovery/password")
   @SuccessResponse("200", "비밀번호 재설정 성공")
+  @Middlewares(validateBody(PasswordResetConfirmDto))
   public async resetPassword(
     @Body() body: PasswordResetConfirmDto,
   ): Promise<ApiResponse<null>> {
@@ -197,6 +205,7 @@ export class AuthController {
   @Delete("/account")
   @Security("jwt")
   @SuccessResponse("200", "회원 탈퇴 성공")
+  @Middlewares(validateBody(VerifyPasswordRequestDto))
   public async deleteAccount(
     @Body() body: VerifyPasswordRequestDto,
     @Request() req: ExpressRequest,
@@ -221,6 +230,7 @@ export class AuthController {
   @Patch("/profile/nickname")
   @Security("jwt")
   @SuccessResponse("200", "닉네임 수정 성공")
+  @Middlewares(validateBody(UpdateNicknameRequestDto))
   public async updateNickname(
     @Body() body: UpdateNicknameRequestDto,
     @Request() req: ExpressRequest
@@ -244,6 +254,7 @@ export class AuthController {
   @Patch("/profile/goal")
   @Security("jwt")
   @SuccessResponse("200", "목표 수정 성공")
+  @Middlewares(validateBody(UpdateGoalRequestDto))
   public async updateGoal(
     @Body() body: UpdateGoalRequestDto,
     @Request() req: ExpressRequest
@@ -306,6 +317,7 @@ export class AuthController {
   @Post("/verify-password")
   @Security("jwt")
   @SuccessResponse("200", "비밀번호 확인 완료")
+  @Middlewares(validateBody(VerifyPasswordRequestDto))
   public async verifyPassword(
     @Body() body: VerifyPasswordRequestDto,
     @Request() req: ExpressRequest
@@ -332,6 +344,7 @@ export class AuthController {
   @Patch("/password")
   @Security("jwt")
   @SuccessResponse("200", "비밀번호 설정/변경 성공")
+  @Middlewares(validateBody(UpdatePasswordRequestDto))
   public async updatePassword(
     @Body() body: UpdatePasswordRequestDto,
     @Request() req: ExpressRequest
@@ -350,6 +363,3 @@ export class AuthController {
     return success(result);
   }
 }
-
-
-
