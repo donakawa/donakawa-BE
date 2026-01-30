@@ -28,7 +28,6 @@ import {
   SendEmailCodeRequestDto,
   LoginRequestDto,
   PasswordResetConfirmDto,
-  DeleteAccountRequestDto,
   UpdateNicknameRequestDto,
   UpdateGoalRequestDto,
   VerifyPasswordRequestDto,
@@ -199,7 +198,7 @@ export class AuthController {
   @Security("jwt")
   @SuccessResponse("200", "회원 탈퇴 성공")
   public async deleteAccount(
-    @Body() body: DeleteAccountRequestDto,
+    @Body() body: VerifyPasswordRequestDto,
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<null>> {
     const user = req.user!;
@@ -234,7 +233,7 @@ export class AuthController {
 
     const result = await this.authService.updateNickname(
       BigInt(user.id),
-      body.nickname
+      body.newNickname
     );
     
     return success(result);
@@ -257,7 +256,7 @@ export class AuthController {
 
     const result = await this.authService.updateGoal(
       BigInt(user.id),
-      body.goal
+      body.newGoal
     );
     
     return success(result);

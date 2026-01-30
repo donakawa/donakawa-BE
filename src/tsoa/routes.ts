@@ -691,7 +691,7 @@ const models: TsoaRoute.Models = {
             "email": {"dataType":"string","required":true},
             "password": {"dataType":"string","required":true},
             "nickname": {"dataType":"string","required":true},
-            "goal": {"dataType":"string","required":true},
+            "goal": {"dataType":"string"},
         },
         "additionalProperties": false,
     },
@@ -758,10 +758,10 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "DeleteAccountRequestDto": {
+    "VerifyPasswordRequestDto": {
         "dataType": "refObject",
         "properties": {
-            "password": {"dataType":"string"},
+            "password": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -789,7 +789,7 @@ const models: TsoaRoute.Models = {
     "UpdateNicknameRequestDto": {
         "dataType": "refObject",
         "properties": {
-            "nickname": {"dataType":"string","required":true},
+            "newNickname": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -817,7 +817,7 @@ const models: TsoaRoute.Models = {
     "UpdateGoalRequestDto": {
         "dataType": "refObject",
         "properties": {
-            "goal": {"dataType":"string","required":true},
+            "newGoal": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -838,7 +838,7 @@ const models: TsoaRoute.Models = {
             "id": {"dataType":"string","required":true},
             "email": {"dataType":"string","required":true},
             "nickname": {"dataType":"string","required":true},
-            "goal": {"dataType":"string","required":true},
+            "goal": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "hasPassword": {"dataType":"boolean","required":true},
             "provider": {"dataType":"string","required":true},
         },
@@ -861,14 +861,6 @@ const models: TsoaRoute.Models = {
             "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
             "error": {"dataType":"enum","enums":[null],"required":true},
             "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"isValid":{"dataType":"boolean","required":true}},"required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "VerifyPasswordRequestDto": {
-        "dataType": "refObject",
-        "properties": {
-            "password": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -2296,7 +2288,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsAuthController_deleteAccount: Record<string, TsoaRoute.ParameterSchema> = {
-                body: {"in":"body","name":"body","required":true,"ref":"DeleteAccountRequestDto"},
+                body: {"in":"body","name":"body","required":true,"ref":"VerifyPasswordRequestDto"},
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.delete('/auth/account',
