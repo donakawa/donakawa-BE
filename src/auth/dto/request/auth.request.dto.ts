@@ -21,6 +21,7 @@ export class RegisterRequestDto {
   nickname!: string;
   @Example("goal")
   @IsString()
+  @IsOptional()
   @MaxLength(10, { message: "목표는 10자 이하여야 합니다." })
   goal?: string;
 }

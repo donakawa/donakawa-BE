@@ -307,7 +307,7 @@ export class AuthService {
     if (body.nickname.length > 10) {
       throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
     }
-    if(body.goal.length > 10){
+    if(body.goal && body.goal.length > 10){
       throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
 
@@ -315,7 +315,7 @@ export class AuthService {
       email: body.email,
       password: await hashingString(body.password),
       nickname: body.nickname,
-      goal: body.goal
+      goal: body.goal || null
     });
     const user = await this.authRepository.saveUser(command);
 
