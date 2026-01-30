@@ -39,7 +39,7 @@ export class UpdateGoalResponseDto {
   
   constructor(entity: User) {
     this.id = entity.id.toString();
-    this.goal = entity.goal;
+    this.goal = entity.goal!;
     this.updatedAt = (entity.updatedAt || new Date()).toISOString();
   }
 }
