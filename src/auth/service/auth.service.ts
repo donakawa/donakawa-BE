@@ -180,7 +180,7 @@ export class AuthService {
           email: googleUserInfo.email,
           password: null,
           nickname,
-          goal: ""
+          goal: null
         });
       user = await this.prisma.$transaction(async (tx) => {
         const newUser = await this.authRepository.saveUser(command, tx);
