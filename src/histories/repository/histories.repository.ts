@@ -297,4 +297,33 @@ export class HistoriesRepository {
       },
     });
   }
+
+  async findItemPhotoFileId(
+    itemId: bigint,
+    itemType: "AUTO" | "MANUAL",
+  ): Promise<bigint | null> {
+    if (itemType === "AUTO") {
+      const item = await this.prisma.addedItemAuto.findUnique({
+        where: { id: itemId },
+        select: {
+          product: {
+            select: {
+              photoFileId: true,
+            },
+          },
+        },
+      });
+
+      return item?.product?.photoFileId ?? null;
+    }
+
+    const item = await this.prisma.addedItemManual.findUnique({
+      where: { id: itemId },
+      select: {
+        photoFileId: true,
+      },
+    });
+
+    return item?.photoFileId ?? null;
+  }
 }
