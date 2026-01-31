@@ -61,14 +61,20 @@ export class HistoriesService {
         const item = review.addedItemAuto;
         const product = item.product;
         const purchased = item.purchasedHistory[0];
+        const purchaseReasons =
+          purchased?.purchasedReason
+            ? [purchased.purchasedReason.reason]
+            : purchased?.reason
+              ? purchased.reason.split(",")
+              : [];
 
         return {
           reviewId: Number(review.id),
           itemId: Number(item.id),
           itemName: product.name,
           price: product.price,
-          imageUrl: null, // 현재 product에 이미지 없음
-          purchaseReasons: item.reason ? item.reason.split(",") : [],
+          imageUrl: null,
+          purchaseReasons,
           satisfactionScore: review.satisfaction ?? 0,
           purchasedAt: purchased
             ? purchased.purchasedDate.toISOString().split("T")[0]
@@ -294,6 +300,12 @@ export class HistoriesService {
 
     const items: HistoryItemDto[] = histories.map((h) => {
       const date = h.purchasedDate.toISOString().split("T")[0];
+      const purchaseReasons =
+        h.purchasedReason
+          ? [h.purchasedReason.reason]
+          : h.reason
+            ? h.reason.split(",")
+            : [];
 
       if (h.addedItemAuto) {
         const item = h.addedItemAuto;
@@ -305,7 +317,7 @@ export class HistoriesService {
           itemName: item.product.name,
           price: item.product.price,
           imageUrl: null,
-          purchaseReasons: item.reason ? item.reason.split(",") : [],
+          purchaseReasons,
           purchasedAt: date,
         };
       }
@@ -319,7 +331,7 @@ export class HistoriesService {
         itemName: item.name,
         price: item.price,
         imageUrl: null,
-        purchaseReasons: item.reason ? item.reason.split(",") : [],
+        purchaseReasons,
         purchasedAt: date,
       };
     });

@@ -1,5 +1,46 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { ReviewStatus } from "../dto/request/histories.request.dto";
+
+type MyReviewWithRelations = Prisma.ReviewGetPayload<{
+  include: {
+    addedItemAuto: {
+      include: {
+        product: true;
+        purchasedHistory: {
+          include: {
+            purchasedReason: true;
+          };
+        };
+      };
+    };
+    addedItemManual: {
+      include: {
+        purchasedHistory: {
+          include: {
+            purchasedReason: true;
+          };
+        };
+      };
+    };
+  };
+}>;
+
+type HistoryItemWithRelations = Prisma.PurchasedHistoryGetPayload<{
+  include: {
+    purchasedReason: true;
+    addedItemAuto: {
+      include: {
+        product: true;
+        review: true;
+      };
+    };
+    addedItemManual: {
+      include: {
+        review: true;
+      };
+    };
+  };
+}>;
 
 export class HistoriesRepository {
   constructor(private readonly prisma: PrismaClient) { }
@@ -38,32 +79,36 @@ export class HistoriesRepository {
     });
   }
 
-  async findMyReviews(userId: bigint) {
+  async findMyReviews(userId: bigint): Promise<MyReviewWithRelations[]> {
     return this.prisma.review.findMany({
       where: {
         OR: [
-          {
-            addedItemAuto: {
-              userId,
-            },
-          },
-          {
-            addedItemManual: {
-              userId,
-            },
-          },
+          { addedItemAuto: { userId } },
+          { addedItemManual: { userId } },
         ],
       },
       include: {
         addedItemAuto: {
           include: {
             product: true,
-            purchasedHistory: { orderBy: { purchasedDate: "desc" }, take: 1 },
+            purchasedHistory: {
+              orderBy: { purchasedDate: "desc" },
+              take: 1,
+              include: {
+                purchasedReason: true,
+              },
+            },
           },
         },
         addedItemManual: {
           include: {
-            purchasedHistory: { orderBy: { purchasedDate: "desc" }, take: 1 },
+            purchasedHistory: {
+              orderBy: { purchasedDate: "desc" },
+              take: 1,
+              include: {
+                purchasedReason: true,
+              },
+            },
           },
         },
       },
@@ -170,7 +215,7 @@ export class HistoriesRepository {
   async findHistoryItems(
     userId: bigint,
     reviewStatus: ReviewStatus
-  ) {
+  ): Promise<HistoryItemWithRelations[]> {
     const reviewCondition =
       reviewStatus === "WRITTEN"
         ? { some: {} }
@@ -184,22 +229,19 @@ export class HistoriesRepository {
           {
             addedItemAuto: {
               userId,
-              ...(reviewCondition && {
-                review: reviewCondition,
-              }),
+              ...(reviewCondition && { review: reviewCondition }),
             },
           },
           {
             addedItemManual: {
               userId,
-              ...(reviewCondition && {
-                review: reviewCondition,
-              }),
+              ...(reviewCondition && { review: reviewCondition }),
             },
           },
         ],
       },
       include: {
+        purchasedReason: true,
         addedItemAuto: {
           include: {
             product: true,
