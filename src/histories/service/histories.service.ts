@@ -1,4 +1,5 @@
 import { HistoriesRepository } from "../repository/histories.repository";
+import { FilesService } from "../..//files/service/files.service";
 import { AppError } from "../../errors/app.error";
 import {
   MonthlyCalendarResponseDto,
@@ -11,7 +12,10 @@ import {
 import { ReviewStatus, AnalyticsMetric } from "../dto/request/histories.request.dto";
 
 export class HistoriesService {
-  constructor(private readonly historiesRepository: HistoriesRepository) { }
+  constructor(
+    private readonly historiesRepository: HistoriesRepository,
+    private readonly filesService: FilesService,
+  ) { }
 
   async createReview(
     userId: bigint,
@@ -55,50 +59,63 @@ export class HistoriesService {
   async getMyReviews(userId: bigint) {
     const reviews = await this.historiesRepository.findMyReviews(userId);
 
-    const mapped = reviews.map((review) => {
-      // AUTO ITEM
-      if (review.addedItemAuto) {
-        const item = review.addedItemAuto;
-        const product = item.product;
+    const mapped = await Promise.all(
+      reviews.map(async (review) => {
+        // AUTO ITEM
+        if (review.addedItemAuto) {
+          const item = review.addedItemAuto;
+          const product = item.product;
+          const purchased = item.purchasedHistory[0];
+
+          const purchaseReasons =
+            purchased?.purchasedReason
+              ? [purchased.purchasedReason.reason]
+              : purchased?.reason
+                ? purchased.reason.split(",")
+                : [];
+
+          const imageUrl = await this.getItemImageUrl(
+            item.id,
+            "AUTO",
+          );
+
+          return {
+            reviewId: Number(review.id),
+            itemId: Number(item.id),
+            itemName: product.name,
+            price: product.price,
+            imageUrl,
+            purchaseReasons,
+            satisfactionScore: review.satisfaction ?? 0,
+            purchasedAt: purchased
+              ? purchased.purchasedDate.toISOString().split("T")[0]
+              : "",
+          };
+        }
+
+        // MANUAL ITEM
+        const item = review.addedItemManual!;
         const purchased = item.purchasedHistory[0];
-        const purchaseReasons =
-          purchased?.purchasedReason
-            ? [purchased.purchasedReason.reason]
-            : purchased?.reason
-              ? purchased.reason.split(",")
-              : [];
+
+        const imageUrl = await this.getItemImageUrl(
+          item.id,
+          "MANUAL",
+        );
 
         return {
           reviewId: Number(review.id),
           itemId: Number(item.id),
-          itemName: product.name,
-          price: product.price,
-          imageUrl: null,
-          purchaseReasons,
+          itemName: item.name,
+          price: item.price,
+          imageUrl,
+          purchaseReasons: item.reason ? item.reason.split(",") : [],
           satisfactionScore: review.satisfaction ?? 0,
           purchasedAt: purchased
             ? purchased.purchasedDate.toISOString().split("T")[0]
             : "",
         };
-      }
-
-      // MANUAL ITEM
-      const item = review.addedItemManual!;
-      const purchased = item.purchasedHistory[0];
-
-      return {
-        reviewId: Number(review.id),
-        itemId: Number(item.id),
-        itemName: item.name,
-        price: item.price,
-        imageUrl: null,
-        purchaseReasons: item.reason ? item.reason.split(",") : [],
-        satisfactionScore: review.satisfaction ?? 0,
-        purchasedAt: purchased
-          ? purchased.purchasedDate.toISOString().split("T")[0]
-          : "",
-      };
-    });
+      })
+    );
 
     return {
       reviewCount: mapped.length,
@@ -118,6 +135,7 @@ export class HistoriesService {
         statusCode: 400,
       });
     }
+
     const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
     const end = new Date(Date.UTC(year, month, 1, 0, 0, 0));
 
@@ -131,7 +149,7 @@ export class HistoriesService {
     const itemsByDate: Record<string, any[]> = {};
     let totalAmount = 0;
 
-    histories.forEach((h) => {
+    for (const h of histories) {
       const date = h.purchasedDate.toISOString().split("T")[0];
 
       if (!itemsByDate[date]) {
@@ -145,12 +163,17 @@ export class HistoriesService {
 
         totalAmount += price;
 
+        const thumbnailUrl = await this.getItemImageUrl(
+          item.id,
+          "AUTO",
+        );
+
         itemsByDate[date].push({
           itemId: Number(item.id),
           itemType: "AUTO",
           name: item.product.name,
           price,
-          thumbnailUrl: null,
+          thumbnailUrl,
           purchasedAt: h.purchasedAt,
           satisfaction: review?.satisfaction ?? null,
         });
@@ -163,17 +186,22 @@ export class HistoriesService {
 
         totalAmount += price;
 
+        const thumbnailUrl = await this.getItemImageUrl(
+          item.id,
+          "MANUAL",
+        );
+
         itemsByDate[date].push({
           itemId: Number(item.id),
           itemType: "MANUAL",
           name: item.name,
           price,
-          thumbnailUrl: null,
+          thumbnailUrl,
           purchasedAt: h.purchasedAt,
           satisfaction: review?.satisfaction ?? null,
         });
       }
-    });
+    }
 
     const calendar = Object.entries(itemsByDate).map(([date, items]) => ({
       date,
@@ -204,6 +232,7 @@ export class HistoriesService {
         statusCode: 400,
       });
     }
+
     const [y, m, d] = date.split("-").map(Number);
     const start = new Date(Date.UTC(y, m - 1, d));
     if (
@@ -218,7 +247,9 @@ export class HistoriesService {
         statusCode: 400,
       });
     }
-    const end = new Date(Date.UTC(y, m - 1, d + 1)); // 다음 날 00:00:00Z (exclusive)
+
+    const end = new Date(Date.UTC(y, m - 1, d + 1));
+
     const histories =
       await this.historiesRepository.findDailyPurchasedItems(
         userId,
@@ -228,41 +259,53 @@ export class HistoriesService {
 
     let totalAmount = 0;
 
-    const items = histories.map((h) => {
-      if (h.addedItemAuto) {
-        const item = h.addedItemAuto;
+    const items = await Promise.all(
+      histories.map(async (h) => {
+        if (h.addedItemAuto) {
+          const item = h.addedItemAuto;
+          const review = item.review[0];
+          const price = item.product.price;
+
+          totalAmount += price;
+
+          const thumbnailUrl = await this.getItemImageUrl(
+            item.id,
+            "AUTO",
+          );
+
+          return {
+            itemId: Number(item.id),
+            itemType: "AUTO" as const,
+            name: item.product.name,
+            price,
+            thumbnailUrl,
+            purchasedAt: h.purchasedAt,
+            satisfaction: review?.satisfaction ?? null,
+          };
+        }
+
+        const item = h.addedItemManual!;
         const review = item.review[0];
-        const price = item.product.price;
+        const price = item.price;
 
         totalAmount += price;
 
+        const thumbnailUrl = await this.getItemImageUrl(
+          item.id,
+          "MANUAL",
+        );
+
         return {
           itemId: Number(item.id),
-          itemType: "AUTO" as const,
-          name: item.product.name,
+          itemType: "MANUAL" as const,
+          name: item.name,
           price,
-          thumbnailUrl: null,
+          thumbnailUrl,
           purchasedAt: h.purchasedAt,
           satisfaction: review?.satisfaction ?? null,
         };
-      }
-
-      const item = h.addedItemManual!;
-      const review = item.review[0];
-      const price = item.price;
-
-      totalAmount += price;
-
-      return {
-        itemId: Number(item.id),
-        itemType: "MANUAL" as const,
-        name: item.name,
-        price,
-        thumbnailUrl: null,
-        purchasedAt: h.purchasedAt,
-        satisfaction: review?.satisfaction ?? null,
-      };
-    });
+      })
+    );
 
     return {
       date,
@@ -290,51 +333,64 @@ export class HistoriesService {
 
   async getHistoryItems(
     userId: bigint,
-    reviewStatus: ReviewStatus = "ALL"
+    reviewStatus: ReviewStatus = "ALL",
   ): Promise<GetHistoryItemsResponseDto> {
     const histories =
       await this.historiesRepository.findHistoryItems(
         userId,
-        reviewStatus
+        reviewStatus,
       );
 
-    const items: HistoryItemDto[] = histories.map((h) => {
-      const date = h.purchasedDate.toISOString().split("T")[0];
-      const purchaseReasons =
-        h.purchasedReason
-          ? [h.purchasedReason.reason]
-          : h.reason
-            ? h.reason.split(",")
-            : [];
+    const items: HistoryItemDto[] = await Promise.all(
+      histories.map(async (h) => {
+        const date = h.purchasedDate.toISOString().split("T")[0];
 
-      if (h.addedItemAuto) {
-        const item = h.addedItemAuto;
+        const purchaseReasons =
+          h.purchasedReason
+            ? [h.purchasedReason.reason]
+            : h.reason
+              ? h.reason.split(",")
+              : [];
+
+        if (h.addedItemAuto) {
+          const item = h.addedItemAuto;
+          const review = item.review[0];
+
+          const imageUrl = await this.getItemImageUrl(
+            item.id,
+            "AUTO",
+          );
+
+          return {
+            reviewId: review ? Number(review.id) : undefined,
+            itemId: Number(item.id),
+            itemName: item.product.name,
+            price: item.product.price,
+            imageUrl,
+            purchaseReasons,
+            purchasedAt: date,
+          };
+        }
+
+        const item = h.addedItemManual!;
         const review = item.review[0];
+
+        const imageUrl = await this.getItemImageUrl(
+          item.id,
+          "MANUAL",
+        );
 
         return {
           reviewId: review ? Number(review.id) : undefined,
           itemId: Number(item.id),
-          itemName: item.product.name,
-          price: item.product.price,
-          imageUrl: null,
+          itemName: item.name,
+          price: item.price,
+          imageUrl,
           purchaseReasons,
           purchasedAt: date,
         };
-      }
-
-      const item = h.addedItemManual!;
-      const review = item.review[0];
-
-      return {
-        reviewId: review ? Number(review.id) : undefined,
-        itemId: Number(item.id),
-        itemName: item.name,
-        price: item.price,
-        imageUrl: null,
-        purchaseReasons,
-        purchasedAt: date,
-      };
-    });
+      }),
+    );
 
     return { items };
   }
@@ -543,5 +599,23 @@ export class HistoriesService {
         ),
       })),
     };
+  }
+
+  async getItemImageUrl(
+    itemId: bigint,
+    itemType: "AUTO" | "MANUAL",
+  ): Promise<string | null> {
+    const photoFileId =
+      await this.historiesRepository.findItemPhotoFileId(
+        itemId,
+        itemType,
+      );
+
+    if (!photoFileId) return null;
+
+    return this.filesService.generateUrl(
+      photoFileId.toString(),
+      60 * 10,
+    );
   }
 }

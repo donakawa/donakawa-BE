@@ -78,7 +78,7 @@ const goals = {
 
 // Histories 도메인
 const historiesRepository = new HistoriesRepository(prisma);
-const historiesService = new HistoriesService(historiesRepository);
+const historiesService = new HistoriesService(historiesRepository, filesService);
 const histories = {
   service: historiesService,
   repository: historiesRepository,
