@@ -330,8 +330,10 @@ export class HistoriesService {
     userId: bigint
   ): Promise<MonthlyReportResponseDto> {
     const to = new Date();
-    const from = new Date();
-    from.setDate(to.getDate() - 29);
+    to.setUTCHours(23, 59, 59, 999);
+    const from = new Date(to);
+    from.setUTCDate(to.getUTCDate() - 29);
+    from.setUTCHours(0, 0, 0, 0);
 
     const histories =
       await this.historiesRepository.findRecentMonthHistories(
