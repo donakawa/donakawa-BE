@@ -850,8 +850,9 @@ export class WishlistService {
         "대상 위시 아이템을 찾을 수 없습니다.",
       );
     const newFileName = uuid();
+    let fileUploadedPayload: FilePayload | null = null;
+    let updated = false;
     try {
-      let fileUploadedPayload = null;
       if (file) {
         fileUploadedPayload = await this.filesService.upload(
           file,
@@ -873,18 +874,27 @@ export class WishlistService {
           id: BigInt(itemId),
         },
       });
+      updated = true;
       if (fileUploadedPayload && item.photoFileId && item.files && file) {
+        try {
+          await this.filesService.delete(
+            item.files!.name,
+            FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
+          );
+        } catch {
+          console.error(
+            `S3 파일 삭제 실패 (${item.files!.name} | ${FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO})`,
+          );
+        }
+      }
+    } catch (e) {
+      if (fileUploadedPayload && !updated) {
+        const ext = file ? path.extname(file.originalname).toLowerCase() : "";
         await this.filesService.delete(
-          item.files!.name,
+          `${newFileName}${ext}`,
           FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
         );
       }
-    } catch (e) {
-      const ext = file ? path.extname(file.originalname).toLowerCase() : "";
-      await this.filesService.delete(
-        `${newFileName}${ext}`,
-        FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
-      );
       throw e;
     }
     const result = await this.fetchWishitemDetails(itemId, userId, "MANUAL");
