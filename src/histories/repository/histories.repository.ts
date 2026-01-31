@@ -151,4 +151,18 @@ export class HistoriesRepository {
       },
     });
   }
+
+  async deleteReviewsByItem(params: {
+    itemId: number;
+    itemType: "AUTO" | "MANUAL";
+  }) {
+    const where =
+      params.itemType === "AUTO"
+        ? { autoItemId: params.itemId }
+        : { manualItemId: params.itemId };
+
+    return this.prisma.review.deleteMany({
+      where,
+    });
+  }
 }
