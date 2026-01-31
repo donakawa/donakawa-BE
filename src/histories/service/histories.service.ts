@@ -1,6 +1,10 @@
 import { HistoriesRepository } from "../repository/histories.repository";
 import { AppError } from "../../errors/app.error";
-import { MonthlyCalendarResponseDto, GetDailyHistoriesResponseDto } from "../dto/response/histories.response.dto";
+import { MonthlyCalendarResponseDto, 
+  GetDailyHistoriesResponseDto,
+  GetHistoryItemsResponseDto,
+  HistoryItemDto, } from "../dto/response/histories.response.dto";
+import { ReviewStatus } from "../dto/request/histories.request.dto";
 
 export class HistoriesService {
   constructor(private readonly historiesRepository: HistoriesRepository) { }
@@ -272,5 +276,50 @@ export class HistoriesService {
     return {
       deletedCount: result.count,
     };
+  }
+
+  async getHistoryItems(
+    userId: bigint,
+    reviewStatus: ReviewStatus = "ALL"
+  ): Promise<GetHistoryItemsResponseDto> {
+    const histories =
+      await this.historiesRepository.findHistoryItems(
+        userId,
+        reviewStatus
+      );
+
+    const items: HistoryItemDto[] = histories.map((h) => {
+      const date = h.purchasedDate.toISOString().split("T")[0];
+
+      if (h.addedItemAuto) {
+        const item = h.addedItemAuto;
+        const review = item.review[0];
+
+        return {
+          reviewId: review ? Number(review.id) : undefined,
+          itemId: Number(item.id),
+          itemName: item.product.name,
+          price: item.product.price,
+          imageUrl: null,
+          purchaseReasons: item.reason ? item.reason.split(",") : [],
+          purchasedAt: date,
+        };
+      }
+
+      const item = h.addedItemManual!;
+      const review = item.review[0];
+
+      return {
+        reviewId: review ? Number(review.id) : undefined,
+        itemId: Number(item.id),
+        itemName: item.name,
+        price: item.price,
+        imageUrl: null,
+        purchaseReasons: item.reason ? item.reason.split(",") : [],
+        purchasedAt: date,
+      };
+    });
+
+    return { items };
   }
 }

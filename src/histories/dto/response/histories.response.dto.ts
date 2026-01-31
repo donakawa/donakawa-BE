@@ -88,3 +88,17 @@ export interface GetDailyHistoriesResponseDto {
   summary: DailyHistorySummaryDto;
   items: DailyHistoryItemDto[];
 }
+
+export interface HistoryItemDto {
+  reviewId?: number;
+  itemId: number;
+  itemName: string;
+  price: number;
+  imageUrl: string | null;
+  purchaseReasons: string[];
+  purchasedAt: string; // yyyy-MM-dd
+}
+
+export interface GetHistoryItemsResponseDto {
+  items: HistoryItemDto[];
+}

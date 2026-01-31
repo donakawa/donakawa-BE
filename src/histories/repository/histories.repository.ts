@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { ReviewStatus } from "../dto/request/histories.request.dto";
 
 export class HistoriesRepository {
   constructor(private readonly prisma: PrismaClient) { }
@@ -163,6 +164,63 @@ export class HistoriesRepository {
 
     return this.prisma.review.deleteMany({
       where,
+    });
+  }
+
+  async findHistoryItems(
+    userId: bigint,
+    reviewStatus: ReviewStatus
+  ) {
+    const reviewCondition =
+      reviewStatus === "WRITTEN"
+        ? { some: {} }
+        : reviewStatus === "NOT_WRITTEN"
+        ? { none: {} }
+        : undefined;
+
+    return this.prisma.purchasedHistory.findMany({
+      where: {
+        OR: [
+          {
+            addedItemAuto: {
+              userId,
+              ...(reviewCondition && {
+                review: reviewCondition,
+              }),
+            },
+          },
+          {
+            addedItemManual: {
+              userId,
+              ...(reviewCondition && {
+                review: reviewCondition,
+              }),
+            },
+          },
+        ],
+      },
+      include: {
+        addedItemAuto: {
+          include: {
+            product: true,
+            review: {
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        },
+        addedItemManual: {
+          include: {
+            review: {
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        },
+      },
+      orderBy: {
+        purchasedDate: "desc",
+      },
     });
   }
 }

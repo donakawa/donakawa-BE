@@ -451,6 +451,43 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "HistoryItemDto": {
+        "dataType": "refObject",
+        "properties": {
+            "reviewId": {"dataType":"double"},
+            "itemId": {"dataType":"double","required":true},
+            "itemName": {"dataType":"string","required":true},
+            "price": {"dataType":"double","required":true},
+            "imageUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "purchaseReasons": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "purchasedAt": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GetHistoryItemsResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "items": {"dataType":"array","array":{"dataType":"refObject","ref":"HistoryItemDto"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_GetHistoryItemsResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"GetHistoryItemsResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ReviewStatus": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["ALL"]},{"dataType":"enum","enums":["WRITTEN"]},{"dataType":"enum","enums":["NOT_WRITTEN"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "CalcShoppingBudgetResponseDto": {
         "dataType": "refObject",
         "properties": {
@@ -1572,6 +1609,38 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'getDailyHistories',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsHistoriesController_getHistoryItems: Record<string, TsoaRoute.ParameterSchema> = {
+                reviewStatus: {"default":"ALL","in":"query","name":"reviewStatus","ref":"ReviewStatus"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/histories/items',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController)),
+            ...(fetchMiddlewares<RequestHandler>(HistoriesController.prototype.getHistoryItems)),
+
+            async function HistoriesController_getHistoryItems(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsHistoriesController_getHistoryItems, request, response });
+
+                const controller = new HistoriesController();
+
+              await templateService.apiHandler({
+                methodName: 'getHistoryItems',
                 controller,
                 response,
                 next,
