@@ -119,6 +119,7 @@ export class GoalsRepository {
             createdAt: true,
             product: {
               select: {
+                id: true,
                 name: true,
                 price: true,
                 files: { select: { id: true } },
@@ -130,6 +131,7 @@ export class GoalsRepository {
         addedItemManual: {
           select: {
             createdAt: true,
+            id: true,
             name: true,
             price: true,
             files: { select: { id: true } },

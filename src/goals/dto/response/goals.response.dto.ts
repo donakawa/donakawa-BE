@@ -38,8 +38,11 @@ export class CalcShoppingBudgetResponseDto {
   }
 }
 
+type SpendItemType = "AUTO" | "MANUAL";
+
 export class SpendItemDto {
   id!: string;
+  type!: SpendItemType;
   name!: string;
   price!: number;
   imageUrl!: string | null;

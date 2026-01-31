@@ -236,10 +236,6 @@ export class GoalsService {
 
     const items = await Promise.all(
       reviews.slice(0, 10).map(async (r) => {
-        const purchased =
-          r.addedItemAuto?.purchasedHistory[0] ??
-          r.addedItemManual?.purchasedHistory[0]!;
-
         // 수동 추가
         if (r.addedItemManual) {
           const fileId = r.addedItemManual.files?.id;
@@ -248,7 +244,8 @@ export class GoalsService {
             : null;
 
           return {
-            id: purchased.id.toString(),
+            id: r.addedItemManual.id.toString(),
+            type: "MANUAL" as const,
             name: r.addedItemManual.name,
             price: r.addedItemManual.price,
             imageUrl,
@@ -256,13 +253,15 @@ export class GoalsService {
         }
 
         // 자동 추가
+        const product = r.addedItemAuto!.product;
         const fileId = r.addedItemAuto?.product.files?.id;
         const imageUrl = fileId
           ? await this.filesService.generateUrl(fileId.toString(), 60 * 10)
           : null;
 
         return {
-          id: purchased.id.toString(),
+          id: product.id.toString(),
+          type: "AUTO" as const,
           name: r.addedItemAuto!.product.name,
           price: r.addedItemAuto!.product.price,
           imageUrl,
