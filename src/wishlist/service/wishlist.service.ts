@@ -860,16 +860,22 @@ export class WishlistService {
           FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
         );
       }
+      const updateData = {
+        ...(body.productName && { name: body.productName }),
+        ...(body.price !== undefined && { price: body.price }),
+        ...(body.url && { url: body.url }),
+        ...(body.storeName && { storePlatform: body.storeName }),
+        ...(fileUploadedPayload && {
+          photoFileId: BigInt(fileUploadedPayload.id),
+        }),
+      };
+      if (Object.keys(updateData).length === 0)
+        throw new BadRequestException(
+          "INVALID_INPUT_FORM",
+          "수정할 항목이 없습니다.",
+        );
       await this.wishlistRepository.updateAddedItemManual({
-        data: {
-          ...(body.productName && { name: body.productName }),
-          ...(body.price !== undefined && { price: body.price }),
-          ...(body.url && { url: body.url }),
-          ...(body.storeName && { storePlatform: body.storeName }),
-          ...(fileUploadedPayload && {
-            photoFileId: BigInt(fileUploadedPayload.id),
-          }),
-        },
+        data: updateData,
         where: {
           id: BigInt(itemId),
         },
