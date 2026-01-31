@@ -3,7 +3,7 @@ import { AppError } from "../../errors/app.error";
 import { MonthlyCalendarResponseDto, GetDailyHistoriesResponseDto } from "../dto/response/histories.response.dto";
 
 export class HistoriesService {
-  constructor(private readonly historiesRepository: HistoriesRepository) {}
+  constructor(private readonly historiesRepository: HistoriesRepository) { }
 
   async createReview(
     userId: bigint,
@@ -98,12 +98,12 @@ export class HistoriesService {
     month: number
   ): Promise<MonthlyCalendarResponseDto> {
     if (month < 1 || month > 12) {
-       throw new AppError({
-         errorCode: "H003",
-         message: "month는 1~12 범위여야 합니다.",
-         statusCode: 400,
-       });
-     }
+      throw new AppError({
+        errorCode: "H003",
+        message: "month는 1~12 범위여야 합니다.",
+        statusCode: 400,
+      });
+    }
     const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
     const end = new Date(Date.UTC(year, month, 1, 0, 0, 0));
 
@@ -257,6 +257,20 @@ export class HistoriesService {
         purchaseCount: items.length,
       },
       items,
+    };
+  }
+
+  async deleteReviewsByItem(
+    itemId: number,
+    itemType: "AUTO" | "MANUAL"
+  ): Promise<{ deletedCount: number }> {
+    const result = await this.historiesRepository.deleteReviewsByItem({
+      itemId,
+      itemType,
+    });
+
+    return {
+      deletedCount: result.count,
     };
   }
 }
