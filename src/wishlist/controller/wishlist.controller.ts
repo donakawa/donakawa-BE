@@ -359,6 +359,11 @@ export class WishlistController extends Controller {
     @BodyProp("type") type: WishitemType,
     @Request() req: ExpressRequest,
   ) {
+    if (!/^\d+$/.exec(itemId))
+      throw new BadRequestException(
+        "INVALID_ITEM_ID",
+        "올바르지 않은 아이템 ID 입니다.",
+      );
     const userId = req.user!.id;
     const dto = new ModifyWishitemReasonRequestDto({
       itemId,

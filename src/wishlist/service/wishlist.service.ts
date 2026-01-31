@@ -862,7 +862,7 @@ export class WishlistService {
       await this.wishlistRepository.updateAddedItemManual({
         data: {
           ...(body.productName && { name: body.productName }),
-          ...(body.price && { price: body.price }),
+          ...(body.price !== undefined && { price: body.price }),
           ...(body.url && { url: body.url }),
           ...(body.storeName && { storePlatform: body.storeName }),
           ...(fileUploadedPayload && {
@@ -873,7 +873,8 @@ export class WishlistService {
           id: BigInt(itemId),
         },
       });
-      if (fileUploadedPayload && !item.photoFileId) {
+      if (fileUploadedPayload && item.photoFileId && item.files && file) {
+        const ext = path.extname(file.originalname.toLowerCase());
         await this.filesService.delete(
           item.files!.name,
           FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,

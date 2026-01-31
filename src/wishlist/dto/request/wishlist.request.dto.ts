@@ -289,12 +289,12 @@ export class ModifyWishitemRequestDto {
   @IsOptional()
   @IsNumber()
   price?: number;
+  @IsOptional()
   @IsUrl()
   @IsString()
-  @IsOptional()
   url?: string;
-  @IsString()
   @IsOptional()
+  @IsString()
   storeName?: string;
   constructor(param: {
     productName?: string;
