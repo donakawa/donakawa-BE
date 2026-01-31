@@ -11,3 +11,9 @@ export interface GetMonthlyCalendarRequestDto {
 export interface GetDailyHistoriesRequestDto {
   date: string; // YYYY-MM-DD
 }
+
+export type ReviewStatus = "ALL" | "WRITTEN" | "NOT_WRITTEN";
+
+export interface GetHistoryItemsRequestDto {
+  reviewStatus?: ReviewStatus; // 기본값 ALL
+}
