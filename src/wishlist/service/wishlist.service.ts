@@ -745,6 +745,7 @@ export class WishlistService {
         await this.historiesService.deleteReviewsByItem(
           data.itemId,
           data.type as WishitemType,
+          tx,
         );
         await this.wishlistRepository.deleteAddedItemManual(
           {

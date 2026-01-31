@@ -12,6 +12,7 @@ import {
   ReviewStatus,
   AnalyticsMetric,
 } from "../dto/request/histories.request.dto";
+import { Prisma } from "@prisma/client";
 
 export class HistoriesService {
   constructor(private readonly historiesRepository: HistoriesRepository) {}
@@ -277,10 +278,12 @@ export class HistoriesService {
   async deleteReviewsByItem(
     itemId: string,
     itemType: "AUTO" | "MANUAL",
+    tx?: Prisma.TransactionClient,
   ): Promise<{ deletedCount: number }> {
     const result = await this.historiesRepository.deleteReviewsByItem({
       itemId,
       itemType,
+      tx,
     });
 
     return {
