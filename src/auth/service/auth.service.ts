@@ -297,7 +297,6 @@ export class AuthService {
         "이메일 인증이 필요합니다."
       );
     }
-    this.validatePassword(body.password);
 
     const isNicknameAvailable = await this.checkNicknameDuplicate(body.nickname);
     if (!isNicknameAvailable) {
@@ -459,8 +458,6 @@ export class AuthService {
       );
     }
 
-    this.validatePassword(newPassword);
-
     await redis.del(`email:verified:RESET_PASSWORD:${email}`);
 
     const hashedPassword = await hashingString(newPassword);
@@ -470,22 +467,6 @@ export class AuthService {
     await this.clearUserSession(user.id);
   }
 
-  // 비밀번호 정책 검증
-  private validatePassword(password: string): void {
-    if (password.length < 8 || password.length > 12) {
-      throw new UnauthorizedException(
-        "A008",
-        "비밀번호는 8자 이상, 12자 이하이어야 합니다."
-      );
-    }
-
-    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
-      throw new UnauthorizedException(
-        "A009",
-        "비밀번호는 영문과 숫자를 포함해야 합니다."
-      );
-    }
-  }
   // 닉네임 수정
   async updateNickname(
     userId: bigint,
@@ -634,9 +615,6 @@ async updatePassword(
     // 일회용: 사용 후 삭제
     await redis.del(`password-verified:${userId}`);
   }
-
-  // 새 비밀번호 유효성 검사
-  this.validatePassword(newPassword);
 
   // 비밀번호 변경
   const hashedPassword = await hashingString(newPassword);
