@@ -6,22 +6,25 @@ import {
   GetHistoryItemsResponseDto,
   HistoryItemDto,
   MonthlyReportResponseDto,
-  AnalyticsResponseDto
+  AnalyticsResponseDto,
 } from "../dto/response/histories.response.dto";
-import { ReviewStatus, AnalyticsMetric } from "../dto/request/histories.request.dto";
+import {
+  ReviewStatus,
+  AnalyticsMetric,
+} from "../dto/request/histories.request.dto";
 
 export class HistoriesService {
-  constructor(private readonly historiesRepository: HistoriesRepository) { }
+  constructor(private readonly historiesRepository: HistoriesRepository) {}
 
   async createReview(
     userId: bigint,
     itemId: number,
     satisfaction: number,
-    frequency: number
+    frequency: number,
   ) {
     const autoItem = await this.historiesRepository.findAutoItem(
       itemId,
-      userId
+      userId,
     );
 
     if (autoItem) {
@@ -34,7 +37,7 @@ export class HistoriesService {
 
     const manualItem = await this.historiesRepository.findManualItem(
       itemId,
-      userId
+      userId,
     );
 
     if (manualItem) {
@@ -61,12 +64,11 @@ export class HistoriesService {
         const item = review.addedItemAuto;
         const product = item.product;
         const purchased = item.purchasedHistory[0];
-        const purchaseReasons =
-          purchased?.purchasedReason
-            ? [purchased.purchasedReason.reason]
-            : purchased?.reason
-              ? purchased.reason.split(",")
-              : [];
+        const purchaseReasons = purchased?.purchasedReason
+          ? [purchased.purchasedReason.reason]
+          : purchased?.reason
+            ? purchased.reason.split(",")
+            : [];
 
         return {
           reviewId: Number(review.id),
@@ -109,7 +111,7 @@ export class HistoriesService {
   async getMonthlyCalendar(
     userId: bigint,
     year: number,
-    month: number
+    month: number,
   ): Promise<MonthlyCalendarResponseDto> {
     if (month < 1 || month > 12) {
       throw new AppError({
@@ -121,12 +123,11 @@ export class HistoriesService {
     const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
     const end = new Date(Date.UTC(year, month, 1, 0, 0, 0));
 
-    const histories =
-      await this.historiesRepository.findMonthlyPurchasedItems(
-        userId,
-        start,
-        end
-      );
+    const histories = await this.historiesRepository.findMonthlyPurchasedItems(
+      userId,
+      start,
+      end,
+    );
 
     const itemsByDate: Record<string, any[]> = {};
     let totalAmount = 0;
@@ -195,7 +196,7 @@ export class HistoriesService {
 
   async getDailyHistories(
     userId: bigint,
-    date: string
+    date: string,
   ): Promise<GetDailyHistoriesResponseDto> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new AppError({
@@ -219,12 +220,11 @@ export class HistoriesService {
       });
     }
     const end = new Date(Date.UTC(y, m - 1, d + 1)); // 다음 날 00:00:00Z (exclusive)
-    const histories =
-      await this.historiesRepository.findDailyPurchasedItems(
-        userId,
-        start,
-        end
-      );
+    const histories = await this.historiesRepository.findDailyPurchasedItems(
+      userId,
+      start,
+      end,
+    );
 
     let totalAmount = 0;
 
@@ -275,8 +275,8 @@ export class HistoriesService {
   }
 
   async deleteReviewsByItem(
-    itemId: number,
-    itemType: "AUTO" | "MANUAL"
+    itemId: string,
+    itemType: "AUTO" | "MANUAL",
   ): Promise<{ deletedCount: number }> {
     const result = await this.historiesRepository.deleteReviewsByItem({
       itemId,
@@ -290,22 +290,20 @@ export class HistoriesService {
 
   async getHistoryItems(
     userId: bigint,
-    reviewStatus: ReviewStatus = "ALL"
+    reviewStatus: ReviewStatus = "ALL",
   ): Promise<GetHistoryItemsResponseDto> {
-    const histories =
-      await this.historiesRepository.findHistoryItems(
-        userId,
-        reviewStatus
-      );
+    const histories = await this.historiesRepository.findHistoryItems(
+      userId,
+      reviewStatus,
+    );
 
     const items: HistoryItemDto[] = histories.map((h) => {
       const date = h.purchasedDate.toISOString().split("T")[0];
-      const purchaseReasons =
-        h.purchasedReason
-          ? [h.purchasedReason.reason]
-          : h.reason
-            ? h.reason.split(",")
-            : [];
+      const purchaseReasons = h.purchasedReason
+        ? [h.purchasedReason.reason]
+        : h.reason
+          ? h.reason.split(",")
+          : [];
 
       if (h.addedItemAuto) {
         const item = h.addedItemAuto;
@@ -340,7 +338,7 @@ export class HistoriesService {
   }
 
   async getRecentMonthReport(
-    userId: bigint
+    userId: bigint,
   ): Promise<MonthlyReportResponseDto> {
     const to = new Date();
     to.setUTCHours(23, 59, 59, 999);
@@ -348,12 +346,11 @@ export class HistoriesService {
     from.setUTCDate(to.getUTCDate() - 29);
     from.setUTCHours(0, 0, 0, 0);
 
-    const histories =
-      await this.historiesRepository.findRecentMonthHistories(
-        userId,
-        from,
-        to
-      );
+    const histories = await this.historiesRepository.findRecentMonthHistories(
+      userId,
+      from,
+      to,
+    );
 
     let totalSpent = 0;
     let satisfactionSum = 0;
@@ -419,8 +416,8 @@ export class HistoriesService {
           data.satisfactionCount === 0
             ? 0
             : Number(
-              (data.satisfactionSum / data.satisfactionCount).toFixed(1)
-            ),
+                (data.satisfactionSum / data.satisfactionCount).toFixed(1),
+              ),
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
@@ -445,10 +442,9 @@ export class HistoriesService {
 
   public async getAnalytics(
     userId: bigint,
-    metric: AnalyticsMetric
+    metric: AnalyticsMetric,
   ): Promise<AnalyticsResponseDto> {
-    const histories =
-      await this.historiesRepository.findAllByUser(userId);
+    const histories = await this.historiesRepository.findAllByUser(userId);
 
     const totalCount = histories.length;
 
@@ -468,7 +464,7 @@ export class HistoriesService {
   // 시간대 통계
   private buildTimeAnalytics(
     histories: any[],
-    totalCount: number
+    totalCount: number,
   ): AnalyticsResponseDto {
     const labels = [
       { key: "MORNING", name: "아침" },
@@ -493,9 +489,7 @@ export class HistoriesService {
         label: l.key,
         displayName: l.name,
         count: countMap[l.key],
-        percentage: Math.round(
-          (countMap[l.key] / totalCount) * 100
-        ),
+        percentage: Math.round((countMap[l.key] / totalCount) * 100),
       })),
     };
   }
@@ -503,7 +497,7 @@ export class HistoriesService {
   // 요일 통계
   private buildDayAnalytics(
     histories: any[],
-    totalCount: number
+    totalCount: number,
   ): AnalyticsResponseDto {
     const labels = [
       { key: "SUN", name: "일" },
@@ -538,9 +532,7 @@ export class HistoriesService {
         label: l.key,
         displayName: l.name,
         count: countMap[l.key],
-        percentage: Math.round(
-          (countMap[l.key] / totalCount) * 100
-        ),
+        percentage: Math.round((countMap[l.key] / totalCount) * 100),
       })),
     };
   }

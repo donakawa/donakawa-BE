@@ -59,6 +59,7 @@ import {
 import { WishItemPayload } from "../payload/wishlist.payload";
 import { WishlistRecordInterface } from "../interface/wishlist.interface";
 import { DbRepository } from "../../infra/db.repository";
+import { HistoriesService } from "../../histories/service/histories.service";
 export class WishlistService {
   constructor(
     private readonly dbRepository: DbRepository,
@@ -67,6 +68,7 @@ export class WishlistService {
     private readonly valkeyClientPromise: Promise<ValkeyClient>,
     private readonly eventEmitterClient: EventEmitterClient,
     private readonly filesService: FilesService,
+    private readonly historiesService: HistoriesService,
   ) {}
   async enqueueItemCrawl(
     data: AddCrawlTaskRequestDto,
@@ -740,7 +742,10 @@ export class WishlistService {
             },
             tx,
           );
-        // TODO : 이 사이에 후기 도 삭제하는 코드 추가하기
+        await this.historiesService.deleteReviewsByItem(
+          data.itemId,
+          data.type as WishitemType,
+        );
         await this.wishlistRepository.deleteAddedItemManual(
           {
             where: {
