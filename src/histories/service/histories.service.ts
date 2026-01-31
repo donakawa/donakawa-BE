@@ -5,9 +5,10 @@ import {
   GetDailyHistoriesResponseDto,
   GetHistoryItemsResponseDto,
   HistoryItemDto,
-  MonthlyReportResponseDto
+  MonthlyReportResponseDto,
+  AnalyticsResponseDto
 } from "../dto/response/histories.response.dto";
-import { ReviewStatus } from "../dto/request/histories.request.dto";
+import { ReviewStatus, AnalyticsMetric } from "../dto/request/histories.request.dto";
 
 export class HistoriesService {
   constructor(private readonly historiesRepository: HistoriesRepository) { }
@@ -420,13 +421,115 @@ export class HistoriesService {
       },
       summary: {
         totalSpent,
-        savedAmount: Math.floor(totalSpent * 0.1), // 👉 정책: 10% 절약 효과
+        savedAmount: Math.floor(totalSpent * 0.1),
         averageSatisfaction:
           satisfactionCount === 0
             ? 0
             : Number((satisfactionSum / satisfactionCount).toFixed(1)),
       },
       topReasons,
+    };
+  }
+
+  public async getAnalytics(
+    userId: bigint,
+    metric: AnalyticsMetric
+  ): Promise<AnalyticsResponseDto> {
+    const histories =
+      await this.historiesRepository.findAllByUser(userId);
+
+    const totalCount = histories.length;
+
+    if (totalCount === 0) {
+      return {
+        metric: metric === "time" ? "TIME" : "DAY",
+        totalCount: 0,
+        statistics: [],
+      };
+    }
+
+    return metric === "time"
+      ? this.buildTimeAnalytics(histories, totalCount)
+      : this.buildDayAnalytics(histories, totalCount);
+  }
+
+  // 시간대 통계
+  private buildTimeAnalytics(
+    histories: any[],
+    totalCount: number
+  ): AnalyticsResponseDto {
+    const labels = [
+      { key: "MORNING", name: "아침" },
+      { key: "EVENING", name: "저녁" },
+      { key: "NIGHT", name: "새벽" },
+    ];
+
+    const countMap: Record<string, number> = {
+      MORNING: 0,
+      EVENING: 0,
+      NIGHT: 0,
+    };
+
+    histories.forEach((h) => {
+      countMap[h.purchasedAt]++;
+    });
+
+    return {
+      metric: "TIME",
+      totalCount,
+      statistics: labels.map((l) => ({
+        label: l.key,
+        displayName: l.name,
+        count: countMap[l.key],
+        percentage: Math.round(
+          (countMap[l.key] / totalCount) * 100
+        ),
+      })),
+    };
+  }
+
+  // 요일 통계
+  private buildDayAnalytics(
+    histories: any[],
+    totalCount: number
+  ): AnalyticsResponseDto {
+    const labels = [
+      { key: "SUN", name: "일" },
+      { key: "MON", name: "월" },
+      { key: "TUE", name: "화" },
+      { key: "WED", name: "수" },
+      { key: "THU", name: "목" },
+      { key: "FRI", name: "금" },
+      { key: "SAT", name: "토" },
+    ];
+
+    const countMap: Record<string, number> = {
+      SUN: 0,
+      MON: 0,
+      TUE: 0,
+      WED: 0,
+      THU: 0,
+      FRI: 0,
+      SAT: 0,
+    };
+
+    histories.forEach((h) => {
+      const dayIndex = h.purchasedDate.getUTCDay();
+      const label = labels[dayIndex].key;
+      countMap[label]++;
+    });
+
+    return {
+      metric: "DAY",
+      totalCount,
+      statistics: labels.map((l) => ({
+        label: l.key,
+        displayName: l.name,
+        count: countMap[l.key],
+        percentage: Math.round(
+          (countMap[l.key] / totalCount) * 100
+        ),
+      })),
     };
   }
 }

@@ -12,7 +12,7 @@ import {
 import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
 import { ApiResponse, success } from "../../common/response";
-import { CreateReviewRequestDto, ReviewStatus } from "../dto/request/histories.request.dto";
+import { CreateReviewRequestDto, ReviewStatus, AnalyticsMetric } from "../dto/request/histories.request.dto";
 import { 
   CreateReviewResponseDto, 
   GetMyReviewsResponseDto, 
@@ -119,5 +119,21 @@ export class HistoriesController {
       await this.historiesService.getRecentMonthReport(userId);
 
     return success(result);
+  }
+
+  @Security("jwt")
+  @Get("/analytics")
+  public async getAnalytics(
+    @Request() req: any,
+    @Query() metric: AnalyticsMetric = "time"
+  ) {
+    const userId = BigInt(req.user.id);
+
+    const data = await this.historiesService.getAnalytics(
+      userId,
+      metric
+    );
+
+    return success(data);
   }
 }

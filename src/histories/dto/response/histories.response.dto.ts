@@ -126,3 +126,16 @@ export interface MonthlyReportResponseDto {
   summary: ReportSummaryDto;
   topReasons: ReportReasonDto[];
 }
+
+export interface AnalyticsStatistic {
+  label: string;
+  displayName: string;
+  count: number;
+  percentage: number;
+}
+
+export interface AnalyticsResponseDto {
+  metric: "TIME" | "DAY";
+  totalCount: number;
+  statistics: AnalyticsStatistic[];
+}

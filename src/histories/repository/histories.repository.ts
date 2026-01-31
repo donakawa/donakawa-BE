@@ -262,4 +262,19 @@ export class HistoriesRepository {
       },
     });
   }
+
+  async findAllByUser(userId: bigint) {
+    return this.prisma.purchasedHistory.findMany({
+      where: {
+        OR: [
+          { addedItemAuto: { userId } },
+          { addedItemManual: { userId } },
+        ],
+      },
+      select: {
+        purchasedAt: true,
+        purchasedDate: true,
+      },
+    });
+  }
 }
