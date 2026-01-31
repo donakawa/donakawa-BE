@@ -175,8 +175,8 @@ export class HistoriesRepository {
       reviewStatus === "WRITTEN"
         ? { some: {} }
         : reviewStatus === "NOT_WRITTEN"
-        ? { none: {} }
-        : undefined;
+          ? { none: {} }
+          : undefined;
 
     return this.prisma.purchasedHistory.findMany({
       where: {
@@ -220,6 +220,45 @@ export class HistoriesRepository {
       },
       orderBy: {
         purchasedDate: "desc",
+      },
+    });
+  }
+
+  async findRecentMonthHistories(
+    userId: bigint,
+    start: Date,
+    end: Date
+  ) {
+    return this.prisma.purchasedHistory.findMany({
+      where: {
+        purchasedDate: {
+          gte: start,
+          lte: end,
+        },
+        OR: [
+          { addedItemAuto: { userId } },
+          { addedItemManual: { userId } },
+        ],
+      },
+      include: {
+        purchasedReason: true,
+        addedItemAuto: {
+          include: {
+            product: true,
+            review: {
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        },
+        addedItemManual: {
+          include: {
+            review: {
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        },
       },
     });
   }
