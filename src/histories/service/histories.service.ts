@@ -96,6 +96,13 @@ export class HistoriesService {
         // MANUAL ITEM
         const item = review.addedItemManual!;
         const purchased = item.purchasedHistory[0];
+        
+        const purchaseReasons =
+            purchased?.purchasedReason
+              ? [purchased.purchasedReason.reason]
+              : purchased?.reason
+                ? purchased.reason.split(",")
+                : [];
 
         const imageUrl = await this.getItemImageUrl(
           item.id,
@@ -108,7 +115,7 @@ export class HistoriesService {
           itemName: item.name,
           price: item.price,
           imageUrl,
-          purchaseReasons: item.reason ? item.reason.split(",") : [],
+          purchaseReasons: purchaseReasons,
           satisfactionScore: review.satisfaction ?? 0,
           purchasedAt: purchased
             ? purchased.purchasedDate.toISOString().split("T")[0]
