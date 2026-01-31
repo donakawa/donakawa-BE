@@ -19,7 +19,8 @@ import {
   MonthlyCalendarResponseDto, 
   GetDailyHistoriesResponseDto,
   GetHistoryItemsResponseDto,
-  MonthlyReportResponseDto } from "../dto/response/histories.response.dto";
+  MonthlyReportResponseDto,
+  AnalyticsResponseDto } from "../dto/response/histories.response.dto";
 import { HistoriesService } from "../service/histories.service";
 
 @Route("/histories")
@@ -124,10 +125,10 @@ export class HistoriesController {
   @Security("jwt")
   @Get("/analytics")
   public async getAnalytics(
-    @Request() req: any,
+    @Request() req: ExpressRequest,
     @Query() metric: AnalyticsMetric = "time"
-  ) {
-    const userId = BigInt(req.user.id);
+  ): Promise<ApiResponse<AnalyticsResponseDto>> {
+    const userId = BigInt(req.user!.id);
 
     const data = await this.historiesService.getAnalytics(
       userId,
