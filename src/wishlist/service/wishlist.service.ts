@@ -16,6 +16,7 @@ import {
   MarkItemAsDroppedRequestDto,
   MarkItemAsPurchasedRequestDto,
   ModifyWishitemReasonRequestDto,
+  ModifyWishitemRequestDto,
   ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
   ShowWishitemsInFolderRequestDto,
@@ -26,6 +27,7 @@ import {
   AddWishlistResponseDto,
   CreateWishitemFolderResponseDto,
   GetCrawlResultResponseDto,
+  ModifyWishitemResponseDto,
   ShowWishitemDetailResponseDto,
   ShowWishitemFoldersResponseDto,
   ShowWishitemListResponseDto,
@@ -59,6 +61,7 @@ import {
 import { WishItemPayload } from "../payload/wishlist.payload";
 import { WishlistRecordInterface } from "../interface/wishlist.interface";
 import { DbRepository } from "../../infra/db.repository";
+import { HistoriesService } from "../../histories/service/histories.service";
 export class WishlistService {
   constructor(
     private readonly dbRepository: DbRepository,
@@ -67,6 +70,7 @@ export class WishlistService {
     private readonly valkeyClientPromise: Promise<ValkeyClient>,
     private readonly eventEmitterClient: EventEmitterClient,
     private readonly filesService: FilesService,
+    private readonly historiesService: HistoriesService,
   ) {}
   async enqueueItemCrawl(
     data: AddCrawlTaskRequestDto,
@@ -740,7 +744,11 @@ export class WishlistService {
             },
             tx,
           );
-        // TODO : 이 사이에 후기 도 삭제하는 코드 추가하기
+        await this.historiesService.deleteReviewsByItem(
+          data.itemId,
+          data.type as WishitemType,
+          tx,
+        );
         await this.wishlistRepository.deleteAddedItemManual(
           {
             where: {
@@ -815,5 +823,87 @@ export class WishlistService {
           where: { id: BigInt(data.itemId) },
           data: { reason: data.reason },
         });
+  }
+  async updateWishitemInfo(
+    itemId: string,
+    userId: string,
+    body: ModifyWishitemRequestDto,
+    file?: Express.Multer.File,
+  ) {
+    const item = await this.wishlistRepository.findAddedItemManualById(itemId, {
+      select: {
+        id: true,
+        userId: true,
+        photoFileId: true,
+        files: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+    const isExist = item !== null;
+    const hasPermission = item?.userId === BigInt(userId);
+    if (!isExist || !hasPermission)
+      throw new NotFoundException(
+        "WISHITEM_NOT_FOUND",
+        "대상 위시 아이템을 찾을 수 없습니다.",
+      );
+    const newFileName = uuid();
+    let fileUploadedPayload: FilePayload | null = null;
+    let updated = false;
+    try {
+      if (file) {
+        fileUploadedPayload = await this.filesService.upload(
+          file,
+          newFileName,
+          FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
+        );
+      }
+      const updateData = {
+        ...(body.productName && { name: body.productName }),
+        ...(body.price !== undefined && { price: body.price }),
+        ...(body.url && { url: body.url }),
+        ...(body.storeName && { storePlatform: body.storeName }),
+        ...(fileUploadedPayload && {
+          photoFileId: BigInt(fileUploadedPayload.id),
+        }),
+      };
+      if (Object.keys(updateData).length === 0)
+        throw new BadRequestException(
+          "INVALID_INPUT_FORM",
+          "수정할 항목이 없습니다.",
+        );
+      await this.wishlistRepository.updateAddedItemManual({
+        data: updateData,
+        where: {
+          id: BigInt(itemId),
+        },
+      });
+      updated = true;
+      if (fileUploadedPayload && item.photoFileId && item.files && file) {
+        try {
+          await this.filesService.delete(
+            item.files!.name,
+            FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
+          );
+        } catch {
+          console.error(
+            `S3 파일 삭제 실패 (${item.files!.name} | ${FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO})`,
+          );
+        }
+      }
+    } catch (e) {
+      if (fileUploadedPayload && !updated) {
+        const ext = file ? path.extname(file.originalname).toLowerCase() : "";
+        await this.filesService.delete(
+          `${newFileName}${ext}`,
+          FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
+        );
+      }
+      throw e;
+    }
+    const result = await this.fetchWishitemDetails(itemId, userId, "MANUAL");
+    return new ModifyWishitemResponseDto(result);
   }
 }

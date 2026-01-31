@@ -18,7 +18,7 @@ model User {
   email     String    @unique @db.VarChar(100)
   password  String?   @db.VarChar(100)
   nickname  String    @db.VarChar(10)
-  goal      String    @db.VarChar(10) @default("")
+  goal      String?    @db.VarChar(10)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
   deletedAt DateTime? @map("deleted_at") @db.Timestamp()
@@ -54,7 +54,7 @@ model Oauth {
 model TargetBudget {
   id              BigInt    @id @default(autoincrement())
   userId          BigInt    @map("user_id")
-  user            User      @relation(fields: [userId], references: [id])
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   monthlyIncome   Int?      @map("monthly_income")
   incomeDate      DateTime? @map("income_date")
   incomeDay       Int?       @map("income_day")
@@ -70,7 +70,7 @@ model TargetBudget {
 model WishItemFolder {
   id     BigInt @id @default(autoincrement())
   userId BigInt @map("user_id")
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   name   String @db.VarChar(50)
 
   addedItemAuto   AddedItemAuto[]
@@ -92,7 +92,7 @@ model AddedItemAuto {
   productId      BigInt          @map("product_id")
   product        Product         @relation(fields: [productId], references: [id])
   userId         BigInt          @map("user_id")
-  user           User            @relation(fields: [userId], references: [id])
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   status         AddedItemStatus @default(WISHLISTED)
   reason         String          @default("") @db.Text()
   createdAt      DateTime        @default(now()) @db.Timestamp()
@@ -152,9 +152,9 @@ model PurchasedHistory {
   purchasedReason PurchasedReason? @relation(fields: [reasonId], references: [id])
   reason          String?          @db.VarChar(10)
   autoItemId      BigInt?          @map("auto_item_id")
-  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id])
+  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id], onDelete: Cascade)
   manualItemId    BigInt?          @map("manual_item_id")
-  addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id])
+  addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id], onDelete: Cascade)
   purchasedDate   DateTime         @map("purchased_date")
   purchasedAt     PurchasedAt
 
@@ -168,7 +168,7 @@ model AddedItemManual {
   folderId       BigInt?         @map("folder_id")
   wishItemFolder WishItemFolder? @relation(fields: [folderId], references: [id])
   userId         BigInt          @map("user_id")
-  user           User            @relation(fields: [userId], references: [id])
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   name           String          @db.VarChar(50)
   price          Int
   files          Files?          @relation(fields: [photoFileId], references: [id])
@@ -190,9 +190,9 @@ model AddedItemManual {
 model Review {
   id              BigInt           @id @default(autoincrement())
   autoItemId      BigInt?          @map("auto_item_id")
-  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id])
+  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id], onDelete: Cascade)
   manualItemId    BigInt?          @map("manual_item_id")
-  addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id])
+  addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id], onDelete: Cascade)
   satisfaction    Float?
   frequency       Int?
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp()
@@ -210,10 +210,10 @@ model AiChatHeader {
   id              BigInt        @id @default(autoincrement())
 
   userId          BigInt        @map("user_id")
-  user            User          @relation(fields: [userId], references: [id])
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   addedItemAutoId BigInt        @map("added_item_auto_id")
-  addedItemAuto   AddedItemAuto @relation(fields: [addedItemAutoId], references: [id])
+  addedItemAuto   AddedItemAuto @relation(fields: [addedItemAutoId], references: [id], onDelete: Cascade)
 
   title String
 

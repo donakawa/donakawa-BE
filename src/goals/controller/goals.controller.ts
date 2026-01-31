@@ -10,6 +10,7 @@ import {
   Tags,
   Security,
   Request,
+  Query,
 } from "tsoa";
 import { AppError } from "../../errors/app.error";
 import { ApiResponse, success } from "../../common/response";
@@ -23,6 +24,7 @@ import {
   GoalsResponseDto,
   BudgetSpendResponseDto,
   CalcShoppingBudgetResponseDto,
+  SpendSummaryResponseDto,
 } from "../dto/response/goals.response.dto";
 import { container } from "../../container";
 import { GoalsService } from "../service/goals.service";
@@ -100,6 +102,36 @@ export class GoalsController {
   ): Promise<ApiResponse<BudgetSpendResponseDto>> {
     const userId = req.user!.id;
     const data = await this.goalsService.getBudgetSpend(userId);
+
+    return success(data);
+  }
+
+  /**
+   * @summary 만족 소비 조회 API
+   */
+  @Get("/spend/satisfied")
+  @SuccessResponse("200", "만족 소비 조회 성공")
+  public async getSatisfiedSpend(
+    @Request() req: ExpressRequest,
+    @Query() cursor?: string,
+  ): Promise<ApiResponse<SpendSummaryResponseDto>> {
+    const userId = req.user!.id;
+    const data = await this.goalsService.getSatisfiedSpend(userId, cursor);
+
+    return success(data);
+  }
+
+  /**
+   * @summary 후회 소비 조회 API
+   */
+  @Get("/spend/regret")
+  @SuccessResponse("200", "후회 소비 조회 성공")
+  public async getRegretSpend(
+    @Request() req: ExpressRequest,
+    @Query() cursor?: string,
+  ): Promise<ApiResponse<SpendSummaryResponseDto>> {
+    const userId = req.user!.id;
+    const data = await this.goalsService.getRegretSpend(userId, cursor);
 
     return success(data);
   }

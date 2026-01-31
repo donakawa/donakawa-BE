@@ -180,24 +180,29 @@ export class AuthService {
           email: googleUserInfo.email,
           password: null,
           nickname,
-          goal: ""
+          goal: null
         });
-        user = await this.authRepository.saveUser(command);
+      user = await this.prisma.$transaction(async (tx) => {
+        const newUser = await this.authRepository.saveUser(command, tx);
         await this.authRepository.createOauth(
-          user.id,
+          newUser.id,
           OauthProvider.GOOGLE,
-          googleUserInfo.googleUid
+          googleUserInfo.googleUid,
+          tx
         );
-      }
+        return newUser;
+      });
     }
-    // JWT 토큰만 생성 (LoginResponseDto 생성 안함)
-    const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
-    await this.saveSession(user.id, sid, refreshToken);
+  }
 
-    return {
-      tokens: { accessToken, refreshToken },
-      isNewUser
-    };
+  // JWT 토큰만 생성 (LoginResponseDto 생성 안함)
+  const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
+  await this.saveSession(user.id, sid, refreshToken);
+
+  return {
+    tokens: { accessToken, refreshToken },
+    isNewUser
+  };
   }
 
   // Google Auth URL 가져오기 (state 생성 및 저장)
@@ -292,25 +297,17 @@ export class AuthService {
         "이메일 인증이 필요합니다."
       );
     }
-    this.validatePassword(body.password);
 
     const isNicknameAvailable = await this.checkNicknameDuplicate(body.nickname);
     if (!isNicknameAvailable) {
       throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
-    }
-    // 닉네임 길이 확인
-    if (body.nickname.length > 10) {
-      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
-    }
-    if(body.goal.length > 10){
-      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
 
     const command = new CreateUserCommand({
       email: body.email,
       password: await hashingString(body.password),
       nickname: body.nickname,
-      goal: body.goal
+      goal: body.goal || null
     });
     const user = await this.authRepository.saveUser(command);
 
@@ -329,13 +326,6 @@ export class AuthService {
     email: string,
     type: EmailVerifyTypeEnum
   ): Promise<void> {
-    if (!this.isValidEmail(email)) {
-      throw new UnauthorizedException(
-        "A001",
-        "이메일 형식이 올바르지 않습니다."
-      );
-    }
-
     const user = await this.authRepository.findUserByEmail(email);
 
     if (type === "REGISTER") {
@@ -389,11 +379,6 @@ export class AuthService {
     await redis.set(`email:verified:${type}:${email}`, "true", {
       EX: this.EMAIL_VERIFIED_SIGNUP_EXPIRES_IN,
     });
-  }
-
-  // 이메일 형식 검증
-  private isValidEmail(email: string): boolean {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
   // 이메일 전송
@@ -473,8 +458,6 @@ export class AuthService {
       );
     }
 
-    this.validatePassword(newPassword);
-
     await redis.del(`email:verified:RESET_PASSWORD:${email}`);
 
     const hashedPassword = await hashingString(newPassword);
@@ -484,22 +467,6 @@ export class AuthService {
     await this.clearUserSession(user.id);
   }
 
-  // 비밀번호 정책 검증
-  private validatePassword(password: string): void {
-    if (password.length < 8 || password.length > 12) {
-      throw new UnauthorizedException(
-        "A008",
-        "비밀번호는 8자 이상, 12자 이하이어야 합니다."
-      );
-    }
-
-    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
-      throw new UnauthorizedException(
-        "A009",
-        "비밀번호는 영문과 숫자를 포함해야 합니다."
-      );
-    }
-  }
   // 닉네임 수정
   async updateNickname(
     userId: bigint,
@@ -512,10 +479,6 @@ export class AuthService {
     }
     if (user.nickname === newNickname) {
       throw new ConflictException("U008", "현재 닉네임과 동일합니다.");
-    }
-    // 닉네임 길이 확인
-    if (newNickname.length > 10) {
-      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
     }
     const isNicknameAvailable = await this.checkNicknameDuplicate(newNickname);
     if (!isNicknameAvailable) {
@@ -547,10 +510,6 @@ export class AuthService {
     const user = await this.authRepository.findUserById(userId);
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
-    }
-    // 목표 길이 검사
-    if(newGoal.length > 10){
-      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
     // 현재 목표 동일한지 확인
     if (user.goal === newGoal) {
@@ -646,13 +605,16 @@ async updatePassword(
         "현재 비밀번호 확인이 필요합니다."
       );
     }
-    
+    const isSame = await compareHash(newPassword, user.password!);
+    if (isSame) {
+    throw new ConflictException(
+      "U012", 
+      "현재 비밀번호와 동일한 비밀번호로 변경할 수 없습니다."
+    );
+  }
     // 일회용: 사용 후 삭제
     await redis.del(`password-verified:${userId}`);
   }
-
-  // 새 비밀번호 유효성 검사
-  this.validatePassword(newPassword);
 
   // 비밀번호 변경
   const hashedPassword = await hashingString(newPassword);

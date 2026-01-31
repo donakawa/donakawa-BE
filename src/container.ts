@@ -58,20 +58,6 @@ const auth = {
   service: authService,
   repository: authRepository,
 };
-// Goals 도메인
-const goalsRepository = new GoalsRepository(prisma);
-const goalsService = new GoalsService(goalsRepository);
-const goals = {
-  service: goalsService,
-  repository: goalsRepository,
-};
-// Histories 도메인
-const historiesRepository = new HistoriesRepository(prisma);
-const historiesService = new HistoriesService(historiesRepository);
-const histories = {
-  service: historiesService,
-  repository: historiesRepository,
-};
 
 // Files 도메인
 const filesRepository = new FilesRepository(prisma);
@@ -81,6 +67,23 @@ const files = {
   repository: filesRepository,
   storage: s3Client,
 };
+
+// Goals 도메인
+const goalsRepository = new GoalsRepository(prisma);
+const goalsService = new GoalsService(goalsRepository, filesService);
+const goals = {
+  service: goalsService,
+  repository: goalsRepository,
+};
+
+// Histories 도메인
+const historiesRepository = new HistoriesRepository(prisma);
+const historiesService = new HistoriesService(historiesRepository, filesService);
+const histories = {
+  service: historiesService,
+  repository: historiesRepository,
+};
+
 // Wishlist 도메인
 const crawlQueueClient = new CrawlQueueClient(sqsClient);
 const wishlistRepository = new WishlistRepository(prisma);
@@ -91,6 +94,7 @@ const wishlistService = new WishlistService(
   valkeyClient,
   eventEmitterClient,
   filesService,
+  historiesService,
 );
 const wishlist = {
   service: wishlistService,
@@ -110,5 +114,12 @@ const chats = {
   repository: chatsRepository,
 };
 
-
-export const container = { prisma, auth, goals, histories, wishlist, chats, files };
+export const container = {
+  prisma,
+  auth,
+  goals,
+  histories,
+  wishlist,
+  chats,
+  files,
+};

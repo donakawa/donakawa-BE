@@ -1,7 +1,6 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MinLength, IsOptional, MaxLength } from "class-validator";
 import { Example } from "tsoa";
 import { EmailVerifyTypeEnum } from "../../enums/send-email.enum";
-import { User } from "@prisma/client";
 
 export class RegisterRequestDto {
   @Example("example@example.com")
@@ -18,13 +17,14 @@ export class RegisterRequestDto {
   @Example("UMC")
   @IsString()
   @IsNotEmpty()
-  @MaxLength(20, { message: "닉네임은 10자 이하여야 합니다." })
+  @MaxLength(10, { message: "닉네임은 10자 이하여야 합니다." })
+  @Matches(/^[a-zA-Z0-9가-힣]+$/, {message: '닉네임은 영문, 숫자, 한글만 사용할 수 있습니다.'})
   nickname!: string;
-  @Example("new-goal")
+  @Example("goal")
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(10, { message: "목표는 10자 이하여야 합니다." })
-  goal!: string;
+  goal?: string;
 }
 
 export class SendEmailCodeRequestDto {
@@ -34,7 +34,7 @@ export class SendEmailCodeRequestDto {
   email!: string;
 
   @Example("REGISTER")
-  @IsEnum(EmailVerifyTypeEnum)
+  @IsEnum(EmailVerifyTypeEnum, { message: "유효하지 않은 이메일 인증 타입입니다." })
   @IsNotEmpty()
   type!: EmailVerifyTypeEnum;
 }
@@ -64,19 +64,13 @@ export class LoginRequestDto {
    newPassword!: string;
  }
 
- export class DeleteAccountRequestDto {
-  @Example("p@ssword123!")
-  @IsString()
-  @IsOptional()
-  password?: string;
-}
-
 export class UpdateNicknameRequestDto {
-  @Example("new-nickname")
+  @Example("newNickname")
   @IsString()
   @IsNotEmpty()
+  @Matches(/^[a-zA-Z0-9가-힣]+$/, {message: '닉네임은 영문, 숫자, 한글만 사용할 수 있습니다.'})
   @MaxLength(10, { message: "닉네임은 10자 이하여야 합니다." })
-  nickname!: string;
+  newNickname!: string;
 }
 
 export class UpdateGoalRequestDto {
@@ -84,7 +78,7 @@ export class UpdateGoalRequestDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(10, { message: "목표는 10자 이하여야 합니다." })
-  goal!: string;
+  newGoal!: string;
 }
 
 // 비밀번호 확인용
@@ -104,4 +98,11 @@ export class UpdatePasswordRequestDto {
   @MaxLength(12, { message: "비밀번호는 12자 이하이어야 합니다." })
   @Matches(/(?=.*[a-zA-Z])(?=.*\d)/, { message: "비밀번호는 영문과 숫자를 포함해야 합니다." })
   newPassword!: string;
+}
+
+export class VerifyEmailCodeRequestDto extends SendEmailCodeRequestDto {
+  @Example("123456")
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
 }
