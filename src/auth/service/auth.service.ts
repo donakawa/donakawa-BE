@@ -303,13 +303,6 @@ export class AuthService {
     if (!isNicknameAvailable) {
       throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
     }
-    // 닉네임 길이 확인
-    if (body.nickname.length > 10) {
-      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
-    }
-    if(body.goal && body.goal.length > 10){
-      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
-    }
 
     const command = new CreateUserCommand({
       email: body.email,
@@ -334,13 +327,6 @@ export class AuthService {
     email: string,
     type: EmailVerifyTypeEnum
   ): Promise<void> {
-    if (!this.isValidEmail(email)) {
-      throw new UnauthorizedException(
-        "A001",
-        "이메일 형식이 올바르지 않습니다."
-      );
-    }
-
     const user = await this.authRepository.findUserByEmail(email);
 
     if (type === "REGISTER") {
@@ -394,11 +380,6 @@ export class AuthService {
     await redis.set(`email:verified:${type}:${email}`, "true", {
       EX: this.EMAIL_VERIFIED_SIGNUP_EXPIRES_IN,
     });
-  }
-
-  // 이메일 형식 검증
-  private isValidEmail(email: string): boolean {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
   // 이메일 전송
