@@ -1,6 +1,7 @@
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
 import type { Request, Response, NextFunction } from "express";
+import { BadRequestException } from "../errors/error";
 
 /**
  * Express 요청 body를 검증하는 미들웨어 생성 함수
@@ -39,11 +40,18 @@ export function validateBody(type: new () => any) {
       validationError: { target: false, value: false },
     });
     
-    // 검증 실패 시 422 Unprocessable Entity 에러 반환
+    //에러 형식 통일
     if (errors.length) {
-      return res.status(422).json({ errors });
-      // 여기서 return하므로 아래 코드는 실행되지 않음
-    }
+      const error = new BadRequestException(
+      "VALIDATION_ERROR",
+      "요청 값이 올바르지 않습니다.",
+      errors.map(err => ({
+        property: err.property,
+        constraints: err.constraints
+      }))
+    );
+    throw error;
+}   // 여기서 return하므로 아래 코드는 실행되지 않음
     
     // 검증 성공 시 req.body를 검증된 DTO 인스턴스로 교체
     // 이후 컨트롤러에서는 변환되고 검증된 DTO를 사용
