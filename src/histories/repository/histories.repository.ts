@@ -314,7 +314,7 @@ export class HistoriesRepository {
         },
       });
 
-      return item?.product.photoFileId ?? null;
+      return item?.product?.photoFileId ?? null;
     }
 
     const item = await this.prisma.addedItemManual.findUnique({

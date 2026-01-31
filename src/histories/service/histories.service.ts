@@ -1,5 +1,5 @@
 import { HistoriesRepository } from "../repository/histories.repository";
-import { FilesService } from "../..//files/service/files.service";
+import { FilesService } from "../../files/service/files.service";
 import { AppError } from "../../errors/app.error";
 import {
   MonthlyCalendarResponseDto,
@@ -267,16 +267,12 @@ export class HistoriesService {
         end
       );
 
-    let totalAmount = 0;
-
     const items = await Promise.all(
       histories.map(async (h) => {
         if (h.addedItemAuto) {
           const item = h.addedItemAuto;
           const review = item.review[0];
           const price = item.product.price;
-
-          totalAmount += price;
 
           const thumbnailUrl = await this.getItemImageUrl(
             item.id,
@@ -298,8 +294,6 @@ export class HistoriesService {
         const review = item.review[0];
         const price = item.price;
 
-        totalAmount += price;
-
         const thumbnailUrl = await this.getItemImageUrl(
           item.id,
           "MANUAL",
@@ -316,6 +310,8 @@ export class HistoriesService {
         };
       })
     );
+
+    const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
 
     return {
       date,
