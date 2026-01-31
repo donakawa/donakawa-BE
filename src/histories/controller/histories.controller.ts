@@ -18,7 +18,8 @@ import {
   GetMyReviewsResponseDto, 
   MonthlyCalendarResponseDto, 
   GetDailyHistoriesResponseDto,
-  GetHistoryItemsResponseDto } from "../dto/response/histories.response.dto";
+  GetHistoryItemsResponseDto,
+  MonthlyReportResponseDto } from "../dto/response/histories.response.dto";
 import { HistoriesService } from "../service/histories.service";
 
 @Route("/histories")
@@ -103,6 +104,19 @@ export class HistoriesController {
       userId,
       reviewStatus
     );
+
+    return success(result);
+  }
+
+  @Security("jwt")
+  @Get("/report")
+  public async getRecentMonthReport(
+    @Request() req: ExpressRequest
+  ): Promise<ApiResponse<MonthlyReportResponseDto>> {
+    const userId = BigInt(req.user!.id);
+
+    const result =
+      await this.historiesService.getRecentMonthReport(userId);
 
     return success(result);
   }

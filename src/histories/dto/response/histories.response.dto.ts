@@ -102,3 +102,27 @@ export interface HistoryItemDto {
 export interface GetHistoryItemsResponseDto {
   items: HistoryItemDto[];
 }
+
+export interface ReportPeriodDto {
+  from: string; // yyyy-MM-dd
+  to: string;   // yyyy-MM-dd
+  days: number;
+}
+
+export interface ReportSummaryDto {
+  totalSpent: number;
+  savedAmount: number;
+  averageSatisfaction: number;
+}
+
+export interface ReportReasonDto {
+  reason: string;
+  count: number;
+  averageSatisfaction: number;
+}
+
+export interface MonthlyReportResponseDto {
+  period: ReportPeriodDto;
+  summary: ReportSummaryDto;
+  topReasons: ReportReasonDto[];
+}

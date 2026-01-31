@@ -1,9 +1,12 @@
 import { HistoriesRepository } from "../repository/histories.repository";
 import { AppError } from "../../errors/app.error";
-import { MonthlyCalendarResponseDto, 
+import {
+  MonthlyCalendarResponseDto,
   GetDailyHistoriesResponseDto,
   GetHistoryItemsResponseDto,
-  HistoryItemDto, } from "../dto/response/histories.response.dto";
+  HistoryItemDto,
+  MonthlyReportResponseDto
+} from "../dto/response/histories.response.dto";
 import { ReviewStatus } from "../dto/request/histories.request.dto";
 
 export class HistoriesService {
@@ -321,5 +324,109 @@ export class HistoriesService {
     });
 
     return { items };
+  }
+
+  async getRecentMonthReport(
+    userId: bigint
+  ): Promise<MonthlyReportResponseDto> {
+    const to = new Date();
+    to.setUTCHours(23, 59, 59, 999);
+    const from = new Date(to);
+    from.setUTCDate(to.getUTCDate() - 29);
+    from.setUTCHours(0, 0, 0, 0);
+
+    const histories =
+      await this.historiesRepository.findRecentMonthHistories(
+        userId,
+        from,
+        to
+      );
+
+    let totalSpent = 0;
+    let satisfactionSum = 0;
+    let satisfactionCount = 0;
+
+    const reasonMap: Record<
+      string,
+      { count: number; satisfactionSum: number; satisfactionCount: number }
+    > = {};
+
+    histories.forEach((h) => {
+      const reason = h.purchasedReason?.reason;
+      const reasons = reason ? [reason] : [];
+      let price = 0;
+      let satisfaction: number | null = null;
+
+      if (h.addedItemAuto) {
+        const item = h.addedItemAuto;
+        const review = item.review[0];
+
+        price = item.product.price;
+        satisfaction = review?.satisfaction ?? null;
+      }
+
+      if (h.addedItemManual) {
+        const item = h.addedItemManual;
+        const review = item.review[0];
+
+        price = item.price;
+        satisfaction = review?.satisfaction ?? null;
+      }
+
+      totalSpent += price;
+
+      if (satisfaction !== null) {
+        satisfactionSum += satisfaction;
+        satisfactionCount++;
+      }
+
+      reasons.forEach((reason) => {
+        if (!reasonMap[reason]) {
+          reasonMap[reason] = {
+            count: 0,
+            satisfactionSum: 0,
+            satisfactionCount: 0,
+          };
+        }
+
+        reasonMap[reason].count++;
+
+        if (satisfaction !== null) {
+          reasonMap[reason].satisfactionSum += satisfaction;
+          reasonMap[reason].satisfactionCount++;
+        }
+      });
+    });
+
+    const topReasons = Object.entries(reasonMap)
+      .map(([reason, data]) => ({
+        reason,
+        count: data.count,
+        averageSatisfaction:
+          data.satisfactionCount === 0
+            ? 0
+            : Number(
+              (data.satisfactionSum / data.satisfactionCount).toFixed(1)
+            ),
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      period: {
+        from: from.toISOString().split("T")[0],
+        to: to.toISOString().split("T")[0],
+        days: 30,
+      },
+      summary: {
+        totalSpent,
+        savedAmount: Math.floor(totalSpent * 0.1), // 👉 정책: 10% 절약 효과
+        averageSatisfaction:
+          satisfactionCount === 0
+            ? 0
+            : Number((satisfactionSum / satisfactionCount).toFixed(1)),
+      },
+      topReasons,
+    };
   }
 }
