@@ -874,15 +874,15 @@ export class WishlistService {
         },
       });
       if (fileUploadedPayload && item.photoFileId && item.files && file) {
-        const ext = path.extname(file.originalname.toLowerCase());
         await this.filesService.delete(
           item.files!.name,
           FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
         );
       }
     } catch (e) {
+      const ext = file ? path.extname(file.originalname).toLowerCase() : "";
       await this.filesService.delete(
-        newFileName,
+        `${newFileName}${ext}`,
         FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
       );
       throw e;
