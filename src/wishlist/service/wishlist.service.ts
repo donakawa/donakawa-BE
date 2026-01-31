@@ -16,6 +16,7 @@ import {
   MarkItemAsDroppedRequestDto,
   MarkItemAsPurchasedRequestDto,
   ModifyWishitemReasonRequestDto,
+  ModifyWishitemRequestDto,
   ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
   ShowWishitemsInFolderRequestDto,
@@ -26,6 +27,7 @@ import {
   AddWishlistResponseDto,
   CreateWishitemFolderResponseDto,
   GetCrawlResultResponseDto,
+  ModifyWishitemResponseDto,
   ShowWishitemDetailResponseDto,
   ShowWishitemFoldersResponseDto,
   ShowWishitemListResponseDto,
@@ -821,5 +823,70 @@ export class WishlistService {
           where: { id: BigInt(data.itemId) },
           data: { reason: data.reason },
         });
+  }
+  async updateWishitemInfo(
+    itemId: string,
+    userId: string,
+    body: ModifyWishitemRequestDto,
+    file?: Express.Multer.File,
+  ) {
+    const item = await this.wishlistRepository.findAddedItemManualById(itemId, {
+      select: {
+        id: true,
+        userId: true,
+        photoFileId: true,
+        files: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+    const isExist = item !== null;
+    const hasPermission = item?.userId === BigInt(userId);
+    if (!isExist || !hasPermission)
+      throw new NotFoundException(
+        "WISHITEM_NOT_FOUND",
+        "대상 위시 아이템을 찾을 수 없습니다.",
+      );
+    const newFileName = uuid();
+    try {
+      let fileUploadedPayload = null;
+      if (file) {
+        fileUploadedPayload = await this.filesService.upload(
+          file,
+          newFileName,
+          FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
+        );
+      }
+      await this.wishlistRepository.updateAddedItemManual({
+        data: {
+          ...(body.productName && { name: body.productName }),
+          ...(body.price && { price: body.price }),
+          ...(body.url && { url: body.url }),
+          ...(body.storeName && { storePlatform: body.storeName }),
+          ...(fileUploadedPayload && {
+            photoFileId: BigInt(fileUploadedPayload.id),
+          }),
+        },
+        where: {
+          id: BigInt(itemId),
+        },
+      });
+      if (fileUploadedPayload && !item.photoFileId) {
+        await this.filesService.delete(
+          item.files!.name,
+          FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
+        );
+      }
+    } catch (e) {
+      await this.filesService.delete(
+        newFileName,
+        FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
+      );
+      throw e;
+    }
+    const result = await this.fetchWishitemDetails(itemId, userId, "MANUAL");
+    return new ModifyWishitemResponseDto(result);
   }
 }

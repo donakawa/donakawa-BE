@@ -33,6 +33,7 @@ import {
   MarkItemAsDroppedRequestDto,
   MarkItemAsPurchasedRequestDto,
   ModifyWishitemReasonRequestDto,
+  ModifyWishitemRequestDto,
   ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
   ShowWishitemsInFolderRequestDto,
@@ -43,6 +44,7 @@ import {
   AddWishlistResponseDto,
   CreateWishitemFolderResponseDto,
   GetCrawlResultResponseDto,
+  ModifyWishitemResponseDto,
   ShowWishitemDetailResponseDto,
   ShowWishitemFoldersResponseDto,
   ShowWishitemListResponseDto,
@@ -365,5 +367,32 @@ export class WishlistController extends Controller {
       type,
     });
     await this.wishlistService.setWishitemReason(dto);
+  }
+  /**
+   * @summary 위시리스트 아이템 수정 (수동 등록 아이템 만)
+   * @description 위시/구매/포기 아이템을 모두 포함하여 수동으로 등록한 아이템의 정보를 수정 합니다.
+   */
+  @Patch("/items/:itemId")
+  @Security("jwt")
+  @Middlewares(validateImageFile)
+  public async modifyWishitem(
+    @Path("itemId") itemId: string,
+    @Request() req: ExpressRequest,
+    @FormField("productName") productName?: string,
+    @FormField("price") price?: number,
+    @FormField("url") url?: string,
+    @FormField("storeName") storeName?: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<ApiResponse<ModifyWishitemResponseDto>> {
+    const userId = req.user!.id;
+    const dto = new ModifyWishitemRequestDto({
+      productName,
+      price,
+      url,
+      storeName,
+    });
+    return success(
+      await this.wishlistService.updateWishitemInfo(itemId, userId, dto, file),
+    );
   }
 }

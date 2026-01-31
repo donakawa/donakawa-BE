@@ -282,3 +282,29 @@ export class ModifyWishitemReasonRequestDto {
     this.type = param.type;
   }
 }
+export class ModifyWishitemRequestDto {
+  @IsOptional()
+  @IsString()
+  productName?: string;
+  @IsOptional()
+  @IsNumber()
+  price?: number;
+  @IsUrl()
+  @IsString()
+  @IsOptional()
+  url?: string;
+  @IsString()
+  @IsOptional()
+  storeName?: string;
+  constructor(param: {
+    productName?: string;
+    price?: number;
+    url?: string;
+    storeName?: string;
+  }) {
+    this.productName = param.productName;
+    this.price = param.price;
+    this.url = param.url;
+    this.storeName = param.storeName;
+  }
+}
