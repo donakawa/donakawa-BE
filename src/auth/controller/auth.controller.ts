@@ -38,7 +38,7 @@ import {
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
 import { BadRequestException, UnauthorizedException } from "../../errors/error";
-import { validateBody } from "../middleware/validation.middleware";
+import { validateBody } from "../../middleware/validation.middleware";
 
 
 @Route("/auth")
