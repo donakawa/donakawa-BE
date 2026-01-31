@@ -499,10 +499,6 @@ export class AuthService {
     if (user.nickname === newNickname) {
       throw new ConflictException("U008", "현재 닉네임과 동일합니다.");
     }
-    // 닉네임 길이 확인
-    if (newNickname.length > 10) {
-      throw new BadRequestException("V001", "닉네임은 10자 이하이어야 합니다.");
-    }
     const isNicknameAvailable = await this.checkNicknameDuplicate(newNickname);
     if (!isNicknameAvailable) {
       throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
@@ -533,10 +529,6 @@ export class AuthService {
     const user = await this.authRepository.findUserById(userId);
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
-    }
-    // 목표 길이 검사
-    if(newGoal.length > 10){
-      throw new BadRequestException("U004", "목표는 10자 이하만 가능합니다.");
     }
     // 현재 목표 동일한지 확인
     if (user.goal === newGoal) {
