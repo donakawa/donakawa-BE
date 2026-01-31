@@ -17,3 +17,5 @@ export type ReviewStatus = "ALL" | "WRITTEN" | "NOT_WRITTEN";
 export interface GetHistoryItemsRequestDto {
   reviewStatus?: ReviewStatus; // 기본값 ALL
 }
+
+export type AnalyticsMetric = "time" | "day";
