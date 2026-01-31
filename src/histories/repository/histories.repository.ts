@@ -43,7 +43,7 @@ type HistoryItemWithRelations = Prisma.PurchasedHistoryGetPayload<{
 }>;
 
 export class HistoriesRepository {
-  constructor(private readonly prisma: PrismaClient) { }
+  constructor(private readonly prisma: PrismaClient) {}
 
   async findAutoItem(itemId: number, userId: bigint) {
     return this.prisma.addedItemAuto.findFirst({
@@ -82,10 +82,7 @@ export class HistoriesRepository {
   async findMyReviews(userId: bigint): Promise<MyReviewWithRelations[]> {
     return this.prisma.review.findMany({
       where: {
-        OR: [
-          { addedItemAuto: { userId } },
-          { addedItemManual: { userId } },
-        ],
+        OR: [{ addedItemAuto: { userId } }, { addedItemManual: { userId } }],
       },
       include: {
         addedItemAuto: {
@@ -118,11 +115,7 @@ export class HistoriesRepository {
     });
   }
 
-  async findMonthlyPurchasedItems(
-    userId: bigint,
-    start: Date,
-    end: Date
-  ) {
+  async findMonthlyPurchasedItems(userId: bigint, start: Date, end: Date) {
     return this.prisma.purchasedHistory.findMany({
       where: {
         purchasedDate: {
@@ -157,21 +150,14 @@ export class HistoriesRepository {
     });
   }
 
-  async findDailyPurchasedItems(
-    userId: bigint,
-    start: Date,
-    end: Date
-  ) {
+  async findDailyPurchasedItems(userId: bigint, start: Date, end: Date) {
     return this.prisma.purchasedHistory.findMany({
       where: {
         purchasedDate: {
           gte: start,
           lt: end,
         },
-        OR: [
-          { addedItemAuto: { userId } },
-          { addedItemManual: { userId } },
-        ],
+        OR: [{ addedItemAuto: { userId } }, { addedItemManual: { userId } }],
       },
       include: {
         addedItemAuto: {
@@ -199,22 +185,24 @@ export class HistoriesRepository {
   }
 
   async deleteReviewsByItem(params: {
-    itemId: number;
+    itemId: string;
     itemType: "AUTO" | "MANUAL";
+    tx?: Prisma.TransactionClient;
   }) {
+    const db = params.tx ?? this.prisma;
     const where =
       params.itemType === "AUTO"
-        ? { autoItemId: params.itemId }
-        : { manualItemId: params.itemId };
+        ? { autoItemId: BigInt(params.itemId) }
+        : { manualItemId: BigInt(params.itemId) };
 
-    return this.prisma.review.deleteMany({
+    return db.review.deleteMany({
       where,
     });
   }
 
   async findHistoryItems(
     userId: bigint,
-    reviewStatus: ReviewStatus
+    reviewStatus: ReviewStatus,
   ): Promise<HistoryItemWithRelations[]> {
     const reviewCondition =
       reviewStatus === "WRITTEN"
@@ -266,21 +254,14 @@ export class HistoriesRepository {
     });
   }
 
-  async findRecentMonthHistories(
-    userId: bigint,
-    start: Date,
-    end: Date
-  ) {
+  async findRecentMonthHistories(userId: bigint, start: Date, end: Date) {
     return this.prisma.purchasedHistory.findMany({
       where: {
         purchasedDate: {
           gte: start,
           lte: end,
         },
-        OR: [
-          { addedItemAuto: { userId } },
-          { addedItemManual: { userId } },
-        ],
+        OR: [{ addedItemAuto: { userId } }, { addedItemManual: { userId } }],
       },
       include: {
         purchasedReason: true,
@@ -308,10 +289,7 @@ export class HistoriesRepository {
   async findAllByUser(userId: bigint) {
     return this.prisma.purchasedHistory.findMany({
       where: {
-        OR: [
-          { addedItemAuto: { userId } },
-          { addedItemManual: { userId } },
-        ],
+        OR: [{ addedItemAuto: { userId } }, { addedItemManual: { userId } }],
       },
       select: {
         purchasedAt: true,

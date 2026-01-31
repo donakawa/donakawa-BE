@@ -308,7 +308,7 @@ export class WishlistController extends Controller {
     await this.wishlistService.markWishitemAsDropped(dto);
   }
   /**
-   * @summary 위시 아이템 삭제 (⚠️ TODO 확인후 수정 필요 / 미 완성)
+   * @summary 위시 아이템 삭제
    * @description 위시 아이템을 삭제합니다.
    */
   @Delete("/items/:itemId")

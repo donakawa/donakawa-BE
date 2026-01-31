@@ -94,6 +94,7 @@ const wishlistService = new WishlistService(
   valkeyClient,
   eventEmitterClient,
   filesService,
+  historiesService,
 );
 const wishlist = {
   service: wishlistService,
