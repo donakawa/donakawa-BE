@@ -1,6 +1,7 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsString, Matches, MinLength, IsOptional, MaxLength } from "class-validator";
 import { Example } from "tsoa";
 import { EmailVerifyTypeEnum } from "../../enums/send-email.enum";
+import { VerifyPasswordTypeEnum } from "../../enums/verify-password.enum";
 
 export class RegisterRequestDto {
   @Example("example@example.com")
@@ -87,6 +88,10 @@ export class VerifyPasswordRequestDto {
   @IsString()
   @IsNotEmpty()
   password!: string;
+  @Example("DELETE_ACCOUNT")
+  @IsEnum(VerifyPasswordTypeEnum, { message: "유효하지 않은 비밀번호 확인 타입입니다." })
+  @IsNotEmpty()
+  type!: VerifyPasswordTypeEnum;
 }
 
 // 비밀번호 설정/변경용 (통합)

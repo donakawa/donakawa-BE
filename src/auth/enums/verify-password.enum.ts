@@ -1,0 +1,4 @@
+export enum VerifyPasswordTypeEnum {
+  DELETE_ACCOUNT = "DELETE_ACCOUNT",
+  CHANGE_PASSWORD = "CHANGE_PASSWORD",
+}
