@@ -39,7 +39,7 @@ export class UpdateGoalResponseDto {
   
   constructor(entity: User) {
     this.id = entity.id.toString();
-    this.goal = entity.goal;
+    this.goal = entity.goal!;
     this.updatedAt = (entity.updatedAt || new Date()).toISOString();
   }
 }
@@ -47,7 +47,7 @@ export class UserProfileResponseDto {
 	readonly id: string;
 	readonly email: string;
 	readonly nickname: string;
-	readonly goal: string; 
+	readonly goal: string | null; 
 	readonly hasPassword: boolean; 
   readonly provider: string;
 
@@ -62,4 +62,13 @@ export class UserProfileResponseDto {
       ? entity.oauth[0].provider.toLowerCase()
       : "email";	
     }
+}
+export class UpdatePasswordResponseDto {
+  readonly id: string;
+  readonly updatedAt: string;
+  
+  constructor(entity: User) {
+    this.id = entity.id.toString();
+    this.updatedAt = (entity.updatedAt || new Date()).toISOString();
+  }
 }
