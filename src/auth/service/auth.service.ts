@@ -30,6 +30,7 @@ import { LoginResult } from "../../types/login-result.type";
 import { LoginResponseDto } from "../dto/response/auth.response.dto";
 import { User } from "@prisma/client";
 import { randomBytes, randomInt } from "node:crypto";
+import { VerifyPasswordTypeEnum } from '../enums/verify-password.enum';
 
 
 export class AuthService {
@@ -521,17 +522,20 @@ export class AuthService {
     
     return new UpdateGoalResponseDto(updatedUser);
   }
-  /**
+/**
  * 비밀번호 확인 (rate limiting 적용)
  */
-  async verifyPassword(
+async verifyPassword(
     userId: bigint,
-    password: string
+    password: string,
+    type: VerifyPasswordTypeEnum // 수정: type 파라미터 추가
   ): Promise<boolean> {
+    // 수정: Redis 키를 타입별로 분리
+    const rateLimitKey = `password-verify:rate:${type}:${userId}`;
+    const verifiedKey = `password-verified:${type}:${userId}`;
+
     // Rate limiting 체크
-    const key = `password-verify:${userId}`;
-    const attempts = await redis.get(key);
-    
+    const attempts = await redis.get(rateLimitKey);
     if (attempts && parseInt(attempts) >= 10) {
       throw new UnauthorizedException(
         "A014",
@@ -539,44 +543,47 @@ export class AuthService {
       );
     }
 
-  const user = await this.authRepository.findUserById(userId);
-  
-  if (!user) {
-    throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    // 사용자 조회
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+
+    // 소셜 로그인 사용자 체크
+    if (PasswordUtil.isSocialUser(user.password)) {
+      throw new UnauthorizedException(
+        "U010",
+        "소셜 로그인 계정은 비밀번호가 설정되지 않았습니다."
+      );
+    }
+
+    // 비밀번호 비교
+    const isValid = await compareHash(password, user.password!);
+
+    if (!isValid) {
+      // 실패 시 시도 횟수 증가 및 TTL 설정
+      const newCount = await redis.incr(rateLimitKey);
+      if (newCount === 1) {
+        await redis.expire(rateLimitKey, 300); // 5분
+      }
+      console.log({
+        event: "password_verify_failed",
+        userId: user.id.toString(),
+        type,
+        timestamp: new Date(),
+      });
+      return false;
+    }
+
+    // 성공 시 Redis에 검증 상태 저장 (5분간 유효)
+    await redis.set(verifiedKey, "true", { EX: 300 }); 
+
+    // 실패 횟수 초기화
+    await redis.del(rateLimitKey);
+
+    return isValid;
   }
 
-  // 소셜 로그인 사용자 체크
-  if (PasswordUtil.isSocialUser(user.password)) {
-    throw new UnauthorizedException(
-      "U010",
-      "소셜 로그인 계정은 비밀번호가 설정되지 않았습니다."
-    );
-  }
-  const isValid = await compareHash(password, user.password!);
-  
-  // 실패 로그
-  if (!isValid) {
-    // 시도 횟수 증가
-    const newCount = await redis.incr(key);
-    if (newCount === 1) {
-      await redis.expire(key, 300); // 5분
-    }
-    console.log({
-      event: 'password_verify_failed',
-      userId: user.id.toString(),
-      timestamp: new Date()
-    });
-  }
-  // 검증 성공 시 상태 저장
-  if (isValid) {
-    await redis.set(
-      `password-verified:${userId}`, 
-      'true', 
-      { EX: 300 }  // 5분
-    );
-  }
-  return isValid;
-}
 
 /**
  * 비밀번호 설정/변경 (통합)
@@ -597,7 +604,7 @@ async updatePassword(
   
   // 일반 사용자: 검증 상태 확인
   if (!isSocialUser) {
-    const verified = await redis.get(`password-verified:${userId}`);
+    const verified = await redis.get(`password-verified:CHANGE_PASSWORD:${userId}`);
     
     if (!verified) {
       throw new UnauthorizedException(
@@ -613,7 +620,7 @@ async updatePassword(
     );
   }
     // 일회용: 사용 후 삭제
-    await redis.del(`password-verified:${userId}`);
+    await redis.del(`password-verified:CHANGE_PASSWORD:${userId}`);
   }
 
   // 비밀번호 변경
@@ -633,18 +640,20 @@ async updatePassword(
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
 
-    // 일반 로그인 사용자는 비밀번호 확인
-    if (PasswordUtil.hasPassword(user.password)) {
-      if (!password) {
+      const isSocialUser = PasswordUtil.isSocialUser(user.password);
+  
+    // 일반 사용자: 검증 상태 확인
+    if (!isSocialUser) {
+      const verified = await redis.get(`password-verified:DELETE_ACCOUNT:${userId}`);
+      
+      if (!verified) {
         throw new UnauthorizedException(
-          "U008",
-          "비밀번호 확인이 필요합니다."
+          "A015",
+          "현재 비밀번호 확인이 필요합니다."
         );
       }
-      
-      if (!(await compareHash(password, user.password!))) {
-        throw new UnauthorizedException("U002", "잘못된 패스워드입니다.");
-      }
+      // 일회용: 사용 후 삭제
+      await redis.del(`password-verified:DELETE_ACCOUNT:${userId}`);
     }
 
     await this.prisma.$transaction(async (tx) => {

@@ -205,9 +205,7 @@ export class AuthController {
   @Delete("/account")
   @Security("jwt")
   @SuccessResponse("200", "회원 탈퇴 성공")
-  @Middlewares(validateBody(VerifyPasswordRequestDto))
   public async deleteAccount(
-    @Body() body: VerifyPasswordRequestDto,
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<null>> {
     const user = req.user!;
@@ -216,9 +214,8 @@ export class AuthController {
     }
     await this.authService.deleteAccount(
       BigInt(user.id),
-      user.sid,
-      body.password
-    );
+      user.sid
+      );
     // 쿠키 삭제
     JwtCookieUtil.clearJwtCookies(req.res!);
     
@@ -330,7 +327,8 @@ export class AuthController {
 
     const isValid = await this.authService.verifyPassword(
       BigInt(user.id),
-      body.password
+      body.password,
+      body.type
     );
     
     return success({ isValid });
