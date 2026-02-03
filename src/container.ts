@@ -21,9 +21,11 @@ import { FilesRepository } from "./files/repository/files.repository";
 import { FilesService } from "./files/service/files.service";
 import { S3StorageAdapter } from "./files/storage/s3.storage";
 import { DbRepository } from "./infra/db.repository";
+import { KakaoOAuthService } from "./auth/service/kakao-oauth.service";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 const googleOAuthService = new GoogleOAuthService();
+const kakaoOAuthService = new KakaoOAuthService();
 
 // AWS Infra
 const sqsClient = new SQSClient({
@@ -53,7 +55,7 @@ const dbRepository = new DbRepository(prisma);
 
 // Auth 도메인
 const authRepository = new AuthRepository(prisma);
-const authService = new AuthService(authRepository, googleOAuthService, prisma);
+const authService = new AuthService(authRepository, googleOAuthService, kakaoOAuthService, prisma);
 const auth = {
   service: authService,
   repository: authRepository,

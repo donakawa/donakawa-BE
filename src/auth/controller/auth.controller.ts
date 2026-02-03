@@ -180,6 +180,48 @@ export class AuthController {
     }
   }
   /**
+   * @summary 카카오 로그인 API
+   */
+  @Get("/kakao-login")
+  @SuccessResponse("302", "카카오 로그인 페이지로 리다이렉트")
+  public async initiateKakaoLogin(@Request() req: ExpressRequest): Promise<void> {
+    const authUrl = await this.authService.getKakaoAuthUrl();
+    req.res!.redirect(authUrl);
+  }
+
+  /**
+   * @summary 카카오 OAuth 콜백
+   */
+  @Get("/oauth/kakao/callback")
+  @SuccessResponse("302", "로그인 성공")
+  public async kakaoCallback(
+    @Query() code: string,
+    @Query() state: string,
+    @Request() req: ExpressRequest
+  ): Promise<void> {
+    try {
+      const { tokens, isNewUser } = await this.authService.handleKakaoCallback(
+        code,
+        state
+      );
+
+      JwtCookieUtil.setJwtCookies(req.res!, tokens);
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
+      if (isNewUser) {
+        req.res!.redirect(`${frontendUrl}/auth/complete-profile?success=true`);
+      } else {
+        req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
+      }
+    } catch (error) {
+      console.error("Kakao Login Error:", error);
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      req.res!.redirect(
+        `${frontendUrl}/auth/callback?success=false&error=kakao_login_failed`
+      );
+    }
+  }
+  /**
    * @summary 로그아웃 API
   */
   @Post("/logout")
