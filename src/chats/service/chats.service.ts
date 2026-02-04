@@ -166,7 +166,6 @@ export class ChatsService {
     // 갱신일까지 남은 일 수
     const now = new Date();
     const nextIncomeDate = budget.incomeDate;
-
     const diffMs = nextIncomeDate.getTime() - now.getTime();
     const daysUntilBudgetReset = Math.max(
       Math.ceil(diffMs / (1000 * 60 * 60 * 24)),
@@ -179,7 +178,7 @@ export class ChatsService {
 
     // 이번 사이클 사용 금액
     const totalSpend = await this.goalsRepository.getTotalSpendByUser(
-      chat.user.id.toString(),
+      chat.user.id.toString(), // bigint -> string
       cycleStart,
     );
 
