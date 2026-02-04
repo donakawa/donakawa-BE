@@ -58,7 +58,7 @@ export class GptService {
         throw new Error("Decision value invalid");
       }
     } catch (err) {
-      console.error("GPT output:", text);
+      console.error("GPT output parse failed", { length: text.length });
       throw new Error("GPT output JSON parsing failed");
     }
 

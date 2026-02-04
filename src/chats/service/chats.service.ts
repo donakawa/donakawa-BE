@@ -63,9 +63,10 @@ export class ChatsService {
     let wishItem;
 
     if (chat.itemType === "AUTO") {
-      const product = chat.autoItem!.product;
+      const autoItem = chat.autoItem!;
+      const product = autoItem.product;
       wishItem = {
-        id: Number(product.id),
+        id: Number(autoItem.id),
         name: product.name,
         price: product.price,
       };
@@ -155,14 +156,16 @@ export class ChatsService {
       .filter((m) => m.sender === "USER")
       .map((m) => m.content);
 
-    const budget = chat.user.targetBudget.at(-1);
-    if (!budget) {
+    const budget = [...chat.user.targetBudget].sort((a, b) =>
+      a.id < b.id ? 1 : -1,
+    )[0];
+    if (!budget || !budget.incomeDate) {
       throw new Error("User budget not found");
     }
-    const now = new Date();
 
     // 갱신일까지 남은 일 수
-    const nextIncomeDate = budget.incomeDate!;
+    const now = new Date();
+    const nextIncomeDate = budget.incomeDate;
 
     const diffMs = nextIncomeDate.getTime() - now.getTime();
     const daysUntilBudgetReset = Math.max(
