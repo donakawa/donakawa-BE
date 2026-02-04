@@ -11,11 +11,13 @@ import {
 import { QUESTIONS } from "../constants/questions";
 import { SelectOptionRequest } from "../dto/request/chats.request.dto";
 import { GptService } from "./gpt.service";
+import { GoalsRepository } from "../../goals/repository/goals.repository";
 
 export class ChatsService {
   constructor(
     private readonly chatsRepository: ChatsRepository,
     private readonly gptService: GptService,
+    private readonly goalsRepository: GoalsRepository,
   ) {}
 
   async createChat(
@@ -154,6 +156,32 @@ export class ChatsService {
       .map((m) => m.content);
 
     const budget = chat.user.targetBudget.at(-1);
+    if (!budget) {
+      throw new Error("User budget not found");
+    }
+    const now = new Date();
+
+    // 갱신일까지 남은 일 수
+    const nextIncomeDate = budget.incomeDate!;
+
+    const diffMs = nextIncomeDate.getTime() - now.getTime();
+    const daysUntilBudgetReset = Math.max(
+      Math.ceil(diffMs / (1000 * 60 * 60 * 24)),
+      0,
+    );
+
+    // 이번 사이클 시작일
+    const cycleStart = new Date(nextIncomeDate);
+    cycleStart.setMonth(cycleStart.getMonth() - 1);
+
+    // 이번 사이클 사용 금액
+    const totalSpend = await this.goalsRepository.getTotalSpendByUser(
+      chat.user.id.toString(),
+      cycleStart,
+    );
+
+    // 남은 예산
+    const remainingBudget = (budget.shoppingBudget ?? 0) - totalSpend;
 
     const product = (() => {
       if (chat.autoItem) {
@@ -176,8 +204,8 @@ export class ChatsService {
         price: product.price,
       },
       user: {
-        budgetLeft: budget?.shoppingBudget ?? 0,
-        daysUntilBudgetReset: 10,
+        budgetLeft: remainingBudget,
+        daysUntilBudgetReset,
       },
       answers,
     });
