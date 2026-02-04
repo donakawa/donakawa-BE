@@ -220,16 +220,18 @@ model AiChatHeader {
   userId          BigInt        @map("user_id")
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  autoItemId   BigInt? `@map`("auto_item_id")
-  autoItem     AddedItemAuto? `@relation`("AutoItemChats", fields: [autoItemId], references: [id])
+  autoItemId   BigInt? @map("auto_item_id")
+  autoItem     AddedItemAuto? @relation("AutoItemChats", fields: [autoItemId], references: [id])
 
   manualItemId BigInt? @map("manual_item_id")
   manualItem   AddedItemManual? @relation("ManualItemChats", fields: [manualItemId], references: [id])
 
+  itemType   WishItemType @map("item_type")
+
   title     String
 
-  createdAt DateTime  `@default`(now()) `@map`("created_at") `@db.Timestamp`()
-  updatedAt DateTime? `@updatedAt` `@map`("updated_at") `@db.Timestamp`()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
 
   aiChatMessage AiChatMessage[]
   aiChatResult  AiChatResult?
