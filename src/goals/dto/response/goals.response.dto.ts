@@ -37,3 +37,20 @@ export class CalcShoppingBudgetResponseDto {
     this.shoppingBudget = shoppingBudget;
   }
 }
+
+type SpendItemType = "AUTO" | "MANUAL";
+
+export class SpendItemDto {
+  id!: string;
+  type!: SpendItemType;
+  name!: string;
+  price!: number;
+  imageUrl!: string | null;
+}
+
+export class SpendSummaryResponseDto {
+  averageDecisionDays!: number;
+  recentMonthCount!: number;
+  items!: SpendItemDto[];
+  nextCursor?: string;
+}

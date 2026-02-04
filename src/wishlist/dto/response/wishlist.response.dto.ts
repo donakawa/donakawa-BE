@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 import {
   WishItemFolderPayload,
+  WishItemPayload,
   WishItemPreviewPayload,
 } from "../../payload/wishlist.payload";
 import { WishlistRecordInterface } from "../../interface/wishlist.interface";
@@ -172,5 +173,35 @@ export class ShowWishitemsInFolderResponseDto {
       },
       [],
     );
+  }
+}
+export class ModifyWishitemResponseDto {
+  id!: string;
+  folder!: string | null;
+  name!: string;
+  price!: number;
+  platform!: string;
+  brand!: string | null;
+  photoUrl!: string | null;
+  productUrl!: string;
+  reason!: string;
+  refreshedAt!: string | null;
+  addedAt!: string | null;
+  updatedAt!: string | null;
+  status!: string;
+  constructor(data: WishItemPayload) {
+    this.id = data.id;
+    this.folder = data.folder;
+    this.name = data.name;
+    this.price = data.price;
+    this.platform = data.platform;
+    this.brand = data.brand;
+    this.photoUrl = data.photoUrl;
+    this.productUrl = data.productUrl;
+    this.reason = data.reason;
+    this.refreshedAt = data.refreshedAt ? data.refreshedAt.toISOString() : null;
+    this.addedAt = data.addedAt ? data.addedAt.toISOString() : null;
+    this.updatedAt = data.updatedAt ? data.updatedAt.toISOString() : null;
+    this.status = data.status;
   }
 }

@@ -21,9 +21,11 @@ import { FilesRepository } from "./files/repository/files.repository";
 import { FilesService } from "./files/service/files.service";
 import { S3StorageAdapter } from "./files/storage/s3.storage";
 import { DbRepository } from "./infra/db.repository";
+import { KakaoOAuthService } from "./auth/service/kakao-oauth.service";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 const googleOAuthService = new GoogleOAuthService();
+const kakaoOAuthService = new KakaoOAuthService();
 
 // AWS Infra
 const sqsClient = new SQSClient({
@@ -53,24 +55,10 @@ const dbRepository = new DbRepository(prisma);
 
 // Auth 도메인
 const authRepository = new AuthRepository(prisma);
-const authService = new AuthService(authRepository, googleOAuthService, prisma);
+const authService = new AuthService(authRepository, googleOAuthService, kakaoOAuthService, prisma);
 const auth = {
   service: authService,
   repository: authRepository,
-};
-// Goals 도메인
-const goalsRepository = new GoalsRepository(prisma);
-const goalsService = new GoalsService(goalsRepository);
-const goals = {
-  service: goalsService,
-  repository: goalsRepository,
-};
-// Histories 도메인
-const historiesRepository = new HistoriesRepository(prisma);
-const historiesService = new HistoriesService(historiesRepository);
-const histories = {
-  service: historiesService,
-  repository: historiesRepository,
 };
 
 // Files 도메인
@@ -81,6 +69,23 @@ const files = {
   repository: filesRepository,
   storage: s3Client,
 };
+
+// Goals 도메인
+const goalsRepository = new GoalsRepository(prisma);
+const goalsService = new GoalsService(goalsRepository, filesService);
+const goals = {
+  service: goalsService,
+  repository: goalsRepository,
+};
+
+// Histories 도메인
+const historiesRepository = new HistoriesRepository(prisma);
+const historiesService = new HistoriesService(historiesRepository, filesService);
+const histories = {
+  service: historiesService,
+  repository: historiesRepository,
+};
+
 // Wishlist 도메인
 const crawlQueueClient = new CrawlQueueClient(sqsClient);
 const wishlistRepository = new WishlistRepository(prisma);
@@ -91,6 +96,7 @@ const wishlistService = new WishlistService(
   valkeyClient,
   eventEmitterClient,
   filesService,
+  historiesService,
 );
 const wishlist = {
   service: wishlistService,
@@ -110,5 +116,12 @@ const chats = {
   repository: chatsRepository,
 };
 
-
-export const container = { prisma, auth, goals, histories, wishlist, chats, files };
+export const container = {
+  prisma,
+  auth,
+  goals,
+  histories,
+  wishlist,
+  chats,
+  files,
+};

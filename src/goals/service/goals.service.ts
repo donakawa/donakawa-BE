@@ -8,6 +8,7 @@ import {
   GoalsResponseDto,
   BudgetSpendResponseDto,
   CalcShoppingBudgetResponseDto,
+  SpendSummaryResponseDto,
 } from "../dto/response/goals.response.dto";
 import {
   ConflictException,
@@ -15,9 +16,13 @@ import {
   BadRequestException,
 } from "../../errors/error";
 import { ShoppingBudgetCalculator } from "./shopping-budget-calculator.service";
+import { FilesService } from "../../files/service/files.service";
 
 export class GoalsService {
-  constructor(private readonly goalsRepository: GoalsRepository) {}
+  constructor(
+    private readonly goalsRepository: GoalsRepository,
+    private readonly filesService: FilesService,
+  ) {}
 
   // 갱신일 등록 계산
   private makeNextIncomeDate(day: number): Date {
@@ -182,5 +187,122 @@ export class GoalsService {
     });
 
     return new CalcShoppingBudgetResponseDto(shoppingBudget);
+  }
+
+  // 만족 소비 조회
+  async getSatisfiedSpend(
+    userId: string,
+    cursor?: string,
+  ): Promise<SpendSummaryResponseDto> {
+    return this.getSpendSummary(userId, true, cursor);
+  }
+
+  // 후회 소비 조회
+  async getRegretSpend(
+    userId: string,
+    cursor?: string,
+  ): Promise<SpendSummaryResponseDto> {
+    return this.getSpendSummary(userId, false, cursor);
+  }
+
+  // 만족 소비, 후회 소비 공통 로직
+  async getSpendSummary(
+    userId: string,
+    isSatisfied: boolean,
+    cursor?: string,
+  ): Promise<SpendSummaryResponseDto> {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const reviews = await this.goalsRepository.findSpendItems(
+      userId,
+      oneMonthAgo,
+      isSatisfied,
+      cursor,
+      10,
+    );
+
+    reviews.sort((a, b) => {
+      const aDate =
+        a.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
+        a.addedItemManual?.purchasedHistory[0]?.purchasedDate ??
+        new Date(0);
+      const bDate =
+        b.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
+        b.addedItemManual?.purchasedHistory[0]?.purchasedDate ??
+        new Date(0);
+      return bDate.getTime() - aDate.getTime();
+    });
+
+    const items = await Promise.all(
+      reviews.slice(0, 10).map(async (r) => {
+        // 수동 추가
+        if (r.addedItemManual) {
+          const fileId = r.addedItemManual.files?.id;
+          const imageUrl = fileId
+            ? await this.filesService.generateUrl(fileId.toString(), 60 * 10)
+            : null;
+
+          return {
+            id: r.addedItemManual.id.toString(),
+            type: "MANUAL" as const,
+            name: r.addedItemManual.name,
+            price: r.addedItemManual.price,
+            imageUrl,
+          };
+        }
+
+        // 자동 추가
+        const product = r.addedItemAuto!.product;
+        const fileId = r.addedItemAuto?.product.files?.id;
+        const imageUrl = fileId
+          ? await this.filesService.generateUrl(fileId.toString(), 60 * 10)
+          : null;
+
+        return {
+          id: product.id.toString(),
+          type: "AUTO" as const,
+          name: r.addedItemAuto!.product.name,
+          price: r.addedItemAuto!.product.price,
+          imageUrl,
+        };
+      }),
+    );
+
+    // 평균 구매 결정 시간
+    const decisionDaysList = reviews
+      .map((r) => {
+        const wishCreated =
+          r.addedItemAuto?.createdAt ?? r.addedItemManual?.createdAt;
+        const purchasedAt =
+          r.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
+          r.addedItemManual?.purchasedHistory[0]?.purchasedDate;
+        if (!wishCreated || !purchasedAt) return null;
+        return Math.floor(
+          (purchasedAt.getTime() - wishCreated.getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
+      })
+      .filter((d): d is number => d !== null);
+
+    const averageDecisionDays =
+      decisionDaysList.length === 0
+        ? 0
+        : Math.floor(
+            decisionDaysList.reduce((sum, d) => sum + d, 0) /
+              decisionDaysList.length,
+          );
+
+    // 최근 한 달 내 만족 소비/후회 소비 개수
+    const recentMonthCount = await this.goalsRepository.countRecentMonth(
+      userId,
+      oneMonthAgo,
+      isSatisfied,
+    );
+
+    const hasNext = reviews.length > 10;
+    const nextCursor = hasNext ? reviews[10].id.toString() : undefined;
+
+    return { averageDecisionDays, recentMonthCount, items, nextCursor };
   }
 }
