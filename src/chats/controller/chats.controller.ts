@@ -28,13 +28,12 @@ export class ChatsController {
    * @description 위시 아이템을 기준으로 새로운 채팅 세션을 생성합니다. (1개의 위시 아이템 당 1개의 채팅)
    */
   @Post()
-  async createChat(
+  public async createChat(
     @Body() body: CreateChatRequest,
     @Request() req: ExpressRequest,
   ) {
     const userId = Number(req.user!.id);
-
-    return this.chatsService.createChat(userId, body.wishItemId);
+    return this.chatsService.createChat(userId, body);
   }
 
   /**

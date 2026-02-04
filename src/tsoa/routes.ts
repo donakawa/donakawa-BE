@@ -404,6 +404,7 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "wishItemId": {"dataType":"double","required":true},
+            "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["MANUAL"]}],"required":true},
         },
         "additionalProperties": false,
     },

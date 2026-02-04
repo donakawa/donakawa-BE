@@ -42,20 +42,18 @@ export class GptService {
       text: {
         format: {
           type: "json_schema",
-          json_schema: {
-            name: "decision_response",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                decision: {
-                  type: "string",
-                  enum: ["구매 추천", "구매 보류"],
-                },
+          name: "decision_response",
+          strict: false,
+          schema: {
+            type: "object",
+            properties: {
+              decision: {
+                type: "string",
+                enum: ["구매 추천", "구매 보류"],
               },
-              required: ["decision"],
-              additionalProperties: false,
             },
+            required: ["decision"],
+            additionalProperties: false,
           },
         },
       },

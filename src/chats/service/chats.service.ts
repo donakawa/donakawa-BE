@@ -1,4 +1,5 @@
 import { ChatsRepository } from "../repository/chats.repository";
+import { CreateChatRequest } from "../dto/request/chats.request.dto";
 import {
   CreateChatResponse,
   ChatDetailResponse,
@@ -19,19 +20,20 @@ export class ChatsService {
 
   async createChat(
     userId: number,
-    addedItemAutoId: number,
+    body: CreateChatRequest,
   ): Promise<CreateChatResponse> {
-    const addedItem = await this.chatsRepository.findAddedItem(addedItemAutoId);
+    const { type, wishItemId } = body;
 
-    if (!addedItem) {
-      throw new Error("Added item not found");
-    }
+    const item = await this.chatsRepository.findChatItem(type, wishItemId);
 
-    const chat = await this.chatsRepository.createChat(
+    if (!item) throw new Error("Item not found");
+
+    const chat = await this.chatsRepository.createChat({
       userId,
-      addedItem.product.name,
-      addedItemAutoId,
-    );
+      itemType: type,
+      itemId: wishItemId,
+      title: item.name,
+    });
 
     return {
       id: Number(chat.id),
@@ -56,22 +58,32 @@ export class ChatsService {
 
     const userMessages = chat.aiChatMessage.filter((m) => m.sender === "USER");
 
-    const aiResult = chat.aiChatResult;
+    let wishItem;
 
-    const product = chat.addedItemAuto.product;
-
-    return {
-      id: Number(chat.id),
-      wishItem: {
+    if (chat.itemType === "AUTO") {
+      const product = chat.autoItem!.product;
+      wishItem = {
         id: Number(product.id),
         name: product.name,
         price: product.price,
-      },
+      };
+    } else {
+      const item = chat.manualItem!;
+      wishItem = {
+        id: Number(item.id),
+        name: item.name,
+        price: item.price,
+      };
+    }
+
+    return {
+      id: Number(chat.id),
+      wishItem,
       answers: userMessages.map((m, i) => ({
         step: i + 1,
         selectedOption: m.content,
       })),
-      result: aiResult ? aiResult.decision : null,
+      result: chat.aiChatResult?.decision ?? null,
       currentStep: userMessages.length + 1,
     };
   }
@@ -141,8 +153,22 @@ export class ChatsService {
       .filter((m) => m.sender === "USER")
       .map((m) => m.content);
 
-    const product = chat.addedItemAuto.product;
     const budget = chat.user.targetBudget.at(-1);
+
+    const product = (() => {
+      if (chat.autoItem) {
+        return chat.autoItem.product;
+      }
+
+      if (chat.manualItem) {
+        return {
+          name: chat.manualItem.name,
+          price: chat.manualItem.price,
+        };
+      }
+
+      throw new Error("Chat item not found");
+    })();
 
     const { decision, message } = await this.gptService.finishDecision({
       item: {
@@ -156,7 +182,6 @@ export class ChatsService {
       answers,
     });
 
-    /** 결과 테이블에 저장 */
     await this.chatsRepository.createChatResult({
       headerId: Number(chat.id),
       decision,

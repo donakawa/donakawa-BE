@@ -1,16 +1,66 @@
 import { PrismaClient } from "@prisma/client";
 
+export type WishItemSummary = {
+  id: number;
+  name: string;
+  price: number;
+};
+
 export class ChatsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  createChat(userId: number, title: string, addedItemAutoId: number) {
+  createChat(input: {
+    userId: number;
+    itemType: "AUTO" | "MANUAL";
+    itemId: number;
+    title: string;
+  }) {
     return this.prisma.aiChatHeader.create({
       data: {
-        userId: BigInt(userId),
-        title,
-        addedItemAutoId: BigInt(addedItemAutoId),
+        title: input.title,
+        itemType: input.itemType,
+
+        user: {
+          connect: { id: BigInt(input.userId) },
+        },
+
+        ...(input.itemType === "AUTO"
+          ? { autoItem: { connect: { id: BigInt(input.itemId) } } }
+          : { manualItem: { connect: { id: BigInt(input.itemId) } } }),
       },
     });
+  }
+
+  async findChatItem(
+    type: "AUTO" | "MANUAL",
+    wishItemId: number,
+  ): Promise<WishItemSummary | null> {
+    if (type === "AUTO") {
+      const item = await this.prisma.addedItemAuto.findUnique({
+        where: { id: BigInt(wishItemId) },
+        include: { product: true },
+      });
+
+      if (!item) return null;
+
+      return {
+        id: Number(item.id),
+        name: item.product.name,
+        price: item.product.price,
+      };
+    }
+
+    const item = await this.prisma.addedItemManual.findUnique({
+      where: { id: BigInt(wishItemId) },
+    });
+
+    if (!item) return null;
+
+    return {
+      id: Number(item.id),
+      name: item.name,
+      price: item.price,
+    };
   }
 
   findChatsByUser(userId: number) {
@@ -20,12 +70,16 @@ export class ChatsRepository {
     });
   }
 
-  findAddedItem(addedItemAutoId: number) {
+  findAddedItemAuto(id: number) {
     return this.prisma.addedItemAuto.findUnique({
-      where: { id: BigInt(addedItemAutoId) },
-      include: {
-        product: true,
-      },
+      where: { id: BigInt(id) },
+      include: { product: true },
+    });
+  }
+
+  findAddedItemManual(id: number) {
+    return this.prisma.addedItemManual.findUnique({
+      where: { id: BigInt(id) },
     });
   }
 
@@ -33,18 +87,16 @@ export class ChatsRepository {
     return this.prisma.aiChatHeader.findUnique({
       where: { id: BigInt(chatId) },
       include: {
-        user: {
-          include: {
-            targetBudget: true,
-          },
+        user: { include: { targetBudget: true } },
+        autoItem: {
+          include: { product: true },
         },
-        addedItemAuto: {
-          include: {
-            product: true,
-          },
-        },
+        manualItem: true,
         aiChatMessage: {
           orderBy: { createdAt: "asc" },
+        },
+        aiChatSelection: {
+          orderBy: { step: "asc" },
         },
         aiChatResult: true,
       },
