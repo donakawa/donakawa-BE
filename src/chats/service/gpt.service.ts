@@ -24,45 +24,42 @@ export class GptService {
     }).join("\n\n");
 
     //  구매 여부 판단
-    const decisionResponse = (await this.client.responses.create({
+    const decisionResponse = await this.client.responses.create({
       model: "gpt-4.1-mini",
       input: `
-        너는 소비 결정을 도와주는 AI야.
+    너는 소비 결정을 도와주는 AI야.
 
-        [상품 정보]
-        - 가격: ${input.item.price}원
+    [상품 정보]
+    - 가격: ${input.item.price}원
+    [예산 정보]
+    - 현재 남은 예산: ${input.user.budgetLeft}원
+    - 예산 갱신까지 남은 기간: ${input.user.daysUntilBudgetReset}일
+    [질문과 답변]
+    ${qaText}
 
-        [예산 정보]
-        - 현재 남은 예산: ${input.user.budgetLeft}원
-        - 예산 갱신까지 남은 기간: ${input.user.daysUntilBudgetReset}일
+    JSON으로 {"decision": "구매 추천" 또는 "구매 보류"} 형태로 출력해주세요.
+    JSON만 출력하고, 어떤 추가 설명도 넣지 마세요.
+  `,
+    });
 
-        [질문과 답변]
-        ${qaText}
-      `,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "decision_response",
-          strict: false,
-          schema: {
-            type: "object",
-            properties: {
-              decision: {
-                type: "string",
-                enum: ["구매 추천", "구매 보류"],
-              },
-            },
-            required: ["decision"],
-            additionalProperties: false,
-          },
-        },
-      },
-    } as any)) as any;
+    const text = decisionResponse.output_text?.trim();
+    if (!text) throw new Error("GPT output missing");
 
-    const decision = decisionResponse.output_parsed?.decision as DecisionType;
+    let decision: DecisionType;
 
-    if (!decision) {
-      throw new Error("GPT decision missing");
+    try {
+      const match = text.match(/\{.*\}/s);
+      if (!match) throw new Error("No JSON object found in GPT output");
+
+      const json = JSON.parse(match[0]);
+      decision = json.decision;
+
+      if (decision !== "구매 추천" && decision !== "구매 보류") {
+        throw new Error("Decision value invalid");
+      }
+    } catch (err) {
+      console.error("GPT output:", text);
+      throw new Error("GPT output JSON parsing failed");
     }
 
     // 설명 문장 생성
