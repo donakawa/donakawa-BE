@@ -12,16 +12,23 @@ import {
 import { Request as ExpressRequest } from "express";
 import { container } from "../../container";
 import { ApiResponse, success } from "../../common/response";
-import { CreateReviewRequestDto, ReviewStatus, AnalyticsMetric } from "../dto/request/histories.request.dto";
-import { 
-  CreateReviewResponseDto, 
-  GetMyReviewsResponseDto, 
-  MonthlyCalendarResponseDto, 
+import {
+  CreateReviewRequestDto,
+  ReviewStatus,
+  AnalyticsMetric,
+} from "../dto/request/histories.request.dto";
+import {
+  CreateReviewResponseDto,
+  GetMyReviewsResponseDto,
+  MonthlyCalendarResponseDto,
   GetDailyHistoriesResponseDto,
   GetHistoryItemsResponseDto,
   MonthlyReportResponseDto,
-  AnalyticsResponseDto } from "../dto/response/histories.response.dto";
+  AnalyticsResponseDto,
+  AiCommentResponseDto,
+} from "../dto/response/histories.response.dto";
 import { HistoriesService } from "../service/histories.service";
+import { AiCommentService } from "../service/aicomment.sevice";
 
 @Route("/histories")
 @Tags("Histories")
@@ -34,7 +41,7 @@ export class HistoriesController {
   public async createReview(
     @Path() itemId: number,
     @Body() body: CreateReviewRequestDto,
-    @Request() req: ExpressRequest
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<CreateReviewResponseDto>> {
     const userId = BigInt(req.user!.id);
 
@@ -42,7 +49,7 @@ export class HistoriesController {
       userId,
       itemId,
       body.satisfaction,
-      body.frequency
+      body.frequency,
     );
 
     return success(CreateReviewResponseDto.from(review));
@@ -51,7 +58,7 @@ export class HistoriesController {
   @Security("jwt")
   @Get("/reviews")
   public async getMyReviews(
-    @Request() req: ExpressRequest
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<GetMyReviewsResponseDto>> {
     const userId = BigInt(req.user!.id);
 
@@ -64,14 +71,14 @@ export class HistoriesController {
   public async getMonthlyCalendar(
     @Query() year: number,
     @Query() month: number,
-    @Request() req: ExpressRequest
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<MonthlyCalendarResponseDto>> {
     const userId = BigInt(req.user!.id);
 
     const result = await this.historiesService.getMonthlyCalendar(
       userId,
       year,
-      month
+      month,
     );
 
     return success(result);
@@ -81,14 +88,11 @@ export class HistoriesController {
   @Get()
   public async getDailyHistories(
     @Query() date: string,
-    @Request() req: ExpressRequest
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<GetDailyHistoriesResponseDto>> {
     const userId = BigInt(req.user!.id);
 
-    const result = await this.historiesService.getDailyHistories(
-      userId,
-      date
-    );
+    const result = await this.historiesService.getDailyHistories(userId, date);
 
     return success(result);
   }
@@ -97,13 +101,13 @@ export class HistoriesController {
   @Get("/items")
   public async getHistoryItems(
     @Query() reviewStatus: ReviewStatus = "ALL",
-    @Request() req: ExpressRequest
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<GetHistoryItemsResponseDto>> {
     const userId = BigInt(req.user!.id);
 
     const result = await this.historiesService.getHistoryItems(
       userId,
-      reviewStatus
+      reviewStatus,
     );
 
     return success(result);
@@ -112,12 +116,11 @@ export class HistoriesController {
   @Security("jwt")
   @Get("/report")
   public async getRecentMonthReport(
-    @Request() req: ExpressRequest
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<MonthlyReportResponseDto>> {
     const userId = BigInt(req.user!.id);
 
-    const result =
-      await this.historiesService.getRecentMonthReport(userId);
+    const result = await this.historiesService.getRecentMonthReport(userId);
 
     return success(result);
   }
@@ -126,15 +129,23 @@ export class HistoriesController {
   @Get("/analytics")
   public async getAnalytics(
     @Request() req: ExpressRequest,
-    @Query() metric: AnalyticsMetric = "time"
+    @Query() metric: AnalyticsMetric = "time",
   ): Promise<ApiResponse<AnalyticsResponseDto>> {
     const userId = BigInt(req.user!.id);
 
-    const data = await this.historiesService.getAnalytics(
-      userId,
-      metric
-    );
+    const data = await this.historiesService.getAnalytics(userId, metric);
 
     return success(data);
+  }
+
+  @Security("jwt")
+  @Get("/report/ai-comment")
+  public async getAiComment(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<AiCommentResponseDto>> {
+    const userId = BigInt(req.user!.id);
+
+    const result = await this.historiesService.getAiComment(userId);
+    return success(result);
   }
 }

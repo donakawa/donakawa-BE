@@ -1,18 +1,24 @@
+// histories/service/aicomment.service.ts
 import { OpenAI } from "openai";
 import { GoalsRepository } from "../../goals/repository/goals.repository";
+import { AiCommentResponseDto } from "../dto/response/histories.response.dto";
 
-export class ReportService {
-  constructor(
-    private readonly goalsRepository: GoalsRepository,
-    private readonly openai: OpenAI,
-  ) {}
+export class AiCommentService {
+  private readonly openai: OpenAI;
 
-  async getAiComment(userId: string) {
+  constructor(private readonly goalsRepository: GoalsRepository) {
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY!,
+    });
+  }
+
+  async getAiComment(userId: string): Promise<AiCommentResponseDto> {
     // 이번 달 소비/예산 조회
     const budget = await this.goalsRepository.findBudgetByUserId(userId);
-    if (!budget || !budget.incomeDate) throw new Error("User budget not found");
+    if (!budget || !budget.incomeDate) {
+      throw new Error("User budget not found");
+    }
 
-    const now = new Date();
     const nextIncomeDate = budget.incomeDate;
     const cycleStart = new Date(nextIncomeDate);
     cycleStart.setMonth(cycleStart.getMonth() - 1);
@@ -29,14 +35,14 @@ export class ReportService {
     const prompt =
       savedAmount > 0
         ? `이번 달 소비 목표: ${shoppingBudget}원
-          이번 달 실제 소비: ${totalSpend}원
-          절약 금액: ${savedAmount}원
+이번 달 실제 소비: ${totalSpend}원
+절약 금액: ${savedAmount}원
 
-          한 줄로 후기를 작성하고, 긍정적인 느낌으로 작성해 주세요.`
+한 줄로 후기를 작성하고, 긍정적인 느낌으로 작성해 주세요.`
         : `이번 달 소비 목표: ${shoppingBudget}원
-          이번 달 실제 소비: ${totalSpend}원
+이번 달 실제 소비: ${totalSpend}원
 
-          한 줄로 후기를 작성하고, 부정적인 느낌으로 작성해 주세요.`;
+한 줄로 후기를 작성하고, 부정적인 느낌으로 작성해 주세요.`;
 
     // OpenAI 호출
     const completion = await this.openai.chat.completions.create({
@@ -46,8 +52,8 @@ export class ReportService {
 
     const comment = completion.choices[0]?.message?.content?.trim() ?? "";
 
-    // 타입 결정
-    const type = savedAmount > 0 ? "positive" : "negative";
+    const type: "positive" | "negative" =
+      savedAmount > 0 ? "positive" : "negative";
 
     return { comment, type };
   }
