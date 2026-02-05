@@ -31,6 +31,7 @@ import { LoginResponseDto } from "../dto/response/auth.response.dto";
 import { User } from "@prisma/client";
 import { randomBytes, randomInt } from "node:crypto";
 import { VerifyPasswordTypeEnum } from '../enums/verify-password.enum';
+import { KakaoOAuthService } from './kakao-oauth.service';
 
 
 export class AuthService {
@@ -43,6 +44,7 @@ export class AuthService {
   constructor(
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
+    private kakaoOAuthService: KakaoOAuthService,
     private prisma: PrismaClient
   ) { }
 
@@ -217,7 +219,85 @@ export class AuthService {
 
     return this.googleOAuthService.getAuthUrl(state);
   }
+  // 카카오 Auth URL 가져오기
+    async getKakaoAuthUrl(): Promise<string> {
+      const state = randomBytes(32).toString('hex');
+      const stateKey = `oauth:state:${state}`;
+      await redis.set(stateKey, 'valid', { EX: 300 });
+      return this.kakaoOAuthService.getAuthUrl(state);
+    }
 
+    // 카카오 OAuth 콜백 처리
+    async handleKakaoCallback(
+      code: string,
+      state: string
+    ): Promise<{
+      tokens: { accessToken: string; refreshToken: string };
+      isNewUser: boolean;
+    }> {
+      await this.verifyOAuthState(state);
+      const kakaoUserInfo = await this.kakaoOAuthService.getUserInfo(code);
+
+      let user = await this.authRepository.findUserBySocialProvider(
+        OauthProvider.KAKAO,
+        kakaoUserInfo.kakaoUid
+      );
+
+      let isNewUser = false;
+
+      if (!user) {
+        user = await this.authRepository.findUserByEmail(kakaoUserInfo.email);
+
+        if (user) {
+          // 기존 계정에 카카오 연동
+          await this.authRepository.createOauth(
+            user.id,
+            OauthProvider.KAKAO,
+            kakaoUserInfo.kakaoUid
+          );
+        } else {
+          // 신규 회원가입
+          isNewUser = true;
+          const rawNickname = (kakaoUserInfo.nickname ?? "").trim();
+          let nickname = rawNickname.slice(0, 10);
+
+          if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
+            nickname = uuid().replace(/-/g, '').slice(0, 10);
+            
+            if (!(await this.checkNicknameDuplicate(nickname))) {
+              throw new ConflictException("U011", "닉네임 생성에 실패했습니다.");
+            }
+          }
+
+          const command = new CreateUserCommand({
+            email: kakaoUserInfo.email,
+            password: null,
+            nickname,
+            goal: null
+          });
+
+          user = await this.prisma.$transaction(async (tx) => {
+            const newUser = await this.authRepository.saveUser(command, tx);
+            await this.authRepository.createOauth(
+              newUser.id,
+              OauthProvider.KAKAO,
+              kakaoUserInfo.kakaoUid,
+              tx
+            );
+            return newUser;
+          });
+        }
+      }
+
+      const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
+      await this.saveSession(user.id, sid, refreshToken);
+
+      return {
+        tokens: { accessToken, refreshToken },
+        isNewUser
+      };
+    }
+  
   // State 검증
   private async verifyOAuthState(state: string): Promise<void> {
     const stateKey = `oauth:state:${state}`;

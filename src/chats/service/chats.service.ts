@@ -1,4 +1,5 @@
 import { ChatsRepository } from "../repository/chats.repository";
+import { CreateChatRequest } from "../dto/request/chats.request.dto";
 import {
   CreateChatResponse,
   ChatDetailResponse,
@@ -10,28 +11,31 @@ import {
 import { QUESTIONS } from "../constants/questions";
 import { SelectOptionRequest } from "../dto/request/chats.request.dto";
 import { GptService } from "./gpt.service";
+import { GoalsRepository } from "../../goals/repository/goals.repository";
 
 export class ChatsService {
   constructor(
     private readonly chatsRepository: ChatsRepository,
     private readonly gptService: GptService,
+    private readonly goalsRepository: GoalsRepository,
   ) {}
 
   async createChat(
     userId: number,
-    addedItemAutoId: number,
+    body: CreateChatRequest,
   ): Promise<CreateChatResponse> {
-    const addedItem = await this.chatsRepository.findAddedItem(addedItemAutoId);
+    const { type, wishItemId } = body;
 
-    if (!addedItem) {
-      throw new Error("Added item not found");
-    }
+    const item = await this.chatsRepository.findChatItem(type, wishItemId);
 
-    const chat = await this.chatsRepository.createChat(
+    if (!item) throw new Error("Item not found");
+
+    const chat = await this.chatsRepository.createChat({
       userId,
-      addedItem.product.name,
-      addedItemAutoId,
-    );
+      itemType: type,
+      itemId: wishItemId,
+      title: item.name,
+    });
 
     return {
       id: Number(chat.id),
@@ -56,22 +60,33 @@ export class ChatsService {
 
     const userMessages = chat.aiChatMessage.filter((m) => m.sender === "USER");
 
-    const aiResult = chat.aiChatResult;
+    let wishItem;
 
-    const product = chat.addedItemAuto.product;
+    if (chat.itemType === "AUTO") {
+      const autoItem = chat.autoItem!;
+      const product = autoItem.product;
+      wishItem = {
+        id: Number(autoItem.id),
+        name: product.name,
+        price: product.price,
+      };
+    } else {
+      const item = chat.manualItem!;
+      wishItem = {
+        id: Number(item.id),
+        name: item.name,
+        price: item.price,
+      };
+    }
 
     return {
       id: Number(chat.id),
-      wishItem: {
-        id: Number(product.id),
-        name: product.name,
-        price: product.price,
-      },
+      wishItem,
       answers: userMessages.map((m, i) => ({
         step: i + 1,
         selectedOption: m.content,
       })),
-      result: aiResult ? aiResult.decision : null,
+      result: chat.aiChatResult?.decision ?? null,
       currentStep: userMessages.length + 1,
     };
   }
@@ -141,8 +156,49 @@ export class ChatsService {
       .filter((m) => m.sender === "USER")
       .map((m) => m.content);
 
-    const product = chat.addedItemAuto.product;
-    const budget = chat.user.targetBudget.at(-1);
+    const budget = [...chat.user.targetBudget].sort((a, b) =>
+      a.id < b.id ? 1 : -1,
+    )[0];
+    if (!budget || !budget.incomeDate) {
+      throw new Error("User budget not found");
+    }
+
+    // 갱신일까지 남은 일 수
+    const now = new Date();
+    const nextIncomeDate = budget.incomeDate;
+    const diffMs = nextIncomeDate.getTime() - now.getTime();
+    const daysUntilBudgetReset = Math.max(
+      Math.ceil(diffMs / (1000 * 60 * 60 * 24)),
+      0,
+    );
+
+    // 이번 사이클 시작일
+    const cycleStart = new Date(nextIncomeDate);
+    cycleStart.setMonth(cycleStart.getMonth() - 1);
+
+    // 이번 사이클 사용 금액
+    const totalSpend = await this.goalsRepository.getTotalSpendByUser(
+      chat.user.id.toString(), // bigint -> string
+      cycleStart,
+    );
+
+    // 남은 예산
+    const remainingBudget = (budget.shoppingBudget ?? 0) - totalSpend;
+
+    const product = (() => {
+      if (chat.autoItem) {
+        return chat.autoItem.product;
+      }
+
+      if (chat.manualItem) {
+        return {
+          name: chat.manualItem.name,
+          price: chat.manualItem.price,
+        };
+      }
+
+      throw new Error("Chat item not found");
+    })();
 
     const { decision, message } = await this.gptService.finishDecision({
       item: {
@@ -150,13 +206,12 @@ export class ChatsService {
         price: product.price,
       },
       user: {
-        budgetLeft: budget?.shoppingBudget ?? 0,
-        daysUntilBudgetReset: 10,
+        budgetLeft: remainingBudget,
+        daysUntilBudgetReset,
       },
       answers,
     });
 
-    /** 결과 테이블에 저장 */
     await this.chatsRepository.createChatResult({
       headerId: Number(chat.id),
       decision,
