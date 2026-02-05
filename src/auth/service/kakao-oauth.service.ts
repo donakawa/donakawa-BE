@@ -7,8 +7,9 @@ export class KakaoOAuthService {
   private readonly clientSecret?: string;
 
   constructor() {
-    const { KAKAO_CLIENT_ID, KAKAO_REDIRECT_URI, KAKAO_CLIENT_SECRET } = process.env;
-    
+    const { KAKAO_CLIENT_ID, KAKAO_REDIRECT_URI, KAKAO_CLIENT_SECRET } =
+      process.env;
+
     if (!KAKAO_CLIENT_ID || !KAKAO_REDIRECT_URI) {
       throw new Error("카카오 OAuth 환경변수가 누락되었습니다.");
     }
@@ -51,13 +52,16 @@ export class KakaoOAuthService {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
           },
-        }
+        },
       );
 
       return response.data.access_token;
     } catch (error) {
       console.error("Kakao Token Error:", error);
-      throw new UnauthorizedException("K001", "카카오 토큰 발급에 실패했습니다.");
+      throw new UnauthorizedException(
+        "K001",
+        "카카오 토큰 발급에 실패했습니다.",
+      );
     }
   }
 
@@ -74,17 +78,27 @@ export class KakaoOAuthService {
 
       const { id, kakao_account } = response.data;
 
+      // 이메일 검증 강화
       if (!kakao_account?.email || !id) {
         throw new UnauthorizedException(
           "K002",
-          "카카오 사용자 정보를 가져올 수 없습니다."
+          "카카오 사용자 정보를 가져올 수 없습니다.",
+        );
+      }
+
+      // 이메일 인증 여부 확인 (보안 강화)
+      if (!kakao_account.is_email_valid || !kakao_account.is_email_verified) {
+        throw new UnauthorizedException(
+          "K004",
+          "인증되지 않은 이메일입니다. 카카오 계정에서 이메일 인증을 완료해주세요.",
         );
       }
 
       return {
         email: kakao_account.email,
         kakaoUid: id.toString(),
-        nickname: kakao_account.profile?.nickname || kakao_account.email.split("@")[0],
+        nickname:
+          kakao_account.profile?.nickname || kakao_account.email.split("@")[0],
       };
     } catch (error) {
       console.error("Kakao OAuth Error:", error);
