@@ -138,6 +138,9 @@ export class HistoriesController {
     return success(data);
   }
 
+  /**
+   * @summary AI 소비 한줄 평 가져오기
+   */
   @Security("jwt")
   @Get("/report/ai-comment")
   public async getAiComment(

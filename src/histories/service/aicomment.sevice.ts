@@ -35,18 +35,21 @@ export class AiCommentService {
     const prompt =
       savedAmount > 0
         ? `이번 달 소비 목표: ${shoppingBudget}원
-이번 달 실제 소비: ${totalSpend}원
-절약 금액: ${savedAmount}원
+      이번 달 실제 소비: ${totalSpend}원
+      절약한 금액: ${savedAmount}원
 
-한 줄로 후기를 작성하고, 긍정적인 느낌으로 작성해 주세요.`
+      절약한 금액을 반드시 숫자로 포함해서 한 문장으로 후기를 작성해 주세요.
+      절약한 금액을 여행, 숙소, 외식 등 구체적인 소비에 비유해서 표현해 주세요.
+      말투는 친근하고 뿌듯한 느낌으로 작성해 주세요.`
         : `이번 달 소비 목표: ${shoppingBudget}원
-이번 달 실제 소비: ${totalSpend}원
+      이번 달 실제 소비: ${totalSpend}원
 
-한 줄로 후기를 작성하고, 부정적인 느낌으로 작성해 주세요.`;
+      소비를 초과했음을 언급하며 한 문장으로 후기를 작성해 주세요.
+      조금 아쉬운 느낌의 말투로 작성해 주세요.`;
 
     // OpenAI 호출
     const completion = await this.openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4.1-mini",
       messages: [{ role: "user", content: prompt }],
     });
 
