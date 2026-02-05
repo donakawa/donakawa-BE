@@ -22,6 +22,7 @@ import { FilesService } from "./files/service/files.service";
 import { S3StorageAdapter } from "./files/storage/s3.storage";
 import { DbRepository } from "./infra/db.repository";
 import { KakaoOAuthService } from "./auth/service/kakao-oauth.service";
+import { AiCommentService } from "./histories/service/aicomment.sevice";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 const googleOAuthService = new GoogleOAuthService();
@@ -85,9 +86,11 @@ const goals = {
 
 // Histories 도메인
 const historiesRepository = new HistoriesRepository(prisma);
+const aiCommentService = new AiCommentService(goalsRepository);
 const historiesService = new HistoriesService(
   historiesRepository,
   filesService,
+  aiCommentService,
 );
 const histories = {
   service: historiesService,

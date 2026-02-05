@@ -8,18 +8,21 @@ import {
   HistoryItemDto,
   MonthlyReportResponseDto,
   AnalyticsResponseDto,
+  AiCommentResponseDto,
 } from "../dto/response/histories.response.dto";
 import {
   ReviewStatus,
   AnalyticsMetric,
 } from "../dto/request/histories.request.dto";
 import { Prisma } from "@prisma/client";
+import { AiCommentService } from "./aicomment.sevice";
 
 export class HistoriesService {
   constructor(
     private readonly historiesRepository: HistoriesRepository,
     private readonly filesService: FilesService,
-  ) { }
+    private readonly aiCommentService: AiCommentService,
+  ) {}
 
   async createReview(
     userId: bigint,
@@ -71,17 +74,13 @@ export class HistoriesService {
           const product = item.product;
           const purchased = item.purchasedHistory[0];
 
-          const purchaseReasons =
-            purchased?.purchasedReason
-              ? [purchased.purchasedReason.reason]
-              : purchased?.reason
-                ? purchased.reason.split(",")
-                : [];
+          const purchaseReasons = purchased?.purchasedReason
+            ? [purchased.purchasedReason.reason]
+            : purchased?.reason
+              ? purchased.reason.split(",")
+              : [];
 
-          const imageUrl = await this.getItemImageUrl(
-            item.id,
-            "AUTO",
-          );
+          const imageUrl = await this.getItemImageUrl(item.id, "AUTO");
 
           return {
             reviewId: Number(review.id),
@@ -100,18 +99,14 @@ export class HistoriesService {
         // MANUAL ITEM
         const item = review.addedItemManual!;
         const purchased = item.purchasedHistory[0];
-        
-        const purchaseReasons =
-            purchased?.purchasedReason
-              ? [purchased.purchasedReason.reason]
-              : purchased?.reason
-                ? purchased.reason.split(",")
-                : [];
 
-        const imageUrl = await this.getItemImageUrl(
-          item.id,
-          "MANUAL",
-        );
+        const purchaseReasons = purchased?.purchasedReason
+          ? [purchased.purchasedReason.reason]
+          : purchased?.reason
+            ? purchased.reason.split(",")
+            : [];
+
+        const imageUrl = await this.getItemImageUrl(item.id, "MANUAL");
 
         return {
           reviewId: Number(review.id),
@@ -125,7 +120,7 @@ export class HistoriesService {
             ? purchased.purchasedDate.toISOString().split("T")[0]
             : "",
         };
-      })
+      }),
     );
 
     return {
@@ -173,10 +168,7 @@ export class HistoriesService {
 
         totalAmount += price;
 
-        const thumbnailUrl = await this.getItemImageUrl(
-          item.id,
-          "AUTO",
-        );
+        const thumbnailUrl = await this.getItemImageUrl(item.id, "AUTO");
 
         itemsByDate[date].push({
           itemId: Number(item.id),
@@ -196,10 +188,7 @@ export class HistoriesService {
 
         totalAmount += price;
 
-        const thumbnailUrl = await this.getItemImageUrl(
-          item.id,
-          "MANUAL",
-        );
+        const thumbnailUrl = await this.getItemImageUrl(item.id, "MANUAL");
 
         itemsByDate[date].push({
           itemId: Number(item.id),
@@ -260,12 +249,11 @@ export class HistoriesService {
 
     const end = new Date(Date.UTC(y, m - 1, d + 1));
 
-    const histories =
-      await this.historiesRepository.findDailyPurchasedItems(
-        userId,
-        start,
-        end
-      );
+    const histories = await this.historiesRepository.findDailyPurchasedItems(
+      userId,
+      start,
+      end,
+    );
 
     const items = await Promise.all(
       histories.map(async (h) => {
@@ -274,10 +262,7 @@ export class HistoriesService {
           const review = item.review[0];
           const price = item.product.price;
 
-          const thumbnailUrl = await this.getItemImageUrl(
-            item.id,
-            "AUTO",
-          );
+          const thumbnailUrl = await this.getItemImageUrl(item.id, "AUTO");
 
           return {
             itemId: Number(item.id),
@@ -294,10 +279,7 @@ export class HistoriesService {
         const review = item.review[0];
         const price = item.price;
 
-        const thumbnailUrl = await this.getItemImageUrl(
-          item.id,
-          "MANUAL",
-        );
+        const thumbnailUrl = await this.getItemImageUrl(item.id, "MANUAL");
 
         return {
           itemId: Number(item.id),
@@ -308,7 +290,7 @@ export class HistoriesService {
           purchasedAt: h.purchasedAt,
           satisfaction: review?.satisfaction ?? null,
         };
-      })
+      }),
     );
 
     const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
@@ -343,31 +325,26 @@ export class HistoriesService {
     userId: bigint,
     reviewStatus: ReviewStatus = "ALL",
   ): Promise<GetHistoryItemsResponseDto> {
-    const histories =
-      await this.historiesRepository.findHistoryItems(
-        userId,
-        reviewStatus,
-      );
+    const histories = await this.historiesRepository.findHistoryItems(
+      userId,
+      reviewStatus,
+    );
 
     const items: HistoryItemDto[] = await Promise.all(
       histories.map(async (h) => {
         const date = h.purchasedDate.toISOString().split("T")[0];
 
-        const purchaseReasons =
-          h.purchasedReason
-            ? [h.purchasedReason.reason]
-            : h.reason
-              ? h.reason.split(",")
-              : [];
+        const purchaseReasons = h.purchasedReason
+          ? [h.purchasedReason.reason]
+          : h.reason
+            ? h.reason.split(",")
+            : [];
 
         if (h.addedItemAuto) {
           const item = h.addedItemAuto;
           const review = item.review[0];
 
-          const imageUrl = await this.getItemImageUrl(
-            item.id,
-            "AUTO",
-          );
+          const imageUrl = await this.getItemImageUrl(item.id, "AUTO");
 
           return {
             reviewId: review ? Number(review.id) : undefined,
@@ -383,10 +360,7 @@ export class HistoriesService {
         const item = h.addedItemManual!;
         const review = item.review[0];
 
-        const imageUrl = await this.getItemImageUrl(
-          item.id,
-          "MANUAL",
-        );
+        const imageUrl = await this.getItemImageUrl(item.id, "MANUAL");
 
         return {
           reviewId: review ? Number(review.id) : undefined,
@@ -607,17 +581,19 @@ export class HistoriesService {
     itemId: bigint,
     itemType: "AUTO" | "MANUAL",
   ): Promise<string | null> {
-    const photoFileId =
-      await this.historiesRepository.findItemPhotoFileId(
-        itemId,
-        itemType,
-      );
+    const photoFileId = await this.historiesRepository.findItemPhotoFileId(
+      itemId,
+      itemType,
+    );
 
     if (!photoFileId) return null;
 
-    return this.filesService.generateUrl(
-      photoFileId.toString(),
-      60 * 10,
-    );
+    return this.filesService.generateUrl(photoFileId.toString(), 60 * 10);
+  }
+
+  public async getAiComment(userId: bigint): Promise<AiCommentResponseDto> {
+    // userId를 string으로 변환해서 GptService 호출
+    const result = await this.aiCommentService.getAiComment(userId.toString());
+    return result;
   }
 }

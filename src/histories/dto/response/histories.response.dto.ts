@@ -105,7 +105,7 @@ export interface GetHistoryItemsResponseDto {
 
 export interface ReportPeriodDto {
   from: string; // yyyy-MM-dd
-  to: string;   // yyyy-MM-dd
+  to: string; // yyyy-MM-dd
   days: number;
 }
 
@@ -138,4 +138,9 @@ export interface AnalyticsResponseDto {
   metric: "TIME" | "DAY";
   totalCount: number;
   statistics: AnalyticsStatistic[];
+}
+
+export interface AiCommentResponseDto {
+  comment: string;
+  type: "positive" | "negative";
 }
