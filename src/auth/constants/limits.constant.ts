@@ -1,0 +1,4 @@
+export const Limits = {
+  EMAIL_VERIFICATION_MAX_ATTEMPTS: 5,
+  PASSWORD_VERIFY_MAX_ATTEMPTS: 5,
+};
