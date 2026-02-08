@@ -100,9 +100,6 @@ export class WishlistService {
         "존재하지 않는 작업 ID 입니다.",
       );
     }
-    if (currentValue === "DONE" || currentValue === "FAILED") {
-      return currentValue as "DONE" | "FAILED";
-    }
     const topic = EventType.CRAWL_STATUS_UPDATED;
 
     type resultValueType = {
