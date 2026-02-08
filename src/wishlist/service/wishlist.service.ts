@@ -109,6 +109,16 @@ export class WishlistService {
       result: "DONE" | "FAILED" | null;
       dataId: string | null;
     };
+    if (currentValue === "DONE" || currentValue === "FAILED") {
+      const dataId =
+        currentValue === "DONE"
+          ? await valkeyClient.valkeyPub.get(`status:crawl:${jobId}:resultId`)
+          : null;
+      return {
+        result: currentValue as "DONE" | "FAILED",
+        dataId: dataId?.toString() ?? null,
+      };
+    }
 
     const TIMEOUT_MS = 1000 * 120; // 2 minutes
     return new Promise<resultValueType>(async (resolve, reject) => {
