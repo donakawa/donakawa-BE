@@ -278,7 +278,7 @@ export class WishlistController extends Controller {
    * @summary 위시 아이템 구매 결정
    * @description 위시 아이템의 상태를 구매 결정으로 변경 합니다.
    */
-  @Post("/items/:itemId/status")
+  @Post("/items/:itemId/buy")
   @Security("jwt")
   @SuccessResponse(204, "Updated")
   public async markItemAsPurchased(
