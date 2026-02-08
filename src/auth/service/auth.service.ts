@@ -1,5 +1,5 @@
-import { OauthProvider, PrismaClient } from '@prisma/client';
-import { GoogleOAuthService } from './google-oauth.service';
+import { OauthProvider, PrismaClient } from "@prisma/client";
+import { GoogleOAuthService } from "./google-oauth.service";
 import {
   BadRequestException,
   ConflictException,
@@ -8,9 +8,7 @@ import {
 } from "../../errors/error";
 import { redis } from "../../infra/redis.client";
 import { CreateUserCommand } from "../command/create-user.command";
-import {
-  RegisterRequestDto,
-} from "../dto/request/auth.request.dto";
+import { RegisterRequestDto } from "../dto/request/auth.request.dto";
 import {
   RegisterResponseDto,
   UpdateGoalResponseDto,
@@ -30,12 +28,10 @@ import { LoginResult } from "../../types/login-result.type";
 import { LoginResponseDto } from "../dto/response/auth.response.dto";
 import { User } from "@prisma/client";
 import { randomBytes, randomInt } from "node:crypto";
-import { VerifyPasswordTypeEnum } from '../enums/verify-password.enum';
-import { KakaoOAuthService } from './kakao-oauth.service';
-
+import { VerifyPasswordTypeEnum } from "../enums/verify-password.enum";
+import { KakaoOAuthService } from "./kakao-oauth.service";
 
 export class AuthService {
-  
   private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
   private readonly EMAIL_VERIFICATION_CODE_TTL = 60 * 5; // 5분
   private readonly EMAIL_VERIFIED_SIGNUP_EXPIRES_IN = 60 * 10; // 10분
@@ -45,8 +41,8 @@ export class AuthService {
     private authRepository: AuthRepository,
     private googleOAuthService: GoogleOAuthService,
     private kakaoOAuthService: KakaoOAuthService,
-    private prisma: PrismaClient
-  ) { }
+    private prisma: PrismaClient,
+  ) {}
 
   // JWT 토큰 생성
   private createJwtTokens(user: User): {
@@ -64,13 +60,13 @@ export class AuthService {
     const accessToken = jwt.sign(
       payload,
       process.env.ACCESS_TOKEN_SECRET_KEY!,
-      { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN }
+      { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN },
     );
 
     const refreshToken = jwt.sign(
       payload,
       process.env.REFRESH_TOKEN_SECRET_KEY!,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     return { accessToken, refreshToken, sid: payload.sid };
@@ -80,7 +76,7 @@ export class AuthService {
   private async saveSession(
     userId: bigint,
     sid: string,
-    refreshToken: string
+    refreshToken: string,
   ): Promise<void> {
     // 기존 세션 정리 (한 번에 하나의 세션만 유지)
     await this.clearUserSession(userId);
@@ -91,7 +87,9 @@ export class AuthService {
     await redis
       .multi()
       .set(`user:${userId}:sid`, sid, { EX: this.SESSION_TTL })
-      .set(`user:refreshToken:${sid}`, hashedRefreshToken, { EX: this.SESSION_TTL })
+      .set(`user:refreshToken:${sid}`, hashedRefreshToken, {
+        EX: this.SESSION_TTL,
+      })
       .exec();
   }
 
@@ -125,7 +123,7 @@ export class AuthService {
     if (PasswordUtil.isSocialUser(user.password)) {
       throw new UnauthorizedException(
         "U002",
-        "비밀번호로 로그인할 수 없는 계정입니다. 소셜 로그인을 이용하거나 비밀번호를 설정해주세요."
+        "비밀번호로 로그인할 수 없는 계정입니다. 소셜 로그인을 이용하거나 비밀번호를 설정해주세요.",
       );
     }
 
@@ -136,175 +134,122 @@ export class AuthService {
     return await this.generateLoginResult(user);
   }
 
-  // Google OAuth 로그인 처리
-  async handleGoogleCallback(
-    code: string, 
-    state: string
-  ): Promise<{ 
+  // Google Auth URL 가져오기 (state 생성 및 저장)
+  async getGoogleAuthUrl(): Promise<string> {
+    // 랜덤 state 생성 (32바이트 = 64자 hex)
+    const state = randomBytes(32).toString("hex");
+
+    // Redis에 5분간 저장
+    const stateKey = `oauth:state:${state}`;
+    await redis.set(stateKey, "valid", { EX: 300 });
+
+    return this.googleOAuthService.getAuthUrl(state);
+  }
+  // 카카오 Auth URL 가져오기
+  async getKakaoAuthUrl(): Promise<string> {
+    const state = randomBytes(32).toString("hex");
+    const stateKey = `oauth:state:${state}`;
+    await redis.set(stateKey, "valid", { EX: 300 });
+    return this.kakaoOAuthService.getAuthUrl(state);
+  }
+
+  // 공통 OAuth 콜백 처리 로직
+  private async handleOAuthCallback(
+    provider: OauthProvider,
+    userInfo: { email: string; uid: string; nickname: string },
+  ): Promise<{
     tokens: { accessToken: string; refreshToken: string };
     isNewUser: boolean;
   }> {
-    await this.verifyOAuthState(state);
-    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
-
     let user = await this.authRepository.findUserBySocialProvider(
-      OauthProvider.GOOGLE,
-      googleUserInfo.googleUid
+      provider,
+      userInfo.uid,
     );
 
     let isNewUser = false;
 
     if (!user) {
-      user = await this.authRepository.findUserByEmail(googleUserInfo.email);
+      user = await this.authRepository.findUserByEmail(userInfo.email);
 
       if (user) {
-        await this.authRepository.createOauth(
-          user.id,
-          OauthProvider.GOOGLE,
-          googleUserInfo.googleUid
-        );
+        await this.authRepository.createOauth(user.id, provider, userInfo.uid);
       } else {
         isNewUser = true;
-        const rawNickname = (googleUserInfo.nickname ?? "").trim();
-        let nickname = rawNickname.slice(0, 10);
-
-        // 닉네임이 비어있거나 중복이면 UUID 사용
-        if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
-          // UUID 앞 10자 사용
-          nickname = uuid().replace(/-/g, '').slice(0, 10);
-          
-          // 만약의 경우를 위한 단일 체크
-          if (!(await this.checkNicknameDuplicate(nickname))) {
-            throw new ConflictException("U011", "닉네임 생성에 실패했습니다. 다시 시도해주세요.");
-          }
-        }
+        const nickname = await this.generateUniqueNickname(userInfo.nickname);
 
         const command = new CreateUserCommand({
-          email: googleUserInfo.email,
+          email: userInfo.email,
           password: null,
           nickname,
-          goal: null
+          goal: null,
         });
-      user = await this.prisma.$transaction(async (tx) => {
-        const newUser = await this.authRepository.saveUser(command, tx);
-        await this.authRepository.createOauth(
-          newUser.id,
-          OauthProvider.GOOGLE,
-          googleUserInfo.googleUid,
-          tx
-        );
-        return newUser;
-      });
-    }
-  }
 
-  // JWT 토큰만 생성 (LoginResponseDto 생성 안함)
-  const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
-  await this.saveSession(user.id, sid, refreshToken);
-
-  return {
-    tokens: { accessToken, refreshToken },
-    isNewUser
-  };
-  }
-
-  // Google Auth URL 가져오기 (state 생성 및 저장)
-  async getGoogleAuthUrl(): Promise<string> {
-    // 랜덤 state 생성 (32바이트 = 64자 hex)
-    const state = randomBytes(32).toString('hex');
-
-    // Redis에 5분간 저장
-    const stateKey = `oauth:state:${state}`;
-    await redis.set(stateKey, 'valid', { EX: 300 });
-
-    return this.googleOAuthService.getAuthUrl(state);
-  }
-  // 카카오 Auth URL 가져오기
-    async getKakaoAuthUrl(): Promise<string> {
-      const state = randomBytes(32).toString('hex');
-      const stateKey = `oauth:state:${state}`;
-      await redis.set(stateKey, 'valid', { EX: 300 });
-      return this.kakaoOAuthService.getAuthUrl(state);
-    }
-
-    // 카카오 OAuth 콜백 처리
-    async handleKakaoCallback(
-      code: string,
-      state: string
-    ): Promise<{
-      tokens: { accessToken: string; refreshToken: string };
-      isNewUser: boolean;
-    }> {
-      await this.verifyOAuthState(state);
-      const kakaoUserInfo = await this.kakaoOAuthService.getUserInfo(code);
-
-      let user = await this.authRepository.findUserBySocialProvider(
-        OauthProvider.KAKAO,
-        kakaoUserInfo.kakaoUid
-      );
-
-      let isNewUser = false;
-
-      if (!user) {
-        user = await this.authRepository.findUserByEmail(kakaoUserInfo.email);
-
-        if (user) {
-          // 기존 계정에 카카오 연동
+        user = await this.prisma.$transaction(async (tx) => {
+          const newUser = await this.authRepository.saveUser(command, tx);
           await this.authRepository.createOauth(
-            user.id,
-            OauthProvider.KAKAO,
-            kakaoUserInfo.kakaoUid
+            newUser.id,
+            provider,
+            userInfo.uid,
+            tx,
           );
-        } else {
-          // 신규 회원가입
-          isNewUser = true;
-          const rawNickname = (kakaoUserInfo.nickname ?? "").trim();
-          let nickname = rawNickname.slice(0, 10);
-
-          if (!nickname || !(await this.checkNicknameDuplicate(nickname))) {
-            nickname = uuid().replace(/-/g, '').slice(0, 10);
-            
-            if (!(await this.checkNicknameDuplicate(nickname))) {
-              throw new ConflictException("U011", "닉네임 생성에 실패했습니다.");
-            }
-          }
-
-          const command = new CreateUserCommand({
-            email: kakaoUserInfo.email,
-            password: null,
-            nickname,
-            goal: null
-          });
-
-          user = await this.prisma.$transaction(async (tx) => {
-            const newUser = await this.authRepository.saveUser(command, tx);
-            await this.authRepository.createOauth(
-              newUser.id,
-              OauthProvider.KAKAO,
-              kakaoUserInfo.kakaoUid,
-              tx
-            );
-            return newUser;
-          });
-        }
+          return newUser;
+        });
       }
-
-      const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
-      await this.saveSession(user.id, sid, refreshToken);
-
-      return {
-        tokens: { accessToken, refreshToken },
-        isNewUser
-      };
     }
-  
+
+    const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
+    await this.saveSession(user.id, sid, refreshToken);
+
+    return { tokens: { accessToken, refreshToken }, isNewUser };
+  }
+
+  // 유니크 닉네임 생성 헬퍼 메서드
+  private async generateUniqueNickname(rawNickname: string): Promise<string> {
+    const trimmed = rawNickname.trim().slice(0, 10);
+
+    if (trimmed && (await this.checkNicknameDuplicate(trimmed))) {
+      return trimmed;
+    }
+
+    // UUID 기반 닉네임 생성
+    const nickname = uuid().replace(/-/g, "").slice(0, 10);
+
+    if (!(await this.checkNicknameDuplicate(nickname))) {
+      throw new ConflictException("U011", "닉네임 생성에 실패했습니다.");
+    }
+
+    return nickname;
+  }
+
+  async handleGoogleCallback(code: string, state: string) {
+    await this.verifyOAuthState(state);
+    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+
+    return this.handleOAuthCallback(OauthProvider.GOOGLE, {
+      email: googleUserInfo.email,
+      uid: googleUserInfo.googleUid,
+      nickname: googleUserInfo.nickname,
+    });
+  }
+
+  async handleKakaoCallback(code: string, state: string) {
+    await this.verifyOAuthState(state);
+    const kakaoUserInfo = await this.kakaoOAuthService.getUserInfo(code);
+
+    return this.handleOAuthCallback(OauthProvider.KAKAO, {
+      email: kakaoUserInfo.email,
+      uid: kakaoUserInfo.kakaoUid,
+      nickname: kakaoUserInfo.nickname,
+    });
+  }
+
   // State 검증
   private async verifyOAuthState(state: string): Promise<void> {
     const stateKey = `oauth:state:${state}`;
     const isValid = await redis.get(stateKey);
 
     if (!isValid) {
-      throw new UnauthorizedException('A010', '잘못된 OAuth 요청입니다.');
+      throw new UnauthorizedException("A010", "잘못된 OAuth 요청입니다.");
     }
 
     // 사용된 state는 즉시 삭제 (재사용 방지)
@@ -313,12 +258,12 @@ export class AuthService {
 
   // 토큰 갱신
   async refreshAccessToken(
-    refreshToken: string
+    refreshToken: string,
   ): Promise<{ accessToken: string }> {
     try {
       const decoded = jwt.verify(
         refreshToken,
-        process.env.REFRESH_TOKEN_SECRET_KEY!
+        process.env.REFRESH_TOKEN_SECRET_KEY!,
       ) as any;
 
       const storedHash = await redis.get(`user:refreshToken:${decoded.sid}`);
@@ -340,13 +285,16 @@ export class AuthService {
       const accessToken = jwt.sign(
         payload,
         process.env.ACCESS_TOKEN_SECRET_KEY!,
-        { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN }
+        { expiresIn: this.ACCESS_TOKEN_EXPIRES_IN },
       );
 
       return { accessToken };
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        throw new UnauthorizedException("U005", "리프레시 토큰이 만료되었습니다.");
+        throw new UnauthorizedException(
+          "U005",
+          "리프레시 토큰이 만료되었습니다.",
+        );
       }
       if (error instanceof jwt.JsonWebTokenError) {
         throw new UnauthorizedException("U006", "유효하지 않은 토큰입니다.");
@@ -373,13 +321,12 @@ export class AuthService {
     const verified = await redis.get(`email:verified:REGISTER:${body.email}`);
 
     if (!verified) {
-      throw new UnauthorizedException(
-        "A003",
-        "이메일 인증이 필요합니다."
-      );
+      throw new UnauthorizedException("A003", "이메일 인증이 필요합니다.");
     }
 
-    const isNicknameAvailable = await this.checkNicknameDuplicate(body.nickname);
+    const isNicknameAvailable = await this.checkNicknameDuplicate(
+      body.nickname,
+    );
     if (!isNicknameAvailable) {
       throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
     }
@@ -388,7 +335,7 @@ export class AuthService {
       email: body.email,
       password: await hashingString(body.password),
       nickname: body.nickname,
-      goal: body.goal || null
+      goal: body.goal || null,
     });
     const user = await this.authRepository.saveUser(command);
 
@@ -405,7 +352,7 @@ export class AuthService {
   // 이메일 인증 코드 전송
   async sendEmailVerificationCode(
     email: string,
-    type: EmailVerifyTypeEnum
+    type: EmailVerifyTypeEnum,
   ): Promise<void> {
     const user = await this.authRepository.findUserByEmail(email);
 
@@ -425,13 +372,15 @@ export class AuthService {
     if (attempts && parseInt(attempts) >= 5) {
       throw new UnauthorizedException(
         "A010",
-        "인증 요청 횟수를 초과했습니다. 1시간 후 다시 시도해주세요."
+        "인증 요청 횟수를 초과했습니다. 1시간 후 다시 시도해주세요.",
       );
     }
 
     const code = this.generateEmailCode();
 
-    await redis.set(`email:verify:${type}:${email}`, code, { EX: this.EMAIL_VERIFICATION_CODE_TTL });
+    await redis.set(`email:verify:${type}:${email}`, code, {
+      EX: this.EMAIL_VERIFICATION_CODE_TTL,
+    });
 
     const newCount = await redis.incr(attemptKey);
     if (newCount === 1) {
@@ -445,14 +394,14 @@ export class AuthService {
   async verifyEmailVerificationCode(
     email: string,
     code: string,
-    type: EmailVerifyTypeEnum
+    type: EmailVerifyTypeEnum,
   ): Promise<void> {
     const savedCode = await redis.get(`email:verify:${type}:${email}`);
 
     if (!savedCode || savedCode !== code) {
       throw new UnauthorizedException(
         "A002",
-        "인증번호가 올바르지 않거나 만료되었습니다."
+        "인증번호가 올바르지 않거나 만료되었습니다.",
       );
     }
 
@@ -466,7 +415,7 @@ export class AuthService {
   private async sendEmail(
     email: string,
     code: string,
-    type: EmailVerifyTypeEnum
+    type: EmailVerifyTypeEnum,
   ): Promise<void> {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -535,7 +484,7 @@ export class AuthService {
     if (PasswordUtil.isSocialUser(user.password)) {
       throw new UnauthorizedException(
         "U007",
-        "소셜 로그인 계정은 비밀번호 재설정이 불가능합니다."
+        "소셜 로그인 계정은 비밀번호 재설정이 불가능합니다.",
       );
     }
 
@@ -551,7 +500,7 @@ export class AuthService {
   // 닉네임 수정
   async updateNickname(
     userId: bigint,
-    newNickname: string
+    newNickname: string,
   ): Promise<UpdateNicknameResponseDto> {
     // 현재 사용자 조회
     const user = await this.authRepository.findUserById(userId);
@@ -566,26 +515,29 @@ export class AuthService {
       throw new ConflictException("U009", "이미 사용 중인 닉네임입니다.");
     }
     // 닉네임 업데이트
-    const updatedUser = await this.authRepository.updateNickname(userId, newNickname);
-    
+    const updatedUser = await this.authRepository.updateNickname(
+      userId,
+      newNickname,
+    );
+
     return new UpdateNicknameResponseDto(updatedUser);
   }
   // 닉네임 중복 확인
   async checkNicknameDuplicate(
     nickname: string,
-    excludeUserId?: bigint
+    excludeUserId?: bigint,
   ): Promise<boolean> {
     const existingUser = await this.authRepository.findUserByNickname(nickname);
-  
+
     if (existingUser && existingUser.id !== excludeUserId) {
-      return false;  // 중복
+      return false; // 중복
     }
-    return true;  // 사용 가능
+    return true; // 사용 가능
   }
   // 목표 수정
   async updateGoal(
     userId: bigint,
-    newGoal: string
+    newGoal: string,
   ): Promise<UpdateGoalResponseDto> {
     // 현재 사용자 조회
     const user = await this.authRepository.findUserById(userId);
@@ -599,16 +551,16 @@ export class AuthService {
 
     // 목표 업데이트
     const updatedUser = await this.authRepository.updateGoal(userId, newGoal);
-    
+
     return new UpdateGoalResponseDto(updatedUser);
   }
-/**
- * 비밀번호 확인 (rate limiting 적용)
- */
-async verifyPassword(
+  /**
+   * 비밀번호 확인 (rate limiting 적용)
+   */
+  async verifyPassword(
     userId: bigint,
     password: string,
-    type: VerifyPasswordTypeEnum // 수정: type 파라미터 추가
+    type: VerifyPasswordTypeEnum, // 수정: type 파라미터 추가
   ): Promise<boolean> {
     // 수정: Redis 키를 타입별로 분리
     const rateLimitKey = `password-verify:rate:${type}:${userId}`;
@@ -619,7 +571,7 @@ async verifyPassword(
     if (attempts && parseInt(attempts) >= 10) {
       throw new UnauthorizedException(
         "A014",
-        "비밀번호 확인 시도 횟수를 초과했습니다. 5분 후 다시 시도해주세요."
+        "비밀번호 확인 시도 횟수를 초과했습니다. 5분 후 다시 시도해주세요.",
       );
     }
 
@@ -633,7 +585,7 @@ async verifyPassword(
     if (PasswordUtil.isSocialUser(user.password)) {
       throw new UnauthorizedException(
         "U010",
-        "소셜 로그인 계정은 비밀번호가 설정되지 않았습니다."
+        "소셜 로그인 계정은 비밀번호가 설정되지 않았습니다.",
       );
     }
 
@@ -656,7 +608,7 @@ async verifyPassword(
     }
 
     // 성공 시 Redis에 검증 상태 저장 (5분간 유효)
-    await redis.set(verifiedKey, "true", { EX: 300 }); 
+    await redis.set(verifiedKey, "true", { EX: 300 });
 
     // 실패 횟수 초기화
     await redis.del(rateLimitKey);
@@ -664,72 +616,79 @@ async verifyPassword(
     return isValid;
   }
 
-
-/**
- * 비밀번호 설정/변경 (통합)
- * - 소셜 로그인 사용자: 비밀번호 설정
- * - 일반 사용자: 비밀번호 변경 (프론트에서 verify-password 먼저 호출 필요)
- */
-async updatePassword(
-  userId: bigint,
-  newPassword: string
-): Promise<UpdatePasswordResponseDto> {
-  const user = await this.authRepository.findUserById(userId);
-  
-  if (!user) {
-    throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
-  }
-
-  const isSocialUser = PasswordUtil.isSocialUser(user.password);
-  
-  // 일반 사용자: 검증 상태 확인
-  if (!isSocialUser) {
-    const verified = await redis.get(`password-verified:CHANGE_PASSWORD:${userId}`);
-    
-    if (!verified) {
-      throw new UnauthorizedException(
-        "A015",
-        "현재 비밀번호 확인이 필요합니다."
-      );
-    }
-    const isSame = await compareHash(newPassword, user.password!);
-    if (isSame) {
-    throw new ConflictException(
-      "U012", 
-      "현재 비밀번호와 동일한 비밀번호로 변경할 수 없습니다."
-    );
-  }
-    // 일회용: 사용 후 삭제
-    await redis.del(`password-verified:CHANGE_PASSWORD:${userId}`);
-  }
-
-  // 비밀번호 변경
-  const hashedPassword = await hashingString(newPassword);
-  await this.authRepository.updatePassword(userId, hashedPassword);
-  await this.clearUserSession(userId);
-
-  const updatedUser = await this.authRepository.findUserById(userId);
-  return new UpdatePasswordResponseDto(updatedUser!);
-}
-
-  // 회원탈퇴
-  async deleteAccount(userId: bigint, sid: string, password?: string): Promise<void> {
+  /**
+   * 비밀번호 설정/변경 (통합)
+   * - 소셜 로그인 사용자: 비밀번호 설정
+   * - 일반 사용자: 비밀번호 변경 (프론트에서 verify-password 먼저 호출 필요)
+   */
+  async updatePassword(
+    userId: bigint,
+    newPassword: string,
+  ): Promise<UpdatePasswordResponseDto> {
     const user = await this.authRepository.findUserById(userId);
-    
+
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
 
-      const isSocialUser = PasswordUtil.isSocialUser(user.password);
-  
+    const isSocialUser = PasswordUtil.isSocialUser(user.password);
+
     // 일반 사용자: 검증 상태 확인
     if (!isSocialUser) {
-      const verified = await redis.get(`password-verified:DELETE_ACCOUNT:${userId}`);
-      
+      const verified = await redis.get(
+        `password-verified:CHANGE_PASSWORD:${userId}`,
+      );
+
       if (!verified) {
         throw new UnauthorizedException(
           "A015",
-          "현재 비밀번호 확인이 필요합니다."
+          "현재 비밀번호 확인이 필요합니다.",
+        );
+      }
+      const isSame = await compareHash(newPassword, user.password!);
+      if (isSame) {
+        throw new ConflictException(
+          "U012",
+          "현재 비밀번호와 동일한 비밀번호로 변경할 수 없습니다.",
+        );
+      }
+      // 일회용: 사용 후 삭제
+      await redis.del(`password-verified:CHANGE_PASSWORD:${userId}`);
+    }
+
+    // 비밀번호 변경
+    const hashedPassword = await hashingString(newPassword);
+    await this.authRepository.updatePassword(userId, hashedPassword);
+    await this.clearUserSession(userId);
+
+    const updatedUser = await this.authRepository.findUserById(userId);
+    return new UpdatePasswordResponseDto(updatedUser!);
+  }
+
+  // 회원탈퇴
+  async deleteAccount(
+    userId: bigint,
+    sid: string,
+    password?: string,
+  ): Promise<void> {
+    const user = await this.authRepository.findUserById(userId);
+
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
+    }
+
+    const isSocialUser = PasswordUtil.isSocialUser(user.password);
+
+    // 일반 사용자: 검증 상태 확인
+    if (!isSocialUser) {
+      const verified = await redis.get(
+        `password-verified:DELETE_ACCOUNT:${userId}`,
+      );
+
+      if (!verified) {
+        throw new UnauthorizedException(
+          "A015",
+          "현재 비밀번호 확인이 필요합니다.",
         );
       }
       // 일회용: 사용 후 삭제
@@ -745,16 +704,16 @@ async updatePassword(
       await this.clearUserSession(userId);
     } catch (error) {
       // 세션 삭제 실패는 로그만 남김 (TTL로 자동 만료되므로 치명적이지 않음)
-      console.error('Failed to clear user session:', error);
+      console.error("Failed to clear user session:", error);
     }
   }
-    async getMyProfile(userId: bigint): Promise<UserProfileResponseDto> {
-      const user = await this.authRepository.findUserById(userId);
-      
-      if (!user) {
-        throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
-      }
-      
-      return new UserProfileResponseDto(user);
+  async getMyProfile(userId: bigint): Promise<UserProfileResponseDto> {
+    const user = await this.authRepository.findUserById(userId);
+
+    if (!user) {
+      throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
+
+    return new UserProfileResponseDto(user);
   }
+}

@@ -112,6 +112,7 @@ export class WishlistRepository {
       data: {
         userId: BigInt(command.userId),
         productId: BigInt(command.cacheId),
+        reason: command.reason,
       },
     });
   }

@@ -100,15 +100,22 @@ export class WishlistService {
         "존재하지 않는 작업 ID 입니다.",
       );
     }
-    if (currentValue === "DONE" || currentValue === "FAILED") {
-      return currentValue as "DONE" | "FAILED";
-    }
     const topic = EventType.CRAWL_STATUS_UPDATED;
 
     type resultValueType = {
       result: "DONE" | "FAILED" | null;
       dataId: string | null;
     };
+    if (currentValue === "DONE" || currentValue === "FAILED") {
+      const dataId =
+        currentValue === "DONE"
+          ? await valkeyClient.valkeyPub.get(`status:crawl:${jobId}:resultId`)
+          : null;
+      return {
+        result: currentValue as "DONE" | "FAILED",
+        dataId: dataId?.toString() ?? null,
+      };
+    }
 
     const TIMEOUT_MS = 1000 * 120; // 2 minutes
     return new Promise<resultValueType>(async (resolve, reject) => {
@@ -171,7 +178,11 @@ export class WishlistService {
     );
   }
   async addWishListFromCache(data: AddWishListFromCacheRequestDto) {
-    const command = new AddWishListFromCacheCommand(data.cacheId, data.userId);
+    const command = new AddWishListFromCacheCommand(
+      data.cacheId,
+      data.userId,
+      data.reason,
+    );
     const isAlreadyExist =
       (await this.wishlistRepository.findAddedItemAutoByProductId(
         command.cacheId,

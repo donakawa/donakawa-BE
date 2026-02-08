@@ -134,10 +134,11 @@ export class WishlistController extends Controller {
   @Security("jwt")
   public async addWishListFromCache(
     @BodyProp("cacheId") cacheId: string,
+    @BodyProp("reason") reason: string,
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<AddWishListFromCacheResponseDto>> {
     const userId = req.user!.id;
-    const dto = new AddWishListFromCacheRequestDto({ cacheId, userId });
+    const dto = new AddWishListFromCacheRequestDto({ cacheId, userId, reason });
     return success(await this.wishlistService.addWishListFromCache(dto));
   }
   /**
