@@ -178,7 +178,11 @@ export class WishlistService {
     );
   }
   async addWishListFromCache(data: AddWishListFromCacheRequestDto) {
-    const command = new AddWishListFromCacheCommand(data.cacheId, data.userId);
+    const command = new AddWishListFromCacheCommand(
+      data.cacheId,
+      data.userId,
+      data.reason,
+    );
     const isAlreadyExist =
       (await this.wishlistRepository.findAddedItemAutoByProductId(
         command.cacheId,
