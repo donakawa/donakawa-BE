@@ -17,6 +17,7 @@ export class WishlistRepository {
         id: true,
         name: true,
         price: true,
+        brandName: true,
         updatedAt: true,
         productId: true,
         photoFileId: true,
@@ -165,8 +166,8 @@ export class WishlistRepository {
       conditions.length > 0
         ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`
         : Prisma.empty;
-    const query = Prisma.sql`select * from (select id, name, price, photo_file_id as "photoFileId", url, created_at as "createdAt", status, folder_id as "folderId", 'MANUAL'::text as type ,concat('M',lpad((extract(epoch from created_at)*1000)::bigint::text,13,'0'),lpad(id::text,13,'0')) as cursor from added_item_manual where user_id = ${userId} union all
-SELECT added_item_auto.id, p.name, p.price,p.photo_file_id as "photoFileId", replace(s.product_url_template, '\$\{productId\}', p.product_id) as url,  "createdAt",added_item_auto.status,folder_id, 'AUTO'::text as type,concat('A',lpad((extract(epoch from "createdAt")*1000)::bigint::text,13,'0'),lpad(added_item_auto.id::text,13,'0'))
+    const query = Prisma.sql`select * from (select id, name, brand as "brandName",price, photo_file_id as "photoFileId", url, created_at as "createdAt", status, folder_id as "folderId", 'MANUAL'::text as type ,concat('M',lpad((extract(epoch from created_at)*1000)::bigint::text,13,'0'),lpad(id::text,13,'0')) as cursor from added_item_manual where user_id = ${userId} union all
+SELECT added_item_auto.id, p.name, p.brand_name as "brandName",p.price,p.photo_file_id as "photoFileId", replace(s.product_url_template, '\$\{productId\}', p.product_id) as url,  "createdAt",added_item_auto.status,folder_id, 'AUTO'::text as type,concat('A',lpad((extract(epoch from "createdAt")*1000)::bigint::text,13,'0'),lpad(added_item_auto.id::text,13,'0'))
 from added_item_auto left join public.product p on added_item_auto.product_id = p.id
 left join store_platform s on p.store_platform_id = s.id where user_id = ${userId}) as t ${whereClause} order by cursor desc limit ${take + 1};`;
     return this.prisma.$queryRaw<WishlistRecordInterface[]>(query);
