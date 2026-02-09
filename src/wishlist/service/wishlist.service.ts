@@ -69,7 +69,15 @@ export class WishlistService {
     data: AddCrawlTaskRequestDto,
     userId: string,
   ): Promise<AddCrawlTaskResponseDto> {
-    const url = new URL(data.url);
+    let url: URL;
+    try {
+      url = new URL(data.url);
+    } catch {
+      throw new BadRequestException(
+        "INVALID_URL",
+        "유효하지 않은 URL 형식입니다.",
+      );
+    }
     const isSupportedPlatform =
       (await this.wishlistRepository.findStorePlatformByUrlDomain(
         url.hostname,
@@ -80,7 +88,7 @@ export class WishlistService {
         "지원하지 않는 쇼핑몰 플랫폼입니다.",
       );
     }
-    const cleanUrl = url.origin + url.pathname;
+    const cleanUrl = url.origin + url.pathname.replace(/\/$/, "");
     const isAlreadyExistItem =
       (
         await this.wishlistRepository.findAddedItems(
@@ -229,9 +237,19 @@ export class WishlistService {
     return new AddWishListFromCacheResponseDto(savedEntity);
   }
   async addWishListManual(dto: AddWishListRequestDto) {
+    let url: URL;
+    try {
+      url = new URL(dto.url);
+    } catch {
+      throw new BadRequestException(
+        "INVALID_URL",
+        "유효하지 않은 URL 형식입니다.",
+      );
+    }
+    const cleanUrl = url.origin + url.pathname.replace(/\/$/, "");
     const isAlreadyExist =
       (await this.wishlistRepository.findAddedItemManualByUrl(
-        dto.url,
+        cleanUrl,
         dto.userId,
         {
           select: { id: true },
@@ -260,7 +278,7 @@ export class WishlistService {
         brandName: dto.brandName,
         reason: dto.reason,
         photoFileId: uploadedResultPayload?.id,
-        url: dto.url,
+        url: cleanUrl,
       });
 
       const savedEntity =
