@@ -169,7 +169,7 @@ export class AuthController {
 
         if (reauthResult) {
           req.res!.redirect(
-            `${frontendUrl}/mypage/settings/withdrawal?reauth=success`,
+            `${frontendUrl}/mypage/setting/withdrawal?reauth=success`,
           );
           return;
         }
@@ -179,13 +179,13 @@ export class AuthController {
         // 인프라 에러 (Redis 장애)
         if (reauthError.message === "REDIS_CONNECTION_ERROR") {
           req.res!.redirect(
-            `${frontendUrl}/mypage/settings/withdrawal?system_error=true`,
+            `${frontendUrl}/mypage/setting/withdrawal?system_error=true`,
           );
           return;
         }
 
         req.res!.redirect(
-          `${frontendUrl}/mypage/settings/withdrawal?reauth=failed`,
+          `${frontendUrl}/mypage/setting/withdrawal?reauth=failed`,
         );
         return;
       }
