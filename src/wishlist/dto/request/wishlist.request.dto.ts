@@ -71,9 +71,14 @@ export class AddWishListFromCacheRequestDto {
   @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
   @IsNotEmpty()
   userId!: string;
-  constructor(param: { cacheId: string; userId: string }) {
+  @IsString()
+  @MaxLength(30)
+  @IsNotEmpty()
+  reason!: string;
+  constructor(param: { cacheId: string; userId: string; reason: string }) {
     this.cacheId = param.cacheId;
     this.userId = param.userId;
+    this.reason = param.reason;
   }
 }
 export class ShowWishitemListRequestDto {

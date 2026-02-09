@@ -159,6 +159,7 @@ const models: TsoaRoute.Models = {
         "properties": {
             "id": {"dataType":"string","required":true},
             "name": {"dataType":"string","required":true},
+            "brandName": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "price": {"dataType":"double","required":true},
             "photoUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "type": {"ref":"WishitemType","required":true},
@@ -1201,6 +1202,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsWishlistController_addWishListFromCache: Record<string, TsoaRoute.ParameterSchema> = {
                 cacheId: {"in":"body-prop","name":"cacheId","required":true,"dataType":"string"},
+                reason: {"in":"body-prop","name":"reason","required":true,"dataType":"string"},
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.post('/wishlist/items/from-cache',
@@ -1477,7 +1479,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
-        app.post('/wishlist/items/:itemId/status',
+        app.post('/wishlist/items/:itemId/buy',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.markItemAsPurchased)),

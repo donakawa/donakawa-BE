@@ -3,6 +3,7 @@ import { WishitemStatus, WishitemType } from "../types/wishitem.types";
 export interface WishlistRecordInterface {
   id: bigint;
   name: string;
+  brandName: string | null;
   price: number;
   photoFileId: bigint | null;
   url: string;

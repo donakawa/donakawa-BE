@@ -24,6 +24,7 @@ export class AddCrawlTaskResponseDto {
 export class GetCrawlResultResponseDto {
   id!: string;
   productName!: string;
+  brandName!: string | null;
   platformName!: string;
   productId!: string;
   price!: number;
@@ -36,11 +37,12 @@ export class GetCrawlResultResponseDto {
   ) {
     this.id = entity.id.toString();
     this.productName = entity.name;
+    this.brandName = entity.brandName;
     this.platformName = storePlatformName;
     this.productId = entity.productId;
     this.price = entity.price;
     this.updatedAt =
-      entity.updatedAt!.toISOString() ?? new Date().toISOString();
+      entity.updatedAt?.toISOString() ?? new Date().toISOString();
     this.imageUrl = imageUrl;
   }
 }
@@ -119,6 +121,7 @@ export class ShowWishitemListResponseDto {
       (acc, wishitem) => {
         acc.push({
           id: wishitem.id.toString(),
+          brandName: wishitem.brandName,
           name: wishitem.name,
           price: wishitem.price,
           photoUrl: photoUrls[wishitem.cursor],
@@ -163,6 +166,7 @@ export class ShowWishitemsInFolderResponseDto {
       (acc, wishitem) => {
         acc.push({
           id: wishitem.id.toString(),
+          brandName: wishitem.brandName,
           name: wishitem.name,
           price: wishitem.price,
           photoUrl: photoUrls[wishitem.cursor],

@@ -122,6 +122,7 @@ model Product {
   storePlatformId BigInt        @map("store_platform_id")
   storePlatform   StorePlatform @relation(fields: [storePlatformId], references: [id])
   name            String        @db.VarChar(300)
+  brandName       String?       @db.VarChar(50) @map("brand_name")
   price           Int
   files           Files?        @relation(fields: [photoFileId], references: [id])
   photoFileId     BigInt?       @map("photo_file_id") @unique
