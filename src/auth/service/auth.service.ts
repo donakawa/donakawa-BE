@@ -373,7 +373,7 @@ export class AuthService {
     ) {
       throw new UnauthorizedException(
         "A010",
-        "인증 요청 횟수를 초과했습니다. 1시간 후 다시 시도해주세요.",
+        "인증 요청 횟수를 초과했습니다. 30분 후 다시 시도해주세요.",
       );
     }
 
