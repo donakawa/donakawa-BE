@@ -682,43 +682,26 @@ export class AuthService {
     return new UpdatePasswordResponseDto(updatedUser!);
   }
 
-  // 회원탈퇴
-  async deleteAccount(
-    userId: bigint,
-    sid: string,
-    password?: string,
-  ): Promise<void> {
+  // 회원 탈퇴
+  async deleteAccount(userId: bigint, sid: string): Promise<void> {
     const user = await this.authRepository.findUserById(userId);
 
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
 
-    const isSocialUser = PasswordUtil.isSocialUser(user.password);
+    // 비밀번호 확인/카카오/구글 중 재인증 성공했는지 확인
+    const isVerified = await this.checkReauthVerification(userId);
 
-    // 일반 사용자: 검증 상태 확인
-    if (!isSocialUser) {
-      const verified = await redis.get(
-        RedisKeys.passwordVerified(
-          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
-          userId,
-        ),
-      );
-
-      if (!verified) {
-        throw new UnauthorizedException(
-          "A015",
-          "현재 비밀번호 확인이 필요합니다.",
-        );
-      }
-      // 일회용: 사용 후 삭제
-      await redis.del(
-        RedisKeys.passwordVerified(
-          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
-          userId,
-        ),
+    if (!isVerified) {
+      throw new UnauthorizedException(
+        "A016",
+        "본인 확인이 필요합니다. 비밀번호 확인 혹은 소셜 계정으로 재인증해주세요.",
       );
     }
+
+    // 검증 완료 후 Redis 키 삭제
+    await this.clearReauthVerification(userId);
 
     await this.prisma.$transaction(async (tx) => {
       await this.authRepository.deleteUser(userId, tx);
@@ -732,6 +715,34 @@ export class AuthService {
       console.error("Failed to clear user session:", error);
     }
   }
+
+  // 모든 재인증 방법 체크
+  private async checkReauthVerification(userId: bigint): Promise<boolean> {
+    const checks = await Promise.all([
+      redis.get(`delete-account:verified:${userId}`), // 소셜(구글/카카오/네이버)
+      redis.get(
+        RedisKeys.passwordVerified(
+          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
+          userId,
+        ),
+      ), // 로컬
+    ]);
+
+    return checks.some((result) => result !== null);
+  }
+
+  // 모든 재인증 관련 Redis 키 삭제
+  private async clearReauthVerification(userId: bigint): Promise<void> {
+    await Promise.all([
+      redis.del(`delete-account:verified:${userId}`),
+      redis.del(
+        RedisKeys.passwordVerified(
+          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
+          userId,
+        ),
+      ),
+    ]);
+  }
   async getMyProfile(userId: bigint): Promise<UserProfileResponseDto> {
     const user = await this.authRepository.findUserById(userId);
 
@@ -740,5 +751,60 @@ export class AuthService {
     }
 
     return new UserProfileResponseDto(user);
+  }
+
+  // 구글 재인증 URL (탈퇴용)
+  async getGoogleReauthUrl(userId: string): Promise<string> {
+    const state = randomBytes(32).toString("hex");
+    const stateKey = `oauth:reauth:${state}`;
+
+    // state에 userId와 목적 저장
+    await redis.set(
+      stateKey,
+      JSON.stringify({ userId, purpose: "delete_account" }),
+      { EX: 300 },
+    );
+
+    return this.googleOAuthService.getAuthUrl(state);
+  }
+  async handleGoogleReauth(state: string, code: string): Promise<boolean> {
+    // 재인증 데이터 조회
+    const reauthKey = `oauth:reauth:${state}`;
+    const reauthData = await redis.get(reauthKey);
+
+    if (!reauthData) return false;
+
+    const { userId, purpose } = JSON.parse(reauthData);
+
+    if (purpose !== "delete_account") return false;
+
+    // 구글 사용자 정보 가져오기
+    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+
+    // 본인 확인
+    const user = await this.authRepository.findUserById(BigInt(userId));
+    if (!user) {
+      throw new UnauthorizedException("A004", "사용자를 찾을 수 없습니다.");
+    }
+
+    const existingOauth = await this.authRepository.findOauthByUserId(
+      BigInt(userId),
+      OauthProvider.GOOGLE,
+    );
+
+    if (!existingOauth || existingOauth.uid !== googleUserInfo.googleUid) {
+      throw new UnauthorizedException("A017", "본인 확인에 실패했습니다.");
+    }
+
+    // 재인증 성공 처리
+    await redis.set(
+      RedisKeys.deleteAccountVerified(userId),
+      "true",
+      { EX: RedisTTL.DELETE_ACCOUNT_VERIFIED }, // 5분 유효
+    );
+
+    await redis.del(reauthKey);
+
+    return true;
   }
 }
