@@ -322,7 +322,7 @@ const models: TsoaRoute.Models = {
             "itemId": {"dataType":"double","required":true},
             "satisfaction": {"dataType":"double","required":true},
             "frequency": {"dataType":"double","required":true},
-            "createdAt": {"dataType":"datetime","required":true},
+            "updatedAt": {"dataType":"union","subSchemas":[{"dataType":"datetime"},{"dataType":"enum","enums":[null]}],"required":true},
         },
         "additionalProperties": false,
     },
@@ -340,6 +340,7 @@ const models: TsoaRoute.Models = {
     "CreateReviewRequestDto": {
         "dataType": "refObject",
         "properties": {
+            "itemType": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["MANUAL"]}],"required":true},
             "satisfaction": {"dataType":"double","required":true},
             "frequency": {"dataType":"double","required":true},
         },
@@ -1023,7 +1024,7 @@ const models: TsoaRoute.Models = {
             "nickname": {"dataType":"string","required":true},
             "goal": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "hasPassword": {"dataType":"boolean","required":true},
-            "provider": {"dataType":"string","required":true},
+            "providers": {"dataType":"array","array":{"dataType":"string"},"required":true},
         },
         "additionalProperties": false,
     },
@@ -1112,6 +1113,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.post('/wishlist/crawl-tasks',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.addCrawlTask)),
 
