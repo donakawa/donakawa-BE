@@ -1,7 +1,6 @@
 import { OauthProvider, PrismaClient } from "@prisma/client";
 import { GoogleOAuthService } from "./google-oauth.service";
 import {
-  BadRequestException,
   ConflictException,
   NotFoundException,
   UnauthorizedException,
@@ -30,11 +29,10 @@ import { User } from "@prisma/client";
 import { randomBytes, randomInt } from "node:crypto";
 import { VerifyPasswordTypeEnum } from "../enums/verify-password.enum";
 import { KakaoOAuthService } from "./kakao-oauth.service";
+import { RedisKeys, RedisTTL } from "../constants/redis-keys.constant";
+import { Limits } from "../constants/limits.constant";
 
 export class AuthService {
-  private readonly SESSION_TTL = 60 * 60 * 24 * 7; // 7일
-  private readonly EMAIL_VERIFICATION_CODE_TTL = 60 * 5; // 5분
-  private readonly EMAIL_VERIFIED_SIGNUP_EXPIRES_IN = 60 * 10; // 10분
   private readonly ACCESS_TOKEN_EXPIRES_IN = "15m";
 
   constructor(
@@ -86,19 +84,19 @@ export class AuthService {
 
     await redis
       .multi()
-      .set(`user:${userId}:sid`, sid, { EX: this.SESSION_TTL })
-      .set(`user:refreshToken:${sid}`, hashedRefreshToken, {
-        EX: this.SESSION_TTL,
+      .set(RedisKeys.userSid(userId), sid, { EX: RedisTTL.USER_SESSION })
+      .set(RedisKeys.refreshToken(sid), hashedRefreshToken, {
+        EX: RedisTTL.USER_SESSION,
       })
       .exec();
   }
 
   // 사용자의 모든 세션 정리 (userId만으로 삭제)
   private async clearUserSession(userId: bigint): Promise<void> {
-    const sid = await redis.get(`user:${userId}:sid`);
+    const sid = await redis.get(RedisKeys.userSid(userId));
     if (sid) {
-      await redis.del(`user:refreshToken:${sid}`);
-      await redis.del(`user:${userId}:sid`);
+      await redis.del(RedisKeys.refreshToken(sid));
+      await redis.del(RedisKeys.userSid(userId));
     }
   }
 
@@ -137,19 +135,20 @@ export class AuthService {
   // Google Auth URL 가져오기 (state 생성 및 저장)
   async getGoogleAuthUrl(): Promise<string> {
     // 랜덤 state 생성 (32바이트 = 64자 hex)
-    const state = randomBytes(32).toString("hex");
+    const randomId = randomBytes(32).toString("hex");
+    const state = `login_${randomId}`; // 일반 로그인 표시
 
     // Redis에 5분간 저장
-    const stateKey = `oauth:state:${state}`;
-    await redis.set(stateKey, "valid", { EX: 300 });
+    const stateKey = RedisKeys.oauthState(state);
+    await redis.set(stateKey, "valid", { EX: RedisTTL.OAUTH_STATE });
 
     return this.googleOAuthService.getAuthUrl(state);
   }
   // 카카오 Auth URL 가져오기
   async getKakaoAuthUrl(): Promise<string> {
     const state = randomBytes(32).toString("hex");
-    const stateKey = `oauth:state:${state}`;
-    await redis.set(stateKey, "valid", { EX: 300 });
+    const stateKey = RedisKeys.oauthState(state);
+    await redis.set(stateKey, "valid", { EX: RedisTTL.OAUTH_STATE });
     return this.kakaoOAuthService.getAuthUrl(state);
   }
 
@@ -245,7 +244,7 @@ export class AuthService {
 
   // State 검증
   private async verifyOAuthState(state: string): Promise<void> {
-    const stateKey = `oauth:state:${state}`;
+    const stateKey = RedisKeys.oauthState(state);
     const isValid = await redis.get(stateKey);
 
     if (!isValid) {
@@ -266,7 +265,7 @@ export class AuthService {
         process.env.REFRESH_TOKEN_SECRET_KEY!,
       ) as any;
 
-      const storedHash = await redis.get(`user:refreshToken:${decoded.sid}`);
+      const storedHash = await redis.get(RedisKeys.refreshToken(decoded.sid));
       if (!storedHash) {
         throw new UnauthorizedException("U003", "만료된 세션입니다.");
       }
@@ -305,8 +304,8 @@ export class AuthService {
 
   // 로그아웃
   async logout(userId: bigint, sid: string): Promise<void> {
-    await redis.del(`user:${userId}:sid`);
-    await redis.del(`user:refreshToken:${sid}`);
+    await redis.del(RedisKeys.userSid(userId));
+    await redis.del(RedisKeys.refreshToken(sid));
   }
 
   // 회원가입
@@ -318,7 +317,9 @@ export class AuthService {
       throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
     }
 
-    const verified = await redis.get(`email:verified:REGISTER:${body.email}`);
+    const verified = await redis.get(
+      RedisKeys.emailVerified(EmailVerifyTypeEnum.REGISTER, body.email),
+    );
 
     if (!verified) {
       throw new UnauthorizedException("A003", "이메일 인증이 필요합니다.");
@@ -339,7 +340,9 @@ export class AuthService {
     });
     const user = await this.authRepository.saveUser(command);
 
-    await redis.del(`email:verified:REGISTER:${body.email}`);
+    await redis.del(
+      RedisKeys.emailVerified(EmailVerifyTypeEnum.REGISTER, body.email),
+    );
 
     return new RegisterResponseDto(user);
   }
@@ -366,25 +369,28 @@ export class AuthService {
       }
     }
 
-    const attemptKey = `email:send_attempt:${type}:${email}`;
+    const attemptKey = RedisKeys.emailSendAttempt(type, email);
     const attempts = await redis.get(attemptKey);
 
-    if (attempts && parseInt(attempts) >= 5) {
+    if (
+      attempts &&
+      parseInt(attempts) >= Limits.EMAIL_VERIFICATION_MAX_ATTEMPTS
+    ) {
       throw new UnauthorizedException(
         "A010",
-        "인증 요청 횟수를 초과했습니다. 1시간 후 다시 시도해주세요.",
+        `인증 요청 횟수를 초과했습니다. ${Math.floor(RedisTTL.EMAIL_SEND_ATTEMPT / 60)}분 후 다시 시도해주세요.`,
       );
     }
 
     const code = this.generateEmailCode();
 
-    await redis.set(`email:verify:${type}:${email}`, code, {
-      EX: this.EMAIL_VERIFICATION_CODE_TTL,
+    await redis.set(RedisKeys.emailVerifyCode(type, email), code, {
+      EX: RedisTTL.EMAIL_VERIFICATION_CODE,
     });
 
     const newCount = await redis.incr(attemptKey);
     if (newCount === 1) {
-      await redis.expire(attemptKey, 3600);
+      await redis.expire(attemptKey, RedisTTL.EMAIL_SEND_ATTEMPT);
     }
 
     await this.sendEmail(email, code, type);
@@ -396,7 +402,7 @@ export class AuthService {
     code: string,
     type: EmailVerifyTypeEnum,
   ): Promise<void> {
-    const savedCode = await redis.get(`email:verify:${type}:${email}`);
+    const savedCode = await redis.get(RedisKeys.emailVerifyCode(type, email));
 
     if (!savedCode || savedCode !== code) {
       throw new UnauthorizedException(
@@ -405,9 +411,9 @@ export class AuthService {
       );
     }
 
-    await redis.del(`email:verify:${type}:${email}`);
-    await redis.set(`email:verified:${type}:${email}`, "true", {
-      EX: this.EMAIL_VERIFIED_SIGNUP_EXPIRES_IN,
+    await redis.del(RedisKeys.emailVerifyCode(type, email));
+    await redis.set(RedisKeys.emailVerified(type, email), "true", {
+      EX: RedisTTL.EMAIL_VERIFIED,
     });
   }
 
@@ -462,7 +468,7 @@ export class AuthService {
         ">
           ${code}
         </div>
-        <p>인증 코드는 <strong>${Math.floor(this.EMAIL_VERIFICATION_CODE_TTL / 60)}분</strong> 동안 유효합니다.</p>
+        <p>인증 코드는 <strong>${Math.floor(RedisTTL.EMAIL_VERIFICATION_CODE / 60)}분</strong> 동안 유효합니다.</p>
         <p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>
       </div>
     `,
@@ -471,7 +477,9 @@ export class AuthService {
 
   // 비밀번호 재설정
   async resetPassword(email: string, newPassword: string): Promise<void> {
-    const verified = await redis.get(`email:verified:RESET_PASSWORD:${email}`);
+    const verified = await redis.get(
+      RedisKeys.emailVerified(EmailVerifyTypeEnum.RESET_PASSWORD, email),
+    );
     if (!verified) {
       throw new UnauthorizedException("A007", "이메일 인증이 필요합니다.");
     }
@@ -488,7 +496,9 @@ export class AuthService {
       );
     }
 
-    await redis.del(`email:verified:RESET_PASSWORD:${email}`);
+    await redis.del(
+      RedisKeys.emailVerified(EmailVerifyTypeEnum.RESET_PASSWORD, email),
+    );
 
     const hashedPassword = await hashingString(newPassword);
     await this.authRepository.updatePassword(user.id, hashedPassword);
@@ -563,15 +573,15 @@ export class AuthService {
     type: VerifyPasswordTypeEnum, // 수정: type 파라미터 추가
   ): Promise<boolean> {
     // 수정: Redis 키를 타입별로 분리
-    const rateLimitKey = `password-verify:rate:${type}:${userId}`;
-    const verifiedKey = `password-verified:${type}:${userId}`;
+    const rateLimitKey = RedisKeys.passwordVerifyRateLimit(type, userId);
+    const verifiedKey = RedisKeys.passwordVerified(type, userId);
 
     // Rate limiting 체크
     const attempts = await redis.get(rateLimitKey);
-    if (attempts && parseInt(attempts) >= 10) {
+    if (attempts && parseInt(attempts) >= Limits.PASSWORD_VERIFY_MAX_ATTEMPTS) {
       throw new UnauthorizedException(
         "A014",
-        "비밀번호 확인 시도 횟수를 초과했습니다. 5분 후 다시 시도해주세요.",
+        `비밀번호 확인 시도 횟수를 초과했습니다. ${Math.floor(RedisTTL.PASSWORD_RATE_LIMIT / 60)}분 후 다시 시도해주세요.`,
       );
     }
 
@@ -596,7 +606,7 @@ export class AuthService {
       // 실패 시 시도 횟수 증가 및 TTL 설정
       const newCount = await redis.incr(rateLimitKey);
       if (newCount === 1) {
-        await redis.expire(rateLimitKey, 300); // 5분
+        await redis.expire(rateLimitKey, RedisTTL.PASSWORD_RATE_LIMIT);
       }
       console.log({
         event: "password_verify_failed",
@@ -608,7 +618,7 @@ export class AuthService {
     }
 
     // 성공 시 Redis에 검증 상태 저장 (5분간 유효)
-    await redis.set(verifiedKey, "true", { EX: 300 });
+    await redis.set(verifiedKey, "true", { EX: RedisTTL.PASSWORD_VERIFIED });
 
     // 실패 횟수 초기화
     await redis.del(rateLimitKey);
@@ -636,7 +646,10 @@ export class AuthService {
     // 일반 사용자: 검증 상태 확인
     if (!isSocialUser) {
       const verified = await redis.get(
-        `password-verified:CHANGE_PASSWORD:${userId}`,
+        RedisKeys.passwordVerified(
+          VerifyPasswordTypeEnum.CHANGE_PASSWORD,
+          userId,
+        ),
       );
 
       if (!verified) {
@@ -653,7 +666,12 @@ export class AuthService {
         );
       }
       // 일회용: 사용 후 삭제
-      await redis.del(`password-verified:CHANGE_PASSWORD:${userId}`);
+      await redis.del(
+        RedisKeys.passwordVerified(
+          VerifyPasswordTypeEnum.CHANGE_PASSWORD,
+          userId,
+        ),
+      );
     }
 
     // 비밀번호 변경
@@ -665,39 +683,34 @@ export class AuthService {
     return new UpdatePasswordResponseDto(updatedUser!);
   }
 
-  // 회원탈퇴
-  async deleteAccount(
-    userId: bigint,
-    sid: string,
-    password?: string,
-  ): Promise<void> {
+  // 회원 탈퇴
+  async deleteAccount(userId: bigint, sid: string): Promise<void> {
     const user = await this.authRepository.findUserById(userId);
 
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
 
-    const isSocialUser = PasswordUtil.isSocialUser(user.password);
+    // 비밀번호 확인/카카오/구글 중 재인증 성공했는지 확인
+    const isVerified = await this.checkReauthVerification(userId);
 
-    // 일반 사용자: 검증 상태 확인
-    if (!isSocialUser) {
-      const verified = await redis.get(
-        `password-verified:DELETE_ACCOUNT:${userId}`,
+    if (!isVerified) {
+      throw new UnauthorizedException(
+        "A016",
+        "본인 확인이 필요합니다. 비밀번호 확인 혹은 소셜 계정으로 재인증해주세요.",
       );
-
-      if (!verified) {
-        throw new UnauthorizedException(
-          "A015",
-          "현재 비밀번호 확인이 필요합니다.",
-        );
-      }
-      // 일회용: 사용 후 삭제
-      await redis.del(`password-verified:DELETE_ACCOUNT:${userId}`);
     }
 
     await this.prisma.$transaction(async (tx) => {
       await this.authRepository.deleteUser(userId, tx);
     });
+
+    // 검증 완료 후 Redis 키 삭제
+    try {
+      await this.clearReauthVerification(userId);
+    } catch (error) {
+      console.error("Failed to clear reauth verification:", error);
+    }
 
     // 세션 정리 (실패해도 자동 만료됨)
     try {
@@ -707,6 +720,34 @@ export class AuthService {
       console.error("Failed to clear user session:", error);
     }
   }
+
+  // 모든 재인증 방법 체크
+  private async checkReauthVerification(userId: bigint): Promise<boolean> {
+    const checks = await Promise.all([
+      redis.get(RedisKeys.deleteAccountVerified(userId)), // 소셜(구글/카카오/네이버)
+      redis.get(
+        RedisKeys.passwordVerified(
+          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
+          userId,
+        ),
+      ), // 로컬
+    ]);
+
+    return checks.some((result) => result !== null);
+  }
+
+  // 모든 재인증 관련 Redis 키 삭제
+  private async clearReauthVerification(userId: bigint): Promise<void> {
+    await Promise.all([
+      redis.del(RedisKeys.deleteAccountVerified(userId)),
+      redis.del(
+        RedisKeys.passwordVerified(
+          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
+          userId,
+        ),
+      ),
+    ]);
+  }
   async getMyProfile(userId: bigint): Promise<UserProfileResponseDto> {
     const user = await this.authRepository.findUserById(userId);
 
@@ -715,5 +756,65 @@ export class AuthService {
     }
 
     return new UserProfileResponseDto(user);
+  }
+
+  // 구글 재인증 URL (탈퇴용)
+  async getGoogleReauthUrl(userId: bigint): Promise<string> {
+    const randomId = randomBytes(32).toString("hex");
+    const state = `reauth_${randomId}`; // prefix로 재인증 표시
+    const stateKey = RedisKeys.oauthReauthState(state);
+
+    // state에 userId와 목적 저장
+    await redis.set(stateKey, userId.toString(), { EX: RedisTTL.OAUTH_STATE });
+
+    return this.googleOAuthService.getAuthUrl(state);
+  }
+  async handleGoogleReauth(state: string, code: string): Promise<boolean> {
+    if (!state.startsWith("reauth_")) {
+      return false; // 일반 로그인
+    }
+    // 재인증 데이터 조회
+    const reauthKey = RedisKeys.oauthReauthState(state);
+    let userId: string | null;
+
+    try {
+      userId = await redis.get(reauthKey);
+    } catch (error) {
+      console.error("Redis error during reauth lookup:", error);
+      throw new Error("REDIS_CONNECTION_ERROR"); // 커스텀 메시지
+    }
+
+    if (!userId) {
+      throw new UnauthorizedException("A018", "재인증 세션이 만료되었습니다.");
+    }
+
+    // 구글 사용자 정보 가져오기
+    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+
+    // 본인 확인
+    const user = await this.authRepository.findUserById(BigInt(userId));
+    if (!user) {
+      throw new UnauthorizedException("A004", "사용자를 찾을 수 없습니다.");
+    }
+
+    const existingOauth = await this.authRepository.findOauthByUserId(
+      BigInt(userId),
+      OauthProvider.GOOGLE,
+    );
+
+    if (!existingOauth || existingOauth.uid !== googleUserInfo.googleUid) {
+      throw new UnauthorizedException("A017", "본인 확인에 실패했습니다.");
+    }
+
+    // 재인증 성공 처리
+    await redis.set(
+      RedisKeys.deleteAccountVerified(BigInt(userId)),
+      "true",
+      { EX: RedisTTL.DELETE_ACCOUNT_VERIFIED }, // 5분 유효
+    );
+
+    await redis.del(reauthKey);
+
+    return true;
   }
 }

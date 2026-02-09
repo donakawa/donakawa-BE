@@ -24,7 +24,7 @@ export class UpdateNicknameResponseDto {
   readonly id: string;
   readonly nickname: string;
   readonly updatedAt: string;
-  
+
   constructor(entity: User) {
     this.id = entity.id.toString();
     this.nickname = entity.nickname;
@@ -36,7 +36,7 @@ export class UpdateGoalResponseDto {
   readonly id: string;
   readonly goal: string;
   readonly updatedAt: string;
-  
+
   constructor(entity: User) {
     this.id = entity.id.toString();
     this.goal = entity.goal!;
@@ -44,29 +44,32 @@ export class UpdateGoalResponseDto {
   }
 }
 export class UserProfileResponseDto {
-	readonly id: string;
-	readonly email: string;
-	readonly nickname: string;
-	readonly goal: string | null; 
-	readonly hasPassword: boolean; 
-  readonly provider: string;
+  readonly id: string;
+  readonly email: string;
+  readonly nickname: string;
+  readonly goal: string | null;
+  readonly hasPassword: boolean;
+  readonly providers: string[]; // 배열로 변경
 
-	constructor(entity: User & { oauth: Oauth[] }) {
-	this.id = entity.id.toString();
-	this.email = entity.email;
-	this.nickname = entity.nickname;
-	this.goal = entity.goal;
-	this.hasPassword = !!entity.password;
-  // 이메일 가입이면 "email", OAuth면 해당 provider
-    this.provider = entity.oauth.length > 0 
-      ? entity.oauth[0].provider.toLowerCase()
-      : "email";	
-    }
+  constructor(entity: User & { oauth: Oauth[] }) {
+    this.id = entity.id.toString();
+    this.email = entity.email;
+    this.nickname = entity.nickname;
+    this.goal = entity.goal;
+    this.hasPassword = !!entity.password;
+
+    // 이메일 가입이면 "email", OAuth가 있으면 provider 추가
+    const oauthProviders = entity.oauth.map((o) => o.provider.toLowerCase());
+    this.providers = this.hasPassword
+      ? ["email", ...oauthProviders]
+      : oauthProviders;
+  }
 }
+
 export class UpdatePasswordResponseDto {
   readonly id: string;
   readonly updatedAt: string;
-  
+
   constructor(entity: User) {
     this.id = entity.id.toString();
     this.updatedAt = (entity.updatedAt || new Date()).toISOString();

@@ -47,7 +47,8 @@ export class HistoriesController {
 
     const review = await this.historiesService.createReview(
       userId,
-      itemId,
+      BigInt(itemId),
+      body.itemType,
       body.satisfaction,
       body.frequency,
     );
