@@ -47,6 +47,7 @@ export class WishItemPayload {
 export class WishItemPreviewPayload {
   id!: string;
   name!: string;
+  brandName!: string | null;
   price!: number;
   photoUrl!: string | null;
   type!: WishitemType;

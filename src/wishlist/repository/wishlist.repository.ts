@@ -17,6 +17,7 @@ export class WishlistRepository {
         id: true,
         name: true,
         price: true,
+        brandName: true,
         updatedAt: true,
         productId: true,
         photoFileId: true,
