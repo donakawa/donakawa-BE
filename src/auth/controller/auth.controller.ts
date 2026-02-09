@@ -150,40 +150,54 @@ export class AuthController {
   }
 
   // Google OAuth 콜백 - Google이 여기로 리다이렉트
+  // auth.controller.ts
   @Get("/oauth/google/callback")
   @SuccessResponse("302", "로그인 성공")
   public async googleCallback(
     @Query() code: string,
-    @Query() state: string, // state 파라미터 추가
+    @Query() state: string,
     @Request() req: ExpressRequest,
   ): Promise<void> {
     try {
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
       try {
         const reauthResult = await this.authService.handleGoogleReauth(
           state,
           code,
         );
+
         if (reauthResult) {
           req.res!.redirect(
             `${frontendUrl}/mypage/settings/withdrawal?reauth=success`,
           );
           return;
         }
-      } catch (reauthError) {
+      } catch (reauthError: any) {
+        console.error("Reauth error:", reauthError);
+
+        // 인프라 에러 (Redis 장애)
+        if (reauthError.message === "REDIS_CONNECTION_ERROR") {
+          req.res!.redirect(
+            `${frontendUrl}/mypage/settings/withdrawal?system_error=true`,
+          );
+          return;
+        }
+
         req.res!.redirect(
           `${frontendUrl}/mypage/settings/withdrawal?reauth=failed`,
         );
         return;
       }
-      // state도 함께 전달
+
+      // 일반 로그인 플로우
       const { tokens, isNewUser } = await this.authService.handleGoogleCallback(
         code,
         state,
       );
 
       JwtCookieUtil.setJwtCookies(req.res!, tokens);
-      // 신규 가입이면 프로필 완성 필요 ( 목표, 닉네임 설정 등 )
+
       if (isNewUser) {
         req.res!.redirect(`${frontendUrl}/auth/complete-profile?success=true`);
       } else {

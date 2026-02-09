@@ -135,7 +135,8 @@ export class AuthService {
   // Google Auth URL 가져오기 (state 생성 및 저장)
   async getGoogleAuthUrl(): Promise<string> {
     // 랜덤 state 생성 (32바이트 = 64자 hex)
-    const state = randomBytes(32).toString("hex");
+    const randomId = randomBytes(32).toString("hex");
+    const state = `login_${randomId}`; // 일반 로그인 표시
 
     // Redis에 5분간 저장
     const stateKey = RedisKeys.oauthState(state);
@@ -759,35 +760,33 @@ export class AuthService {
 
   // 구글 재인증 URL (탈퇴용)
   async getGoogleReauthUrl(userId: bigint): Promise<string> {
-    const state = randomBytes(32).toString("hex");
+    const randomId = randomBytes(32).toString("hex");
+    const state = `reauth_${randomId}`; // prefix로 재인증 표시
     const stateKey = RedisKeys.oauthReauthState(state);
 
     // state에 userId와 목적 저장
-    await redis.set(
-      stateKey,
-      JSON.stringify({ userId: userId.toString(), purpose: "delete_account" }),
-      { EX: RedisTTL.OAUTH_STATE },
-    );
+    await redis.set(stateKey, userId.toString(), { EX: RedisTTL.OAUTH_STATE });
 
     return this.googleOAuthService.getAuthUrl(state);
   }
   async handleGoogleReauth(state: string, code: string): Promise<boolean> {
+    if (!state.startsWith("reauth_")) {
+      return false; // 일반 로그인
+    }
     // 재인증 데이터 조회
     const reauthKey = RedisKeys.oauthReauthState(state);
-    const reauthData = await redis.get(reauthKey);
+    let userId: string | null;
 
-    if (!reauthData) return false;
-
-    let parsed: { userId: string; purpose: string };
     try {
-      parsed = JSON.parse(reauthData);
+      userId = await redis.get(reauthKey);
     } catch (error) {
-      await redis.del(reauthKey);
-      return false;
+      console.error("Redis error during reauth lookup:", error);
+      throw new Error("REDIS_CONNECTION_ERROR"); // 커스텀 메시지
     }
-    const { userId, purpose } = parsed;
 
-    if (purpose !== "delete_account") return false;
+    if (!userId) {
+      throw new UnauthorizedException("A018", "재인증 세션이 만료되었습니다.");
+    }
 
     // 구글 사용자 정보 가져오기
     const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
