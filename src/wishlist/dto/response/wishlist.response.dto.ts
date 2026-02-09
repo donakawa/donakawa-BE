@@ -24,6 +24,7 @@ export class AddCrawlTaskResponseDto {
 export class GetCrawlResultResponseDto {
   id!: string;
   productName!: string;
+  brandName!: string | null;
   platformName!: string;
   productId!: string;
   price!: number;
@@ -36,6 +37,7 @@ export class GetCrawlResultResponseDto {
   ) {
     this.id = entity.id.toString();
     this.productName = entity.name;
+    this.brandName = entity.brandName;
     this.platformName = storePlatformName;
     this.productId = entity.productId;
     this.price = entity.price;
