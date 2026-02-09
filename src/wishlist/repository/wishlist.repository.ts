@@ -3,6 +3,7 @@ import {
   AddedItemManual,
   Prisma,
   PrismaClient,
+  Product,
 } from "@prisma/client";
 import { AddWishListFromCacheCommand } from "../command/add-wishlist-from-cache.command";
 import { AddWishListCommand } from "../command/add-wishlist.command";
@@ -151,17 +152,19 @@ export class WishlistRepository {
       select: args?.select,
     });
   }
-  async findAllAddedItem(
+  async findAddedItems(
     userId: string,
     take: number,
     status?: WishitemStatus,
     cursor?: string,
     folderId?: string,
+    url?: string,
   ) {
     const conditions: Prisma.Sql[] = [];
     if (cursor) conditions.push(Prisma.sql`cursor < ${cursor}`);
     if (folderId) conditions.push(Prisma.sql`"folderId"=${BigInt(folderId)}`);
     if (status) conditions.push(Prisma.sql`status=${status}`);
+    if (url) conditions.push(Prisma.sql`url=${url}`);
     const whereClause =
       conditions.length > 0
         ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`
@@ -237,5 +240,12 @@ left join store_platform s on p.store_platform_id = s.id where user_id = ${userI
   ) {
     const db = tx ?? this.prisma;
     return db.addedItemManual.delete(args);
+  }
+  async findStorePlatformByUrlDomain(urlDomain: string) {
+    return this.prisma.storePlatform.findFirst({
+      where: {
+        urlDomain: urlDomain,
+      },
+    });
   }
 }
