@@ -42,7 +42,7 @@ export class GetCrawlResultResponseDto {
     this.productId = entity.productId;
     this.price = entity.price;
     this.updatedAt =
-      entity.updatedAt!.toISOString() ?? new Date().toISOString();
+      entity.updatedAt?.toISOString() ?? new Date().toISOString();
     this.imageUrl = imageUrl;
   }
 }

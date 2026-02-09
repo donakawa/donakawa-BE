@@ -43,19 +43,12 @@ import { CrawlStatusUpdatedPayload } from "../../interface/event-payload.interfa
 import { AddWishListFromCacheCommand } from "../command/add-wishlist-from-cache.command";
 import { AddWishListCommand } from "../command/add-wishlist.command";
 import { FilesService } from "../../files/service/files.service";
-import {
-  AddedItemManual,
-  FileType,
-  Prisma,
-  PrismaClient,
-} from "@prisma/client";
 import { FileTypeEnum } from "../../files/enum/file-type.enum";
 import { FilePayload } from "../../files/payload/file.payload";
 import path from "path";
 import {
   isWishitemStatus,
   isWishitemType,
-  WishitemStatus,
   WishitemType,
 } from "../types/wishitem.types";
 import { WishItemPayload } from "../payload/wishlist.payload";
