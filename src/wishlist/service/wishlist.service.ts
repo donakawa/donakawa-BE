@@ -912,10 +912,24 @@ export class WishlistService {
           FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
         );
       }
+      let url: URL = new URL("");
+      let cleanUrl: string | undefined = undefined;
+      if (body.url) {
+        try {
+          url = new URL(body.url);
+          cleanUrl = url.hostname + url.pathname.replace(/\/$/, "");
+        } catch {
+          throw new BadRequestException(
+            "INVALID_URL",
+            "유효하지 않은 URL 형식입니다.",
+          );
+        }
+      }
+
       const updateData = {
         ...(body.productName && { name: body.productName }),
         ...(body.price !== undefined && { price: body.price }),
-        ...(body.url && { url: body.url }),
+        ...(cleanUrl && { url: cleanUrl }),
         ...(body.storeName && { storePlatform: body.storeName }),
         ...(fileUploadedPayload && {
           photoFileId: BigInt(fileUploadedPayload.id),
