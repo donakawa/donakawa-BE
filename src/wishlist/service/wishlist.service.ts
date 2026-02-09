@@ -67,10 +67,40 @@ export class WishlistService {
   ) {}
   async enqueueItemCrawl(
     data: AddCrawlTaskRequestDto,
+    userId: string,
   ): Promise<AddCrawlTaskResponseDto> {
+    const url = new URL(data.url);
+    const isSupportedPlatform =
+      (await this.wishlistRepository.findStorePlatformByUrlDomain(
+        url.hostname,
+      )) !== null;
+    if (!isSupportedPlatform) {
+      throw new BadRequestException(
+        "UNSUPPORTED_PLATFORM",
+        "지원하지 않는 쇼핑몰 플랫폼입니다.",
+      );
+    }
+    const cleanUrl = url.origin + url.pathname;
+    const isAlreadyExistItem =
+      (
+        await this.wishlistRepository.findAddedItems(
+          userId,
+          1,
+          undefined,
+          undefined,
+          undefined,
+          cleanUrl,
+        )
+      ).length > 0;
+    if (isAlreadyExistItem) {
+      throw new ConflictException(
+        "ITEM_ALREADY_EXIST",
+        "이미 추가된 상품입니다.",
+      );
+    }
     const valkeyClient = await this.valkeyClientPromise;
     const jobId = uuid();
-    const message = new CrawlRequestMessage(jobId, data.url);
+    const message = new CrawlRequestMessage(jobId, cleanUrl);
     await this.crawlQueueClient.enqueueCrawl(message);
     const sentAt = new Date().toISOString();
     await valkeyClient.valkeyPub.set(
@@ -399,7 +429,7 @@ export class WishlistService {
         "유효하지 않은 입력 값 입니다.",
       );
     const rows: WishlistRecordInterface[] =
-      await this.wishlistRepository.findAllAddedItem(
+      await this.wishlistRepository.findAddedItems(
         data.userId,
         data.take,
         data.status,
@@ -776,7 +806,7 @@ export class WishlistService {
         "해당 ID를 가진 폴더를 찾을 수 없습니다.",
       );
     const rows: WishlistRecordInterface[] =
-      await this.wishlistRepository.findAllAddedItem(
+      await this.wishlistRepository.findAddedItems(
         data.userId,
         data.take,
         "WISHLISTED",

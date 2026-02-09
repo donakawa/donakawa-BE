@@ -52,7 +52,6 @@ import {
 } from "../dto/response/wishlist.response.dto";
 import { validateImageFile } from "../policy/upload.policy";
 import { BadRequestException } from "../../errors/error";
-import { IsOptional } from "class-validator";
 import { WishitemType } from "../types/wishitem.types";
 
 @Route("/wishlist")
@@ -68,8 +67,10 @@ export class WishlistController extends Controller {
   @Security("jwt")
   public async addCrawlTask(
     @Body() body: AddCrawlTaskRequestDto,
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<AddCrawlTaskResponseDto>> {
-    return success(await this.wishlistService.enqueueItemCrawl(body));
+    const userId = req.user!.id;
+    return success(await this.wishlistService.enqueueItemCrawl(body, userId));
   }
   /**
    * @summary 위시리스트 크롤링 작업 이벤트 수신
