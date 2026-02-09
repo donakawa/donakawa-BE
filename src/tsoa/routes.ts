@@ -741,6 +741,7 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "id": {"dataType":"string","required":true},
+            "itemId": {"dataType":"string","required":true},
             "type": {"ref":"SpendItemType","required":true},
             "name": {"dataType":"string","required":true},
             "price": {"dataType":"double","required":true},

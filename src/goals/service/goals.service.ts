@@ -252,7 +252,8 @@ export class GoalsService {
             : null;
 
           return {
-            id: r.addedItemManual.id.toString(),
+            id: r.id.toString(),
+            itemId: r.addedItemManual.id.toString(),
             type: "MANUAL" as const,
             name: r.addedItemManual.name,
             price: r.addedItemManual.price,
@@ -268,7 +269,8 @@ export class GoalsService {
           : null;
 
         return {
-          id: product.id.toString(),
+          id: r.id.toString(),
+          itemId: product.id.toString(),
           type: "AUTO" as const,
           name: r.addedItemAuto!.product.name,
           price: r.addedItemAuto!.product.price,
