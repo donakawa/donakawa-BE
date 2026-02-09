@@ -67,10 +67,48 @@ export class WishlistService {
   ) {}
   async enqueueItemCrawl(
     data: AddCrawlTaskRequestDto,
+    userId: string,
   ): Promise<AddCrawlTaskResponseDto> {
+    let url: URL;
+    try {
+      url = new URL(data.url);
+    } catch {
+      throw new BadRequestException(
+        "INVALID_URL",
+        "유효하지 않은 URL 형식입니다.",
+      );
+    }
+    const isSupportedPlatform =
+      (await this.wishlistRepository.findStorePlatformByUrlDomain(
+        url.hostname,
+      )) !== null;
+    if (!isSupportedPlatform) {
+      throw new BadRequestException(
+        "UNSUPPORTED_PLATFORM",
+        "지원하지 않는 쇼핑몰 플랫폼입니다.",
+      );
+    }
+    const cleanUrl = url.origin + url.pathname.replace(/\/$/, "");
+    const isAlreadyExistItem =
+      (
+        await this.wishlistRepository.findAddedItems(
+          userId,
+          1,
+          undefined,
+          undefined,
+          undefined,
+          cleanUrl,
+        )
+      ).length > 0;
+    if (isAlreadyExistItem) {
+      throw new ConflictException(
+        "ITEM_ALREADY_EXIST",
+        "이미 추가된 상품입니다.",
+      );
+    }
     const valkeyClient = await this.valkeyClientPromise;
     const jobId = uuid();
-    const message = new CrawlRequestMessage(jobId, data.url);
+    const message = new CrawlRequestMessage(jobId, cleanUrl);
     await this.crawlQueueClient.enqueueCrawl(message);
     const sentAt = new Date().toISOString();
     await valkeyClient.valkeyPub.set(
@@ -199,9 +237,19 @@ export class WishlistService {
     return new AddWishListFromCacheResponseDto(savedEntity);
   }
   async addWishListManual(dto: AddWishListRequestDto) {
+    let url: URL;
+    try {
+      url = new URL(dto.url);
+    } catch {
+      throw new BadRequestException(
+        "INVALID_URL",
+        "유효하지 않은 URL 형식입니다.",
+      );
+    }
+    const cleanUrl = url.origin + url.pathname.replace(/\/$/, "");
     const isAlreadyExist =
       (await this.wishlistRepository.findAddedItemManualByUrl(
-        dto.url,
+        cleanUrl,
         dto.userId,
         {
           select: { id: true },
@@ -230,7 +278,7 @@ export class WishlistService {
         brandName: dto.brandName,
         reason: dto.reason,
         photoFileId: uploadedResultPayload?.id,
-        url: dto.url,
+        url: cleanUrl,
       });
 
       const savedEntity =
@@ -399,7 +447,7 @@ export class WishlistService {
         "유효하지 않은 입력 값 입니다.",
       );
     const rows: WishlistRecordInterface[] =
-      await this.wishlistRepository.findAllAddedItem(
+      await this.wishlistRepository.findAddedItems(
         data.userId,
         data.take,
         data.status,
@@ -776,7 +824,7 @@ export class WishlistService {
         "해당 ID를 가진 폴더를 찾을 수 없습니다.",
       );
     const rows: WishlistRecordInterface[] =
-      await this.wishlistRepository.findAllAddedItem(
+      await this.wishlistRepository.findAddedItems(
         data.userId,
         data.take,
         "WISHLISTED",
@@ -864,10 +912,24 @@ export class WishlistService {
           FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
         );
       }
+      let url: URL = new URL("");
+      let cleanUrl: string | undefined = undefined;
+      if (body.url) {
+        try {
+          url = new URL(body.url);
+          cleanUrl = url.hostname + url.pathname.replace(/\/$/, "");
+        } catch {
+          throw new BadRequestException(
+            "INVALID_URL",
+            "유효하지 않은 URL 형식입니다.",
+          );
+        }
+      }
+
       const updateData = {
         ...(body.productName && { name: body.productName }),
         ...(body.price !== undefined && { price: body.price }),
-        ...(body.url && { url: body.url }),
+        ...(cleanUrl && { url: cleanUrl }),
         ...(body.storeName && { storePlatform: body.storeName }),
         ...(fileUploadedPayload && {
           photoFileId: BigInt(fileUploadedPayload.id),
