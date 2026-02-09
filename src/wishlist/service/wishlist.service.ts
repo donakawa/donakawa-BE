@@ -248,13 +248,16 @@ export class WishlistService {
     }
     const cleanUrl = url.origin + url.pathname.replace(/\/$/, "");
     const isAlreadyExist =
-      (await this.wishlistRepository.findAddedItemManualByUrl(
-        cleanUrl,
-        dto.userId,
-        {
-          select: { id: true },
-        },
-      )) !== null;
+      (
+        await this.wishlistRepository.findAddedItems(
+          dto.userId,
+          1,
+          undefined,
+          undefined,
+          undefined,
+          cleanUrl,
+        )
+      ).length > 0;
     if (isAlreadyExist) {
       throw new ConflictException(
         "WISHLIST_ALREADY_EXIST",
@@ -925,7 +928,23 @@ export class WishlistService {
           );
         }
       }
-
+      const itemWithSameUrl = await this.wishlistRepository.findAddedItems(
+        userId,
+        1,
+        undefined,
+        undefined,
+        undefined,
+        cleanUrl,
+      );
+      if (
+        itemWithSameUrl.length > 0 &&
+        itemWithSameUrl[0].id.toString() !== itemId
+      ) {
+        throw new ConflictException(
+          "DUPLICATE_URL",
+          "이미 동일한 URL이 등록된 위시 아이템이 존재합니다.",
+        );
+      }
       const updateData = {
         ...(body.productName && { name: body.productName }),
         ...(body.price !== undefined && { price: body.price }),
