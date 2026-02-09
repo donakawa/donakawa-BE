@@ -927,24 +927,25 @@ export class WishlistService {
             "유효하지 않은 URL 형식입니다.",
           );
         }
-      }
-      const itemWithSameUrl = await this.wishlistRepository.findAddedItems(
-        userId,
-        1,
-        undefined,
-        undefined,
-        undefined,
-        cleanUrl,
-      );
-      if (
-        itemWithSameUrl.length > 0 &&
-        itemWithSameUrl[0].id.toString() !== itemId
-      ) {
-        throw new ConflictException(
-          "DUPLICATE_URL",
-          "이미 동일한 URL이 등록된 위시 아이템이 존재합니다.",
+        const itemWithSameUrl = await this.wishlistRepository.findAddedItems(
+          userId,
+          1,
+          undefined,
+          undefined,
+          undefined,
+          cleanUrl,
         );
+        if (
+          itemWithSameUrl.length > 0 &&
+          itemWithSameUrl[0].id.toString() !== itemId
+        ) {
+          throw new ConflictException(
+            "DUPLICATE_URL",
+            "이미 동일한 URL이 등록된 위시 아이템이 존재합니다.",
+          );
+        }
       }
+
       const updateData = {
         ...(body.productName && { name: body.productName }),
         ...(body.price !== undefined && { price: body.price }),
