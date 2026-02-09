@@ -580,7 +580,7 @@ export class AuthService {
     if (attempts && parseInt(attempts) >= Limits.PASSWORD_VERIFY_MAX_ATTEMPTS) {
       throw new UnauthorizedException(
         "A014",
-        "비밀번호 확인 시도 횟수를 초과했습니다. 30분 후 다시 시도해주세요.",
+        `비밀번호 확인 시도 횟수를 초과했습니다. ${Math.floor(RedisTTL.PASSWORD_RATE_LIMIT / 60)}분 후 다시 시도해주세요.`,
       );
     }
 
