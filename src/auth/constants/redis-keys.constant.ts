@@ -20,8 +20,13 @@ export const RedisKeys = {
   passwordVerifyRateLimit: (type: VerifyPasswordTypeEnum, userId: bigint) =>
     `password:verify:rate:${type}:${userId}`,
 
+  // 계정 탈퇴 관련(소셜)
+  deleteAccountVerified: (userId: bigint) =>
+    `delete-account:verified:${userId}`,
+
   // OAuth 관련
   oauthState: (state: string) => `oauth:state:${state}`,
+  oauthReauthState: (state: string) => `oauth:reauth:${state}`,
 } as const;
 
 export const RedisTTL = {
@@ -32,4 +37,5 @@ export const RedisTTL = {
   PASSWORD_VERIFIED: 60 * 5, // 비밀번호 검증 완료 상태 5분
   PASSWORD_RATE_LIMIT: 60 * 30, // 비밀번호 검증 시도 제한 30분
   EMAIL_SEND_ATTEMPT: 60 * 30, // 이메일 전송 시도 기록 30분
+  DELETE_ACCOUNT_VERIFIED: 60 * 5, // 계정 탈퇴 본인 확인 상태 5분
 } as const;

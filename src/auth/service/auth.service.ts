@@ -135,7 +135,8 @@ export class AuthService {
   // Google Auth URL 가져오기 (state 생성 및 저장)
   async getGoogleAuthUrl(): Promise<string> {
     // 랜덤 state 생성 (32바이트 = 64자 hex)
-    const state = randomBytes(32).toString("hex");
+    const randomId = randomBytes(32).toString("hex");
+    const state = `login_${randomId}`; // 일반 로그인 표시
 
     // Redis에 5분간 저장
     const stateKey = RedisKeys.oauthState(state);
@@ -682,47 +683,34 @@ export class AuthService {
     return new UpdatePasswordResponseDto(updatedUser!);
   }
 
-  // 회원탈퇴
-  async deleteAccount(
-    userId: bigint,
-    sid: string,
-    password?: string,
-  ): Promise<void> {
+  // 회원 탈퇴
+  async deleteAccount(userId: bigint, sid: string): Promise<void> {
     const user = await this.authRepository.findUserById(userId);
 
     if (!user) {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
 
-    const isSocialUser = PasswordUtil.isSocialUser(user.password);
+    // 비밀번호 확인/카카오/구글 중 재인증 성공했는지 확인
+    const isVerified = await this.checkReauthVerification(userId);
 
-    // 일반 사용자: 검증 상태 확인
-    if (!isSocialUser) {
-      const verified = await redis.get(
-        RedisKeys.passwordVerified(
-          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
-          userId,
-        ),
-      );
-
-      if (!verified) {
-        throw new UnauthorizedException(
-          "A015",
-          "현재 비밀번호 확인이 필요합니다.",
-        );
-      }
-      // 일회용: 사용 후 삭제
-      await redis.del(
-        RedisKeys.passwordVerified(
-          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
-          userId,
-        ),
+    if (!isVerified) {
+      throw new UnauthorizedException(
+        "A016",
+        "본인 확인이 필요합니다. 비밀번호 확인 혹은 소셜 계정으로 재인증해주세요.",
       );
     }
 
     await this.prisma.$transaction(async (tx) => {
       await this.authRepository.deleteUser(userId, tx);
     });
+
+    // 검증 완료 후 Redis 키 삭제
+    try {
+      await this.clearReauthVerification(userId);
+    } catch (error) {
+      console.error("Failed to clear reauth verification:", error);
+    }
 
     // 세션 정리 (실패해도 자동 만료됨)
     try {
@@ -732,6 +720,34 @@ export class AuthService {
       console.error("Failed to clear user session:", error);
     }
   }
+
+  // 모든 재인증 방법 체크
+  private async checkReauthVerification(userId: bigint): Promise<boolean> {
+    const checks = await Promise.all([
+      redis.get(RedisKeys.deleteAccountVerified(userId)), // 소셜(구글/카카오/네이버)
+      redis.get(
+        RedisKeys.passwordVerified(
+          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
+          userId,
+        ),
+      ), // 로컬
+    ]);
+
+    return checks.some((result) => result !== null);
+  }
+
+  // 모든 재인증 관련 Redis 키 삭제
+  private async clearReauthVerification(userId: bigint): Promise<void> {
+    await Promise.all([
+      redis.del(RedisKeys.deleteAccountVerified(userId)),
+      redis.del(
+        RedisKeys.passwordVerified(
+          VerifyPasswordTypeEnum.DELETE_ACCOUNT,
+          userId,
+        ),
+      ),
+    ]);
+  }
   async getMyProfile(userId: bigint): Promise<UserProfileResponseDto> {
     const user = await this.authRepository.findUserById(userId);
 
@@ -740,5 +756,65 @@ export class AuthService {
     }
 
     return new UserProfileResponseDto(user);
+  }
+
+  // 구글 재인증 URL (탈퇴용)
+  async getGoogleReauthUrl(userId: bigint): Promise<string> {
+    const randomId = randomBytes(32).toString("hex");
+    const state = `reauth_${randomId}`; // prefix로 재인증 표시
+    const stateKey = RedisKeys.oauthReauthState(state);
+
+    // state에 userId와 목적 저장
+    await redis.set(stateKey, userId.toString(), { EX: RedisTTL.OAUTH_STATE });
+
+    return this.googleOAuthService.getAuthUrl(state);
+  }
+  async handleGoogleReauth(state: string, code: string): Promise<boolean> {
+    if (!state.startsWith("reauth_")) {
+      return false; // 일반 로그인
+    }
+    // 재인증 데이터 조회
+    const reauthKey = RedisKeys.oauthReauthState(state);
+    let userId: string | null;
+
+    try {
+      userId = await redis.get(reauthKey);
+    } catch (error) {
+      console.error("Redis error during reauth lookup:", error);
+      throw new Error("REDIS_CONNECTION_ERROR"); // 커스텀 메시지
+    }
+
+    if (!userId) {
+      throw new UnauthorizedException("A018", "재인증 세션이 만료되었습니다.");
+    }
+
+    // 구글 사용자 정보 가져오기
+    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+
+    // 본인 확인
+    const user = await this.authRepository.findUserById(BigInt(userId));
+    if (!user) {
+      throw new UnauthorizedException("A004", "사용자를 찾을 수 없습니다.");
+    }
+
+    const existingOauth = await this.authRepository.findOauthByUserId(
+      BigInt(userId),
+      OauthProvider.GOOGLE,
+    );
+
+    if (!existingOauth || existingOauth.uid !== googleUserInfo.googleUid) {
+      throw new UnauthorizedException("A017", "본인 확인에 실패했습니다.");
+    }
+
+    // 재인증 성공 처리
+    await redis.set(
+      RedisKeys.deleteAccountVerified(BigInt(userId)),
+      "true",
+      { EX: RedisTTL.DELETE_ACCOUNT_VERIFIED }, // 5분 유효
+    );
+
+    await redis.del(reauthKey);
+
+    return true;
   }
 }
