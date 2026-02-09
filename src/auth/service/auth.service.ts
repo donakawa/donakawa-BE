@@ -761,7 +761,7 @@ export class AuthService {
     // state에 userId와 목적 저장
     await redis.set(
       stateKey,
-      JSON.stringify({ userId, purpose: "delete_account" }),
+      JSON.stringify({ userId: userId.toString(), purpose: "delete_account" }),
       { EX: RedisTTL.OAUTH_STATE },
     );
 
@@ -777,7 +777,7 @@ export class AuthService {
     let parsed: { userId: string; purpose: string };
     try {
       parsed = JSON.parse(reauthData);
-    } catch {
+    } catch (error) {
       await redis.del(reauthKey);
       return false;
     }
