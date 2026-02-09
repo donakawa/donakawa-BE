@@ -242,8 +242,9 @@ export class GoalsService {
       return Number(bId - aId);
     });
 
+    const itemsToUse = reviews.slice(0, 10);
     const items = await Promise.all(
-      reviews.slice(0, 10).map(async (r) => {
+      itemsToUse.map(async (r) => {
         // 수동 추가
         if (r.addedItemManual) {
           const fileId = r.addedItemManual.files?.id;
@@ -310,14 +311,19 @@ export class GoalsService {
       isSatisfied,
     );
 
-    const hasNext = reviews.length > 10;
-    const last = reviews[9];
-    const nextCursor = hasNext
-      ? (
-          last.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
-          last.addedItemManual?.purchasedHistory[0]?.purchasedDate
-        )?.toISOString()
-      : undefined;
+    const last = itemsToUse[itemsToUse.length - 1];
+    let nextCursor: string | undefined;
+    if (reviews.length > 10) {
+      const last = itemsToUse[itemsToUse.length - 1];
+      if (last) {
+        const lastHistory =
+          last.addedItemAuto?.purchasedHistory[0] ??
+          last.addedItemManual?.purchasedHistory[0];
+        nextCursor = lastHistory?.purchasedDate.toISOString();
+      }
+    } else {
+      nextCursor = undefined;
+    }
 
     return { averageDecisionDays, recentMonthCount, items, nextCursor };
   }

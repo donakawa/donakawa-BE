@@ -92,7 +92,7 @@ export class GoalsRepository {
     cursor?: string,
     take: number = 10,
   ) {
-    const cursorId = cursor ? new Date(cursor) : undefined;
+    const cursorId = cursor ? new Date(decodeURIComponent(cursor)) : undefined;
     const satisfactionCondition = isSatisfied ? { gte: 4 } : { lte: 3 };
 
     return this.prisma.review.findMany({
