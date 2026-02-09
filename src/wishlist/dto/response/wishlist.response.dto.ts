@@ -119,6 +119,7 @@ export class ShowWishitemListResponseDto {
       (acc, wishitem) => {
         acc.push({
           id: wishitem.id.toString(),
+          brandName: wishitem.brandName,
           name: wishitem.name,
           price: wishitem.price,
           photoUrl: photoUrls[wishitem.cursor],
@@ -163,6 +164,7 @@ export class ShowWishitemsInFolderResponseDto {
       (acc, wishitem) => {
         acc.push({
           id: wishitem.id.toString(),
+          brandName: wishitem.brandName,
           name: wishitem.name,
           price: wishitem.price,
           photoUrl: photoUrls[wishitem.cursor],

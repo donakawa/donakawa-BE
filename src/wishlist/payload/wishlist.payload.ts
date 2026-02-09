@@ -47,6 +47,7 @@ export class WishItemPayload {
 export class WishItemPreviewPayload {
   id!: string;
   name!: string;
+  brandName!: string | null;
   price!: number;
   photoUrl!: string | null;
   type!: WishitemType;
@@ -55,6 +56,7 @@ export class WishItemPreviewPayload {
     id: string;
     name: string;
     price: number;
+    brandName: string | null;
     photoUrl: string | null;
     type: WishitemType;
     status: WishitemStatus;
@@ -64,6 +66,7 @@ export class WishItemPreviewPayload {
     this.price = param.price;
     this.photoUrl = param.photoUrl;
     this.type = param.type;
+    this.brandName = param.brandName;
     this.status = param.status;
   }
 }
