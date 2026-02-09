@@ -311,7 +311,6 @@ export class GoalsService {
       isSatisfied,
     );
 
-    const last = itemsToUse[itemsToUse.length - 1];
     let nextCursor: string | undefined;
     if (reviews.length > 10) {
       const last = itemsToUse[itemsToUse.length - 1];
@@ -321,8 +320,6 @@ export class GoalsService {
           last.addedItemManual?.purchasedHistory[0];
         nextCursor = lastHistory?.purchasedDate.toISOString();
       }
-    } else {
-      nextCursor = undefined;
     }
 
     return { averageDecisionDays, recentMonthCount, items, nextCursor };
