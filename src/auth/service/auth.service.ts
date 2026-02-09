@@ -719,7 +719,7 @@ export class AuthService {
   // 모든 재인증 방법 체크
   private async checkReauthVerification(userId: bigint): Promise<boolean> {
     const checks = await Promise.all([
-      redis.get(`delete-account:verified:${userId}`), // 소셜(구글/카카오/네이버)
+      redis.get(RedisKeys.deleteAccountVerified(userId)), // 소셜(구글/카카오/네이버)
       redis.get(
         RedisKeys.passwordVerified(
           VerifyPasswordTypeEnum.DELETE_ACCOUNT,
@@ -734,7 +734,7 @@ export class AuthService {
   // 모든 재인증 관련 Redis 키 삭제
   private async clearReauthVerification(userId: bigint): Promise<void> {
     await Promise.all([
-      redis.del(`delete-account:verified:${userId}`),
+      redis.del(RedisKeys.deleteAccountVerified(userId)),
       redis.del(
         RedisKeys.passwordVerified(
           VerifyPasswordTypeEnum.DELETE_ACCOUNT,
@@ -754,27 +754,34 @@ export class AuthService {
   }
 
   // 구글 재인증 URL (탈퇴용)
-  async getGoogleReauthUrl(userId: string): Promise<string> {
+  async getGoogleReauthUrl(userId: bigint): Promise<string> {
     const state = randomBytes(32).toString("hex");
-    const stateKey = `oauth:reauth:${state}`;
+    const stateKey = RedisKeys.oauthReauthState(state);
 
     // state에 userId와 목적 저장
     await redis.set(
       stateKey,
       JSON.stringify({ userId, purpose: "delete_account" }),
-      { EX: 300 },
+      { EX: RedisTTL.OAUTH_STATE },
     );
 
     return this.googleOAuthService.getAuthUrl(state);
   }
   async handleGoogleReauth(state: string, code: string): Promise<boolean> {
     // 재인증 데이터 조회
-    const reauthKey = `oauth:reauth:${state}`;
+    const reauthKey = RedisKeys.oauthReauthState(state);
     const reauthData = await redis.get(reauthKey);
 
     if (!reauthData) return false;
 
-    const { userId, purpose } = JSON.parse(reauthData);
+    let parsed: { userId: string; purpose: string };
+    try {
+      parsed = JSON.parse(reauthData);
+    } catch {
+      await redis.del(reauthKey);
+      return false;
+    }
+    const { userId, purpose } = parsed;
 
     if (purpose !== "delete_account") return false;
 
@@ -798,7 +805,7 @@ export class AuthService {
 
     // 재인증 성공 처리
     await redis.set(
-      RedisKeys.deleteAccountVerified(userId),
+      RedisKeys.deleteAccountVerified(BigInt(userId)),
       "true",
       { EX: RedisTTL.DELETE_ACCOUNT_VERIFIED }, // 5분 유효
     );

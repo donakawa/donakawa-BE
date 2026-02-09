@@ -26,6 +26,7 @@ export const RedisKeys = {
 
   // OAuth 관련
   oauthState: (state: string) => `oauth:state:${state}`,
+  oauthReauthState: (state: string) => `oauth:reauth:${state}`,
 } as const;
 
 export const RedisTTL = {

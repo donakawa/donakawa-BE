@@ -159,16 +159,20 @@ export class AuthController {
   ): Promise<void> {
     try {
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-
-      // 재인증 플로우 처리
-      const reauthResult = await this.authService.handleGoogleReauth(
-        state,
-        code,
-      );
-
-      if (reauthResult) {
+      try {
+        const reauthResult = await this.authService.handleGoogleReauth(
+          state,
+          code,
+        );
+        if (reauthResult) {
+          req.res!.redirect(
+            `${frontendUrl}/mypage/settings/withdrawal?reauth=success`,
+          );
+          return;
+        }
+      } catch (reauthError) {
         req.res!.redirect(
-          `${frontendUrl}/mypage/settings/withdrawal?reauth=success`,
+          `${frontendUrl}/mypage/settings/withdrawal?reauth=failed`,
         );
         return;
       }
@@ -431,7 +435,7 @@ export class AuthController {
       throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
     }
 
-    const authUrl = await this.authService.getGoogleReauthUrl(user.id);
+    const authUrl = await this.authService.getGoogleReauthUrl(BigInt(user.id));
     req.res!.redirect(authUrl);
   }
 }
