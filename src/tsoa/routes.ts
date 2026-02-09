@@ -57,6 +57,7 @@ const models: TsoaRoute.Models = {
         "properties": {
             "id": {"dataType":"string","required":true},
             "productName": {"dataType":"string","required":true},
+            "brandName": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "platformName": {"dataType":"string","required":true},
             "productId": {"dataType":"string","required":true},
             "price": {"dataType":"double","required":true},
@@ -1108,9 +1109,9 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
     
         const argsWishlistController_addCrawlTask: Record<string, TsoaRoute.ParameterSchema> = {
                 body: {"in":"body","name":"body","required":true,"ref":"AddCrawlTaskRequestDto"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.post('/wishlist/crawl-tasks',
-            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.addCrawlTask)),
 
