@@ -92,7 +92,7 @@ export class GoalsRepository {
     cursor?: string,
     take: number = 10,
   ) {
-    const cursorBigInt = cursor ? BigInt(cursor) : undefined;
+    const cursorId = cursor ? new Date(cursor) : undefined;
     const satisfactionCondition = isSatisfied ? { gte: 4 } : { lte: 3 };
 
     return this.prisma.review.findMany({
@@ -102,13 +102,27 @@ export class GoalsRepository {
           {
             addedItemAuto: {
               userId: BigInt(userId),
-              purchasedHistory: { some: { purchasedDate: { gte: since } } },
+              purchasedHistory: {
+                some: {
+                  purchasedDate: {
+                    gte: since,
+                    ...(cursorId && { lt: cursorId }),
+                  },
+                },
+              },
             },
           },
           {
             addedItemManual: {
               userId: BigInt(userId),
-              purchasedHistory: { some: { purchasedDate: { gte: since } } },
+              purchasedHistory: {
+                some: {
+                  purchasedDate: {
+                    gte: since,
+                    ...(cursorId && { lt: cursorId }),
+                  },
+                },
+              },
             },
           },
         ],
@@ -125,7 +139,14 @@ export class GoalsRepository {
                 files: { select: { id: true } },
               },
             },
-            purchasedHistory: { orderBy: { purchasedDate: "desc" }, take: 1 },
+            purchasedHistory: {
+              orderBy: { purchasedDate: "desc" },
+              take: 1,
+              select: {
+                id: true,
+                purchasedDate: true,
+              },
+            },
           },
         },
         addedItemManual: {
@@ -138,15 +159,15 @@ export class GoalsRepository {
             purchasedHistory: {
               orderBy: { purchasedDate: "desc" },
               take: 1,
+              select: {
+                id: true,
+                purchasedDate: true,
+              },
             },
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
       take: take + 1,
-      cursor: cursorBigInt ? { id: cursorBigInt } : undefined,
     });
   }
 
