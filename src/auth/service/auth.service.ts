@@ -243,7 +243,7 @@ export class AuthService {
 
   // State 검증
   private async verifyOAuthState(state: string): Promise<void> {
-    const stateKey = `oauth:state:${state}`;
+    const stateKey = RedisKeys.oauthState(state);
     const isValid = await redis.get(stateKey);
 
     if (!isValid) {
@@ -264,7 +264,7 @@ export class AuthService {
         process.env.REFRESH_TOKEN_SECRET_KEY!,
       ) as any;
 
-      const storedHash = await redis.get(`user:refreshToken:${decoded.sid}`);
+      const storedHash = await redis.get(RedisKeys.refreshToken(decoded.sid));
       if (!storedHash) {
         throw new UnauthorizedException("U003", "만료된 세션입니다.");
       }
@@ -303,8 +303,8 @@ export class AuthService {
 
   // 로그아웃
   async logout(userId: bigint, sid: string): Promise<void> {
-    await redis.del(`user:${userId}:sid`);
-    await redis.del(`user:refreshToken:${sid}`);
+    await redis.del(RedisKeys.userSid(userId));
+    await redis.del(RedisKeys.refreshToken(sid));
   }
 
   // 회원가입
@@ -316,7 +316,9 @@ export class AuthService {
       throw new ConflictException("U003", "이미 존재하는 계정 입니다.");
     }
 
-    const verified = await redis.get(`email:verified:REGISTER:${body.email}`);
+    const verified = await redis.get(
+      RedisKeys.emailVerified(EmailVerifyTypeEnum.REGISTER, body.email),
+    );
 
     if (!verified) {
       throw new UnauthorizedException("A003", "이메일 인증이 필요합니다.");
@@ -337,7 +339,9 @@ export class AuthService {
     });
     const user = await this.authRepository.saveUser(command);
 
-    await redis.del(`email:verified:REGISTER:${body.email}`);
+    await redis.del(
+      RedisKeys.emailVerified(EmailVerifyTypeEnum.REGISTER, body.email),
+    );
 
     return new RegisterResponseDto(user);
   }
@@ -373,7 +377,7 @@ export class AuthService {
     ) {
       throw new UnauthorizedException(
         "A010",
-        "인증 요청 횟수를 초과했습니다. 30분 후 다시 시도해주세요.",
+        `인증 요청 횟수를 초과했습니다. ${Math.floor(RedisTTL.EMAIL_SEND_ATTEMPT / 60)}분 후 다시 시도해주세요.`,
       );
     }
 
@@ -491,7 +495,9 @@ export class AuthService {
       );
     }
 
-    await redis.del(`email:verified:RESET_PASSWORD:${email}`);
+    await redis.del(
+      RedisKeys.emailVerified(EmailVerifyTypeEnum.RESET_PASSWORD, email),
+    );
 
     const hashedPassword = await hashingString(newPassword);
     await this.authRepository.updatePassword(user.id, hashedPassword);
