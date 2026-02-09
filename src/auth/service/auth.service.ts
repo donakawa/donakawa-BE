@@ -705,7 +705,11 @@ export class AuthService {
     });
 
     // 검증 완료 후 Redis 키 삭제
-    await this.clearReauthVerification(userId);
+    try {
+      await this.clearReauthVerification(userId);
+    } catch (error) {
+      console.error("Failed to clear reauth verification:", error);
+    }
 
     // 세션 정리 (실패해도 자동 만료됨)
     try {
