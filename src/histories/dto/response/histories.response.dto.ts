@@ -3,13 +3,13 @@ export class CreateReviewResponseDto {
   itemId!: number;
   satisfaction!: number;
   frequency!: number;
-  createdAt!: Date;
+  updatedAt!: Date | null;
 
   static from(review: {
     id: bigint;
     satisfaction: number | null;
     frequency: number | null;
-    createdAt: Date;
+    updatedAt: Date | null;
     autoItemId?: bigint | null;
     manualItemId?: bigint | null;
   }): CreateReviewResponseDto {
@@ -18,7 +18,7 @@ export class CreateReviewResponseDto {
       itemId: Number(review.autoItemId ?? review.manualItemId),
       satisfaction: review.satisfaction ?? 0,
       frequency: review.frequency ?? 0,
-      createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
     };
   }
 }

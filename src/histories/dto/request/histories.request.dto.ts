@@ -1,4 +1,5 @@
 export interface CreateReviewRequestDto {
+  itemType: "AUTO" | "MANUAL";
   satisfaction: number;
   frequency: number;
 }
