@@ -26,7 +26,7 @@ export class HistoriesService {
 
   async createReview(
     userId: bigint,
-    itemId: number,
+    itemId: bigint,
     itemType: "AUTO" | "MANUAL",
     satisfaction: number,
     frequency: number,
