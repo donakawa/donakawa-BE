@@ -915,12 +915,12 @@ export class WishlistService {
           FileTypeEnum.MANUAL_ADDED_PRODUCT_PHOTO,
         );
       }
-      let url: URL = new URL("");
+      let url: URL | undefined = undefined;
       let cleanUrl: string | undefined = undefined;
       if (body.url) {
         try {
           url = new URL(body.url);
-          cleanUrl = url.hostname + url.pathname.replace(/\/$/, "");
+          cleanUrl = url.origin + url.pathname.replace(/\/$/, "");
         } catch {
           throw new BadRequestException(
             "INVALID_URL",
@@ -945,7 +945,6 @@ export class WishlistService {
           );
         }
       }
-
       const updateData = {
         ...(body.productName && { name: body.productName }),
         ...(body.price !== undefined && { price: body.price }),

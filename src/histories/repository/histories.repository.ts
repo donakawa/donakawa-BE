@@ -45,7 +45,7 @@ type HistoryItemWithRelations = Prisma.PurchasedHistoryGetPayload<{
 export class HistoriesRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async findAutoItem(itemId: number, userId: bigint) {
+  async findAutoItem(itemId: bigint, userId: bigint) {
     return this.prisma.addedItemAuto.findFirst({
       where: {
         id: itemId,
@@ -54,7 +54,7 @@ export class HistoriesRepository {
     });
   }
 
-  async findManualItem(itemId: number, userId: bigint) {
+  async findManualItem(itemId: bigint, userId: bigint) {
     return this.prisma.addedItemManual.findFirst({
       where: {
         id: itemId,
@@ -64,8 +64,8 @@ export class HistoriesRepository {
   }
 
   async createReview(params: {
-    autoItemId?: number;
-    manualItemId?: number;
+    autoItemId?: bigint;
+    manualItemId?: bigint;
     satisfaction: number;
     frequency: number;
   }) {

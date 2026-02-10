@@ -322,7 +322,7 @@ const models: TsoaRoute.Models = {
             "itemId": {"dataType":"double","required":true},
             "satisfaction": {"dataType":"double","required":true},
             "frequency": {"dataType":"double","required":true},
-            "createdAt": {"dataType":"datetime","required":true},
+            "updatedAt": {"dataType":"union","subSchemas":[{"dataType":"datetime"},{"dataType":"enum","enums":[null]}],"required":true},
         },
         "additionalProperties": false,
     },
@@ -340,6 +340,7 @@ const models: TsoaRoute.Models = {
     "CreateReviewRequestDto": {
         "dataType": "refObject",
         "properties": {
+            "itemType": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["MANUAL"]}],"required":true},
             "satisfaction": {"dataType":"double","required":true},
             "frequency": {"dataType":"double","required":true},
         },
@@ -741,6 +742,7 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "id": {"dataType":"string","required":true},
+            "itemId": {"dataType":"string","required":true},
             "type": {"ref":"SpendItemType","required":true},
             "name": {"dataType":"string","required":true},
             "price": {"dataType":"double","required":true},
@@ -2932,6 +2934,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAuthController_reauthGoogleForDelete: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/auth/google/reauth',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AuthController)),
+            ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.reauthGoogleForDelete)),
+
+            async function AuthController_reauthGoogleForDelete(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAuthController_reauthGoogleForDelete, request, response });
+
+                const controller = new AuthController();
+
+              await templateService.apiHandler({
+                methodName: 'reauthGoogleForDelete',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 302,
               });
             } catch (err) {
                 return next(err);

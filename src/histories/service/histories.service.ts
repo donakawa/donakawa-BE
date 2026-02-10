@@ -22,20 +22,29 @@ export class HistoriesService {
     private readonly historiesRepository: HistoriesRepository,
     private readonly filesService: FilesService,
     private readonly aiCommentService: AiCommentService,
-  ) {}
+  ) { }
 
   async createReview(
     userId: bigint,
-    itemId: number,
+    itemId: bigint,
+    itemType: "AUTO" | "MANUAL",
     satisfaction: number,
     frequency: number,
   ) {
-    const autoItem = await this.historiesRepository.findAutoItem(
-      itemId,
-      userId,
-    );
+    if (itemType === "AUTO") {
+      const autoItem = await this.historiesRepository.findAutoItem(
+        itemId,
+        userId,
+      );
 
-    if (autoItem) {
+      if (!autoItem) {
+        throw new AppError({
+          errorCode: "H002",
+          message: "해당 AUTO 아이템을 찾을 수 없습니다.",
+          statusCode: 404,
+        });
+      }
+
       return this.historiesRepository.createReview({
         autoItemId: itemId,
         satisfaction,
@@ -43,23 +52,24 @@ export class HistoriesService {
       });
     }
 
+    // MANUAL
     const manualItem = await this.historiesRepository.findManualItem(
       itemId,
       userId,
     );
 
-    if (manualItem) {
-      return this.historiesRepository.createReview({
-        manualItemId: itemId,
-        satisfaction,
-        frequency,
+    if (!manualItem) {
+      throw new AppError({
+        errorCode: "H002",
+        message: "해당 MANUAL 아이템을 찾을 수 없습니다.",
+        statusCode: 404,
       });
     }
 
-    throw new AppError({
-      errorCode: "H002",
-      message: "해당 아이템을 찾을 수 없습니다.",
-      statusCode: 404,
+    return this.historiesRepository.createReview({
+      manualItemId: itemId,
+      satisfaction,
+      frequency,
     });
   }
 
@@ -456,8 +466,8 @@ export class HistoriesService {
           data.satisfactionCount === 0
             ? 0
             : Number(
-                (data.satisfactionSum / data.satisfactionCount).toFixed(1),
-              ),
+              (data.satisfactionSum / data.satisfactionCount).toFixed(1),
+            ),
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);

@@ -42,6 +42,7 @@ type SpendItemType = "AUTO" | "MANUAL";
 
 export class SpendItemDto {
   id!: string;
+  itemId!: string;
   type!: SpendItemType;
   name!: string;
   price!: number;
