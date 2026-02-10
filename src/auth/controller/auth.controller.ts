@@ -419,17 +419,9 @@ export class AuthController {
     req.res!.redirect(authUrl);
   }
 
-  private async handleOAuthCallback(params: {
-    code: string;
-    state: string;
-    req: ExpressRequest;
-    reauthHandler: (state: string, code: string) => Promise<boolean>;
-    loginHandler: (
-      code: string,
-      state: string,
-    ) => Promise<{ tokens: any; isNewUser: boolean }>;
-    provider: "google" | "kakao";
-  }): Promise<void> {
+  private async handleOAuthCallback(
+    params: OAuthCallbackParams,
+  ): Promise<void> {
     const { code, state, req, reauthHandler, loginHandler, provider } = params;
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -478,4 +470,15 @@ export class AuthController {
       );
     }
   }
+}
+interface OAuthCallbackParams {
+  code: string;
+  state: string;
+  req: ExpressRequest;
+  reauthHandler: (state: string, code: string) => Promise<boolean>;
+  loginHandler: (
+    code: string,
+    state: string,
+  ) => Promise<{ tokens: any; isNewUser: boolean }>;
+  provider: "google" | "kakao";
 }
