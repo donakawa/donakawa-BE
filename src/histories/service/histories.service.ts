@@ -165,7 +165,8 @@ export class HistoriesService {
     let totalAmount = 0;
 
     for (const h of histories) {
-      const date = h.purchasedDate.toISOString().split("T")[0];
+      const d = h.purchasedDate;
+      const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 
       if (!itemsByDate[date]) {
         itemsByDate[date] = [];
@@ -243,7 +244,8 @@ export class HistoriesService {
     }
 
     const [y, m, d] = date.split("-").map(Number);
-    const start = new Date(Date.UTC(y, m - 1, d));
+    const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+    const end = new Date(Date.UTC(y, m - 1, d + 1, 0, 0, 0));
     if (
       Number.isNaN(start.getTime()) ||
       start.getUTCFullYear() !== y ||
@@ -257,7 +259,7 @@ export class HistoriesService {
       });
     }
 
-    const end = new Date(Date.UTC(y, m - 1, d + 1));
+    // const end = new Date(Date.UTC(y, m - 1, d + 1));
 
     const histories = await this.historiesRepository.findDailyPurchasedItems(
       userId,
