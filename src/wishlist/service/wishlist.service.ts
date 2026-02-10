@@ -316,6 +316,7 @@ export class WishlistService {
               id: true,
               name: true,
               price: true,
+              brandName: true,
               storePlatform: {
                 select: {
                   id: true,
@@ -354,7 +355,7 @@ export class WishlistService {
         name: wishitem.product.name,
         price: wishitem.product.price,
         platform: wishitem.product.storePlatform.name,
-        brand: null,
+        brand: wishitem.product.brandName,
         photoUrl,
         productUrl,
         reason: wishitem.reason,
