@@ -92,26 +92,23 @@ export class GoalsRepository {
     cursor?: string,
     take: number = 10,
   ) {
-    const cursorBigInt = cursor ? BigInt(cursor) : undefined;
     const satisfactionCondition = isSatisfied ? { gte: 4 } : { lte: 3 };
+    const cursorId = cursor ? BigInt(cursor) : undefined;
 
     return this.prisma.review.findMany({
       where: {
         satisfaction: satisfactionCondition,
+        createdAt: { gte: since },
+        ...(cursorId && {
+          id: { lt: cursorId },
+        }),
         OR: [
-          {
-            addedItemAuto: {
-              userId: BigInt(userId),
-              purchasedHistory: { some: { purchasedDate: { gte: since } } },
-            },
-          },
-          {
-            addedItemManual: {
-              userId: BigInt(userId),
-              purchasedHistory: { some: { purchasedDate: { gte: since } } },
-            },
-          },
+          { addedItemAuto: { userId: BigInt(userId) } },
+          { addedItemManual: { userId: BigInt(userId) } },
         ],
+      },
+      orderBy: {
+        id: "desc",
       },
       include: {
         addedItemAuto: {
@@ -125,7 +122,11 @@ export class GoalsRepository {
                 files: { select: { id: true } },
               },
             },
-            purchasedHistory: { orderBy: { purchasedDate: "desc" }, take: 1 },
+            purchasedHistory: {
+              orderBy: { purchasedDate: "desc" },
+              take: 1,
+              select: { id: true, purchasedDate: true },
+            },
           },
         },
         addedItemManual: {
@@ -138,15 +139,12 @@ export class GoalsRepository {
             purchasedHistory: {
               orderBy: { purchasedDate: "desc" },
               take: 1,
+              select: { id: true, purchasedDate: true },
             },
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
       take: take + 1,
-      cursor: cursorBigInt ? { id: cursorBigInt } : undefined,
     });
   }
 

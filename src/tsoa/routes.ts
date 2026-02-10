@@ -1023,7 +1023,7 @@ const models: TsoaRoute.Models = {
             "nickname": {"dataType":"string","required":true},
             "goal": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "hasPassword": {"dataType":"boolean","required":true},
-            "provider": {"dataType":"string","required":true},
+            "providers": {"dataType":"array","array":{"dataType":"string"},"required":true},
         },
         "additionalProperties": false,
     },
@@ -1112,6 +1112,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.post('/wishlist/crawl-tasks',
+            authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.addCrawlTask)),
 
