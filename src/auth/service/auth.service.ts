@@ -482,13 +482,6 @@ export class AuthService {
       throw new NotFoundException("U001", "존재하지 않는 계정입니다.");
     }
 
-    if (PasswordUtil.isSocialUser(user.password)) {
-      throw new UnauthorizedException(
-        "U007",
-        "소셜 로그인 계정은 비밀번호 재설정이 불가능합니다.",
-      );
-    }
-
     await redis.del(
       RedisKeys.emailVerified(EmailVerifyTypeEnum.RESET_PASSWORD, email),
     );
