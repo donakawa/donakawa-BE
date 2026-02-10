@@ -93,21 +93,19 @@ export class GoalsRepository {
     take: number = 10,
   ) {
     const satisfactionCondition = isSatisfied ? { gte: 4 } : { lte: 3 };
-    const cursorId = cursor ? new Date(decodeURIComponent(cursor)) : undefined;
+    const cursorId = cursor ? BigInt(cursor) : undefined;
 
     return this.prisma.review.findMany({
       where: {
         satisfaction: satisfactionCondition,
+        ...(cursorId && { id: { lt: cursorId } }),
         OR: [
           {
             addedItemAuto: {
               userId: BigInt(userId),
               purchasedHistory: {
                 some: {
-                  purchasedDate: {
-                    gte: since,
-                    ...(cursorId && { lt: cursorId }),
-                  },
+                  purchasedDate: { gte: since },
                 },
               },
             },
@@ -117,15 +115,15 @@ export class GoalsRepository {
               userId: BigInt(userId),
               purchasedHistory: {
                 some: {
-                  purchasedDate: {
-                    gte: since,
-                    ...(cursorId && { lt: cursorId }),
-                  },
+                  purchasedDate: { gte: since },
                 },
               },
             },
           },
         ],
+      },
+      orderBy: {
+        id: "desc",
       },
       include: {
         addedItemAuto: {
@@ -142,10 +140,7 @@ export class GoalsRepository {
             purchasedHistory: {
               orderBy: { purchasedDate: "desc" },
               take: 1,
-              select: {
-                id: true,
-                purchasedDate: true,
-              },
+              select: { id: true, purchasedDate: true },
             },
           },
         },
@@ -159,10 +154,7 @@ export class GoalsRepository {
             purchasedHistory: {
               orderBy: { purchasedDate: "desc" },
               take: 1,
-              select: {
-                id: true,
-                purchasedDate: true,
-              },
+              select: { id: true, purchasedDate: true },
             },
           },
         },
