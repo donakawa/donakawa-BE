@@ -223,19 +223,28 @@ export class GoalsService {
     );
 
     reviews.sort((a, b) => {
-      const aDate =
-        a.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
-        a.addedItemManual?.purchasedHistory[0]?.purchasedDate ??
-        new Date(0);
-      const bDate =
-        b.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
-        b.addedItemManual?.purchasedHistory[0]?.purchasedDate ??
-        new Date(0);
-      return bDate.getTime() - aDate.getTime();
+      const aHistory =
+        a.addedItemAuto?.purchasedHistory[0] ??
+        a.addedItemManual?.purchasedHistory[0];
+      const bHistory =
+        b.addedItemAuto?.purchasedHistory[0] ??
+        b.addedItemManual?.purchasedHistory[0];
+
+      const aDate = aHistory?.purchasedDate ?? new Date(0);
+      const bDate = bHistory?.purchasedDate ?? new Date(0);
+
+      const dateDiff = bDate.getTime() - aDate.getTime();
+      if (dateDiff !== 0) return dateDiff;
+
+      const aId = aHistory?.id ?? 0n;
+      const bId = bHistory?.id ?? 0n;
+
+      return Number(bId - aId);
     });
 
+    const itemsToUse = reviews.slice(0, 10);
     const items = await Promise.all(
-      reviews.slice(0, 10).map(async (r) => {
+      itemsToUse.map(async (r) => {
         // 수동 추가
         if (r.addedItemManual) {
           const fileId = r.addedItemManual.files?.id;
@@ -244,7 +253,8 @@ export class GoalsService {
             : null;
 
           return {
-            id: r.addedItemManual.id.toString(),
+            id: r.id.toString(),
+            itemId: r.addedItemManual.id.toString(),
             type: "MANUAL" as const,
             name: r.addedItemManual.name,
             price: r.addedItemManual.price,
@@ -260,7 +270,8 @@ export class GoalsService {
           : null;
 
         return {
-          id: product.id.toString(),
+          id: r.id.toString(),
+          itemId: product.id.toString(),
           type: "AUTO" as const,
           name: r.addedItemAuto!.product.name,
           price: r.addedItemAuto!.product.price,
@@ -300,8 +311,16 @@ export class GoalsService {
       isSatisfied,
     );
 
-    const hasNext = reviews.length > 10;
-    const nextCursor = hasNext ? reviews[10].id.toString() : undefined;
+    let nextCursor: string | undefined;
+    if (reviews.length > 10) {
+      const last = itemsToUse[itemsToUse.length - 1];
+      if (last) {
+        const lastHistory =
+          last.addedItemAuto?.purchasedHistory[0] ??
+          last.addedItemManual?.purchasedHistory[0];
+        nextCursor = lastHistory?.purchasedDate.toISOString();
+      }
+    }
 
     return { averageDecisionDays, recentMonthCount, items, nextCursor };
   }
