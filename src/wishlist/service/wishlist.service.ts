@@ -920,7 +920,7 @@ export class WishlistService {
       if (body.url) {
         try {
           url = new URL(body.url);
-          cleanUrl = url.hostname + url.pathname.replace(/\/$/, "");
+          cleanUrl = url.origin + url.pathname.replace(/\/$/, "");
         } catch {
           throw new BadRequestException(
             "INVALID_URL",
