@@ -245,7 +245,7 @@ export class HistoriesService {
 
     const [y, m, d] = date.split("-").map(Number);
     const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
-    const end = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+    const end = new Date(Date.UTC(y, m - 1, d + 1, 0, 0, 0));
     if (
       Number.isNaN(start.getTime()) ||
       start.getUTCFullYear() !== y ||
