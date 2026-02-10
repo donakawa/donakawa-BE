@@ -778,12 +778,12 @@ export class AuthService {
     await redis.set(stateKey, userId.toString(), { EX: RedisTTL.OAUTH_STATE });
 
     // provider에 따라 OAuth 선택
-    const oauthService =
-      provider === OauthProvider.GOOGLE
-        ? this.googleOAuthService
-        : this.kakaoOAuthService;
-
-    return oauthService.getAuthUrl(state);
+    if (provider === OauthProvider.GOOGLE) {
+      return this.googleOAuthService.getAuthUrl(state);
+    } else if (provider === OauthProvider.KAKAO) {
+      return this.kakaoOAuthService.getAuthUrl(state);
+    }
+    throw new Error(`Unsupported OAuth provider: ${provider}`);
   }
 
   //OAuth 재인증 처리 (구글/카카오 공통)
