@@ -129,6 +129,7 @@ export class GoalsRepository {
         addedItemAuto: {
           select: {
             createdAt: true,
+            id: true,
             product: {
               select: {
                 id: true,
