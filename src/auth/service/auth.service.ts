@@ -758,21 +758,44 @@ export class AuthService {
     return new UserProfileResponseDto(user);
   }
 
-  // 구글 재인증 URL (탈퇴용)
+  //구글 재인증 URL (탈퇴용)
   async getGoogleReauthUrl(userId: bigint): Promise<string> {
+    return this.getReauthUrl(OauthProvider.GOOGLE, userId);
+  }
+  //카카오 재인증 URL (탈퇴용)
+  async getKakaoReauthUrl(userId: bigint): Promise<string> {
+    return this.getReauthUrl(OauthProvider.KAKAO, userId);
+  }
+  // 재인증 URL 생성 헬퍼 메서드(구글/카카오 공통)
+  private async getReauthUrl(
+    provider: OauthProvider,
+    userId: bigint,
+  ): Promise<string> {
     const randomId = randomBytes(32).toString("hex");
-    const state = `reauth_${randomId}`; // prefix로 재인증 표시
+    const state = `reauth_${randomId}`;
     const stateKey = RedisKeys.oauthReauthState(state);
 
-    // state에 userId와 목적 저장
     await redis.set(stateKey, userId.toString(), { EX: RedisTTL.OAUTH_STATE });
 
-    return this.googleOAuthService.getAuthUrl(state);
+    // provider에 따라 OAuth 선택
+    if (provider === OauthProvider.GOOGLE) {
+      return this.googleOAuthService.getAuthUrl(state);
+    } else if (provider === OauthProvider.KAKAO) {
+      return this.kakaoOAuthService.getAuthUrl(state);
+    }
+    throw new Error(`Unsupported OAuth provider: ${provider}`);
   }
-  async handleGoogleReauth(state: string, code: string): Promise<boolean> {
+
+  //OAuth 재인증 처리 (구글/카카오 공통)
+  private async handleOAuthReauth(
+    provider: OauthProvider,
+    state: string,
+    code: string,
+  ): Promise<boolean> {
     if (!state.startsWith("reauth_")) {
       return false; // 일반 로그인
     }
+
     // 재인증 데이터 조회
     const reauthKey = RedisKeys.oauthReauthState(state);
     let userId: string | null;
@@ -781,15 +804,24 @@ export class AuthService {
       userId = await redis.get(reauthKey);
     } catch (error) {
       console.error("Redis error during reauth lookup:", error);
-      throw new Error("REDIS_CONNECTION_ERROR"); // 커스텀 메시지
+      throw new Error("REDIS_CONNECTION_ERROR");
     }
 
     if (!userId) {
       throw new UnauthorizedException("A018", "재인증 세션이 만료되었습니다.");
     }
 
-    // 구글 사용자 정보 가져오기
-    const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+    // provider에 따라 사용자 정보 가져오기
+    let uid: string;
+    if (provider === OauthProvider.GOOGLE) {
+      const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
+      uid = googleUserInfo.googleUid;
+    } else if (provider === OauthProvider.KAKAO) {
+      const kakaoUserInfo = await this.kakaoOAuthService.getUserInfo(code);
+      uid = kakaoUserInfo.kakaoUid;
+    } else {
+      throw new Error(`Unsupported OAuth provider: ${provider}`);
+    }
 
     // 본인 확인
     const user = await this.authRepository.findUserById(BigInt(userId));
@@ -799,22 +831,30 @@ export class AuthService {
 
     const existingOauth = await this.authRepository.findOauthByUserId(
       BigInt(userId),
-      OauthProvider.GOOGLE,
+      provider,
     );
 
-    if (!existingOauth || existingOauth.uid !== googleUserInfo.googleUid) {
+    if (!existingOauth || existingOauth.uid !== uid) {
       throw new UnauthorizedException("A017", "본인 확인에 실패했습니다.");
     }
 
     // 재인증 성공 처리
-    await redis.set(
-      RedisKeys.deleteAccountVerified(BigInt(userId)),
-      "true",
-      { EX: RedisTTL.DELETE_ACCOUNT_VERIFIED }, // 5분 유효
-    );
+    await redis.set(RedisKeys.deleteAccountVerified(BigInt(userId)), "true", {
+      EX: RedisTTL.DELETE_ACCOUNT_VERIFIED,
+    });
 
     await redis.del(reauthKey);
 
     return true;
+  }
+
+  //구글 재인증 처리 (탈퇴용)
+  async handleGoogleReauth(state: string, code: string): Promise<boolean> {
+    return this.handleOAuthReauth(OauthProvider.GOOGLE, state, code);
+  }
+
+  //카카오 재인증 처리 (탈퇴용)
+  async handleKakaoReauth(state: string, code: string): Promise<boolean> {
+    return this.handleOAuthReauth(OauthProvider.KAKAO, state, code);
   }
 }
