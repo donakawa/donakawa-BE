@@ -140,7 +140,7 @@ export class AuthController {
   /**
    * @summary Google 로그인 API
    */
-  @Get("/google-login")
+  @Get("/google/login")
   @SuccessResponse("302", "Google 로그인 페이지로 리다이렉트")
   public async initiateGoogleLogin(
     @Request() req: ExpressRequest,
@@ -214,7 +214,7 @@ export class AuthController {
   /**
    * @summary 카카오 로그인 API
    */
-  @Get("/kakao-login")
+  @Get("/kakao/login")
   @SuccessResponse("302", "카카오 로그인 페이지로 리다이렉트")
   public async initiateKakaoLogin(
     @Request() req: ExpressRequest,
