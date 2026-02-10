@@ -459,7 +459,7 @@ export class AuthController {
       JwtCookieUtil.setJwtCookies(req.res!, tokens);
 
       if (isNewUser) {
-        req.res!.redirect(`${frontendUrl}/auth/complete-profile?success=true`);
+        req.res!.redirect(`${frontendUrl}/social/goal`);
       } else {
         req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
       }
