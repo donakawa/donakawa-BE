@@ -243,7 +243,6 @@ export class GoalsService {
         }
 
         // 자동 추가
-        const product = r.addedItemAuto!.product;
         const fileId = r.addedItemAuto?.product.files?.id;
         const imageUrl = fileId
           ? await this.filesService.generateUrl(fileId.toString(), 60 * 10)
@@ -251,7 +250,7 @@ export class GoalsService {
 
         return {
           id: r.id.toString(),
-          itemId: product.id.toString(),
+          itemId: r.addedItemAuto!.id.toString(),
           type: "AUTO" as const,
           name: r.addedItemAuto!.product.name,
           price: r.addedItemAuto!.product.price,
