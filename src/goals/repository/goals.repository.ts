@@ -98,13 +98,28 @@ export class GoalsRepository {
     return this.prisma.review.findMany({
       where: {
         satisfaction: satisfactionCondition,
-        createdAt: { gte: since },
-        ...(cursorId && {
-          id: { lt: cursorId },
-        }),
+        ...(cursorId && { id: { lt: cursorId } }),
         OR: [
-          { addedItemAuto: { userId: BigInt(userId) } },
-          { addedItemManual: { userId: BigInt(userId) } },
+          {
+            addedItemAuto: {
+              userId: BigInt(userId),
+              purchasedHistory: {
+                some: {
+                  purchasedDate: { gte: since },
+                },
+              },
+            },
+          },
+          {
+            addedItemManual: {
+              userId: BigInt(userId),
+              purchasedHistory: {
+                some: {
+                  purchasedDate: { gte: since },
+                },
+              },
+            },
+          },
         ],
       },
       orderBy: {
