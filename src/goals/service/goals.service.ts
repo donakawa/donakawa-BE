@@ -222,26 +222,6 @@ export class GoalsService {
       10,
     );
 
-    reviews.sort((a, b) => {
-      const aHistory =
-        a.addedItemAuto?.purchasedHistory[0] ??
-        a.addedItemManual?.purchasedHistory[0];
-      const bHistory =
-        b.addedItemAuto?.purchasedHistory[0] ??
-        b.addedItemManual?.purchasedHistory[0];
-
-      const aDate = aHistory?.purchasedDate ?? new Date(0);
-      const bDate = bHistory?.purchasedDate ?? new Date(0);
-
-      const dateDiff = bDate.getTime() - aDate.getTime();
-      if (dateDiff !== 0) return dateDiff;
-
-      const aId = aHistory?.id ?? 0n;
-      const bId = bHistory?.id ?? 0n;
-
-      return Number(bId - aId);
-    });
-
     const itemsToUse = reviews.slice(0, 10);
     const items = await Promise.all(
       itemsToUse.map(async (r) => {
@@ -281,7 +261,17 @@ export class GoalsService {
     );
 
     // 평균 구매 결정 시간
-    const decisionDaysList = reviews
+    const allRecentReviews = cursor
+      ? await this.goalsRepository.findSpendItems(
+          userId,
+          oneMonthAgo,
+          isSatisfied,
+          undefined,
+          1000,
+        )
+      : reviews;
+
+    const decisionDaysList = allRecentReviews
       .map((r) => {
         const wishCreated =
           r.addedItemAuto?.createdAt ?? r.addedItemManual?.createdAt;
@@ -314,12 +304,7 @@ export class GoalsService {
     let nextCursor: string | undefined;
     if (reviews.length > 10) {
       const last = itemsToUse[itemsToUse.length - 1];
-      if (last) {
-        const lastHistory =
-          last.addedItemAuto?.purchasedHistory[0] ??
-          last.addedItemManual?.purchasedHistory[0];
-        nextCursor = lastHistory?.purchasedDate.toISOString();
-      }
+      nextCursor = last.id.toString();
     }
 
     return { averageDecisionDays, recentMonthCount, items, nextCursor };
