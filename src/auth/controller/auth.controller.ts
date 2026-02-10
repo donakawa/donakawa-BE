@@ -234,13 +234,45 @@ export class AuthController {
     @Request() req: ExpressRequest,
   ): Promise<void> {
     try {
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
+      // 재인증 처리 시도
+      try {
+        const reauthResult = await this.authService.handleKakaoReauth(
+          state,
+          code,
+        );
+
+        if (reauthResult) {
+          req.res!.redirect(
+            `${frontendUrl}/mypage/settings/withdrawal?reauth=success`,
+          );
+          return;
+        }
+      } catch (reauthError: any) {
+        console.error("Reauth error:", reauthError);
+
+        // 인프라 에러 (Redis 장애)
+        if (reauthError.message === "REDIS_CONNECTION_ERROR") {
+          req.res!.redirect(
+            `${frontendUrl}/mypage/settings/withdrawal?system_error=true`,
+          );
+          return;
+        }
+
+        req.res!.redirect(
+          `${frontendUrl}/mypage/settings/withdrawal?reauth=failed`,
+        );
+        return;
+      }
+
+      // 일반 로그인 플로우
       const { tokens, isNewUser } = await this.authService.handleKakaoCallback(
         code,
         state,
       );
 
       JwtCookieUtil.setJwtCookies(req.res!, tokens);
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
       if (isNewUser) {
         req.res!.redirect(`${frontendUrl}/auth/complete-profile?success=true`);
@@ -450,6 +482,25 @@ export class AuthController {
     }
 
     const authUrl = await this.authService.getGoogleReauthUrl(BigInt(user.id));
+    req.res!.redirect(authUrl);
+  }
+
+  /**
+   * @summary 카카오 재인증 (회원 탈퇴용)
+   */
+  @Get("/kakao/reauth")
+  @Security("jwt")
+  @SuccessResponse("302", "카카오 재인증 페이지로 리다이렉트")
+  public async reauthKakaoForDelete(
+    @Request() req: ExpressRequest,
+  ): Promise<void> {
+    const user = req.user;
+
+    if (!user?.id) {
+      throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
+    }
+
+    const authUrl = await this.authService.getKakaoReauthUrl(BigInt(user.id));
     req.res!.redirect(authUrl);
   }
 }
