@@ -787,7 +787,7 @@ export class AuthService {
   }
 
   //OAuth 재인증 처리 (구글/카카오 공통)
-  async handleOAuthReauth(
+  private async handleOAuthReauth(
     provider: OauthProvider,
     state: string,
     code: string,
@@ -816,9 +816,11 @@ export class AuthService {
     if (provider === OauthProvider.GOOGLE) {
       const googleUserInfo = await this.googleOAuthService.getUserInfo(code);
       uid = googleUserInfo.googleUid;
-    } else {
+    } else if (provider === OauthProvider.KAKAO) {
       const kakaoUserInfo = await this.kakaoOAuthService.getUserInfo(code);
       uid = kakaoUserInfo.kakaoUid;
+    } else {
+      throw new Error(`Unsupported OAuth provider: ${provider}`);
     }
 
     // 본인 확인

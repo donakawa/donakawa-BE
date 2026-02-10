@@ -148,9 +148,9 @@ export class AuthController {
     const authUrl = await this.authService.getGoogleAuthUrl();
     req.res!.redirect(authUrl);
   }
-
-  // Google OAuth 콜백 - Google이 여기로 리다이렉트
-  // auth.controller.ts
+  /**
+   * @summary 구글 OAuth 콜백
+   */
   @Get("/oauth/google/callback")
   @SuccessResponse("302", "로그인 성공")
   public async googleCallback(
@@ -158,59 +158,18 @@ export class AuthController {
     @Query() state: string,
     @Request() req: ExpressRequest,
   ): Promise<void> {
-    try {
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-
-      try {
-        const reauthResult = await this.authService.handleGoogleReauth(
-          state,
-          code,
-        );
-
-        if (reauthResult) {
-          req.res!.redirect(
-            `${frontendUrl}/mypage/settings/withdrawal?reauth=success`,
-          );
-          return;
-        }
-      } catch (reauthError: any) {
-        console.error("Reauth error:", reauthError);
-
-        // 인프라 에러 (Redis 장애)
-        if (reauthError.message === "REDIS_CONNECTION_ERROR") {
-          req.res!.redirect(
-            `${frontendUrl}/mypage/settings/withdrawal?system_error=true`,
-          );
-          return;
-        }
-
-        req.res!.redirect(
-          `${frontendUrl}/mypage/settings/withdrawal?reauth=failed`,
-        );
-        return;
-      }
-
-      // 일반 로그인 플로우
-      const { tokens, isNewUser } = await this.authService.handleGoogleCallback(
-        code,
-        state,
-      );
-
-      JwtCookieUtil.setJwtCookies(req.res!, tokens);
-
-      if (isNewUser) {
-        req.res!.redirect(`${frontendUrl}/auth/complete-profile?success=true`);
-      } else {
-        req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
-      }
-    } catch (error) {
-      console.error("Google Login Error:", error);
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      req.res!.redirect(
-        `${frontendUrl}/auth/callback?success=false&error=google_login_failed`,
-      );
-    }
+    return this.handleOAuthCallback({
+      code,
+      state,
+      req,
+      reauthHandler: this.authService.handleGoogleReauth.bind(this.authService),
+      loginHandler: this.authService.handleGoogleCallback.bind(
+        this.authService,
+      ),
+      provider: "google",
+    });
   }
+
   /**
    * @summary 카카오 로그인 API
    */
@@ -233,60 +192,16 @@ export class AuthController {
     @Query() state: string,
     @Request() req: ExpressRequest,
   ): Promise<void> {
-    try {
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-
-      // 재인증 처리 시도
-      try {
-        const reauthResult = await this.authService.handleKakaoReauth(
-          state,
-          code,
-        );
-
-        if (reauthResult) {
-          req.res!.redirect(
-            `${frontendUrl}/mypage/settings/withdrawal?reauth=success`,
-          );
-          return;
-        }
-      } catch (reauthError: any) {
-        console.error("Reauth error:", reauthError);
-
-        // 인프라 에러 (Redis 장애)
-        if (reauthError.message === "REDIS_CONNECTION_ERROR") {
-          req.res!.redirect(
-            `${frontendUrl}/mypage/settings/withdrawal?system_error=true`,
-          );
-          return;
-        }
-
-        req.res!.redirect(
-          `${frontendUrl}/mypage/settings/withdrawal?reauth=failed`,
-        );
-        return;
-      }
-
-      // 일반 로그인 플로우
-      const { tokens, isNewUser } = await this.authService.handleKakaoCallback(
-        code,
-        state,
-      );
-
-      JwtCookieUtil.setJwtCookies(req.res!, tokens);
-
-      if (isNewUser) {
-        req.res!.redirect(`${frontendUrl}/auth/complete-profile?success=true`);
-      } else {
-        req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
-      }
-    } catch (error) {
-      console.error("Kakao Login Error:", error);
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      req.res!.redirect(
-        `${frontendUrl}/auth/callback?success=false&error=kakao_login_failed`,
-      );
-    }
+    return this.handleOAuthCallback({
+      code,
+      state,
+      req,
+      reauthHandler: this.authService.handleKakaoReauth.bind(this.authService),
+      loginHandler: this.authService.handleKakaoCallback.bind(this.authService),
+      provider: "kakao",
+    });
   }
+
   /**
    * @summary 로그아웃 API
    */
@@ -502,5 +417,65 @@ export class AuthController {
 
     const authUrl = await this.authService.getKakaoReauthUrl(BigInt(user.id));
     req.res!.redirect(authUrl);
+  }
+
+  private async handleOAuthCallback(params: {
+    code: string;
+    state: string;
+    req: ExpressRequest;
+    reauthHandler: (state: string, code: string) => Promise<boolean>;
+    loginHandler: (
+      code: string,
+      state: string,
+    ) => Promise<{ tokens: any; isNewUser: boolean }>;
+    provider: "google" | "kakao";
+  }): Promise<void> {
+    const { code, state, req, reauthHandler, loginHandler, provider } = params;
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
+    try {
+      // 1. 재인증 처리
+      try {
+        const reauthResult = await reauthHandler(state, code);
+
+        if (reauthResult) {
+          req.res!.redirect(
+            `${frontendUrl}/mypage/settings/withdrawal?reauth=success`,
+          );
+          return;
+        }
+      } catch (reauthError: any) {
+        console.error("Reauth error:", reauthError);
+
+        if (reauthError.message === "REDIS_CONNECTION_ERROR") {
+          req.res!.redirect(
+            `${frontendUrl}/mypage/settings/withdrawal?system_error=true`,
+          );
+          return;
+        }
+
+        req.res!.redirect(
+          `${frontendUrl}/mypage/settings/withdrawal?reauth=failed`,
+        );
+        return;
+      }
+
+      // 2. 일반 로그인 플로우
+      const { tokens, isNewUser } = await loginHandler(code, state);
+
+      JwtCookieUtil.setJwtCookies(req.res!, tokens);
+
+      if (isNewUser) {
+        req.res!.redirect(`${frontendUrl}/auth/complete-profile?success=true`);
+      } else {
+        req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
+      }
+    } catch (error) {
+      console.error(`${provider} Login Error:`, error);
+      req.res!.redirect(
+        `${frontendUrl}/auth/callback?success=false&error=${provider}_login_failed`,
+      );
+    }
   }
 }
