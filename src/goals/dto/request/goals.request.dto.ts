@@ -5,6 +5,7 @@ import {
   Min,
   Max,
   IsNumber,
+  IsIn,
 } from "class-validator";
 import { Example } from "tsoa";
 
@@ -33,6 +34,7 @@ export class GoalsRequestDto {
 
   @Example(1)
   @IsInt()
+  @IsIn([1, 2, 3], { message: "유효하지 않은 spendStrategy 값입니다." })
   spendStrategy!: number;
 
   @Example(30000)
@@ -84,5 +86,6 @@ export class CalcShoppingBudgetRequestDto {
   @Example(1)
   @IsInt()
   @IsNotEmpty()
+  @IsIn([1, 2, 3], { message: "유효하지 않은 spendStrategy 값입니다." })
   spendStrategy!: number;
 }
