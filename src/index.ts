@@ -35,7 +35,7 @@ async function bootstrap() {
   app.use(express.json());
   app.use(
     cors({
-      origin: ["http://localhost:5173", "https://donakawa.site"],
+      origin: [process.env.FRONTEND_URL ?? "http://localhost:3000"],
       credentials: true,
     }),
   );
