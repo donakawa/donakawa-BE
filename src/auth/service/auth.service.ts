@@ -832,10 +832,13 @@ export class AuthService {
 
     // Redis 장애 처리 추가
     try {
-      await redis.set(RedisKeys.deleteAccountVerified(BigInt(userId)), "true", {
-        EX: RedisTTL.DELETE_ACCOUNT_VERIFIED,
-      });
-      await redis.del(reauthKey);
+      await redis
+        .multi()
+        .set(RedisKeys.deleteAccountVerified(BigInt(userId)), "true", {
+          EX: RedisTTL.DELETE_ACCOUNT_VERIFIED,
+        })
+        .del(reauthKey)
+        .exec();
     } catch (error) {
       console.error("Redis error during reauth verification save:", error);
       throw new InfrastructureException("I001", "시스템 오류가 발생했습니다.");
