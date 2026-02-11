@@ -37,7 +37,11 @@ import {
 } from "../dto/request/auth.request.dto";
 import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
-import { BadRequestException, UnauthorizedException } from "../../errors/error";
+import {
+  BadRequestException,
+  InfrastructureException,
+  UnauthorizedException,
+} from "../../errors/error";
 import { validateBody } from "../../middleware/validation.middleware";
 
 @Route("/auth")
@@ -427,7 +431,7 @@ export class AuthController {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
     try {
-      // 1. 재인증 처리
+      // 재인증 처리
       try {
         const reauthResult = await reauthHandler(state, code);
 
@@ -440,7 +444,8 @@ export class AuthController {
       } catch (reauthError: any) {
         console.error("Reauth error:", reauthError);
 
-        if (reauthError.message === "REDIS_CONNECTION_ERROR") {
+        // 인스턴스 체크로 개선
+        if (reauthError instanceof InfrastructureException) {
           req.res!.redirect(
             `${frontendUrl}/mypage/settings/withdrawal?system_error=true`,
           );
@@ -453,7 +458,7 @@ export class AuthController {
         return;
       }
 
-      // 2. 일반 로그인 플로우
+      // 일반 로그인 플로우
       const { tokens, isNewUser } = await loginHandler(code, state);
 
       JwtCookieUtil.setJwtCookies(req.res!, tokens);

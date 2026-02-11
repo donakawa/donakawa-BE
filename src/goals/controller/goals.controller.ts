@@ -11,6 +11,7 @@ import {
   Security,
   Request,
   Query,
+  Middlewares,
 } from "tsoa";
 import { AppError } from "../../errors/app.error";
 import { ApiResponse, success } from "../../common/response";
@@ -26,8 +27,9 @@ import {
   CalcShoppingBudgetResponseDto,
   SpendSummaryResponseDto,
 } from "../dto/response/goals.response.dto";
-import { container } from "../../container";
 import { GoalsService } from "../service/goals.service";
+import { container } from "../../container";
+import { validateBody } from "../../middleware/validation.middleware";
 
 @Route("/goals")
 @Tags("Goals")
@@ -39,6 +41,7 @@ export class GoalsController {
    * @summary 온라인 쇼핑 목표액 계산 API
    */
   @Post("/budget/calculate")
+  @Middlewares(validateBody(CalcShoppingBudgetRequestDto))
   @SuccessResponse("200", "온라인 쇼핑 목표액 계산 성공")
   public async calcShoppingBudget(
     @Body() body: CalcShoppingBudgetRequestDto,
@@ -52,6 +55,7 @@ export class GoalsController {
    * @summary 목표 예산 설정 API
    */
   @Post("/budget")
+  @Middlewares(validateBody(GoalsRequestDto))
   @SuccessResponse("201", "목표 예산 설정 성공")
   public async createTargetBudget(
     @Body() body: GoalsRequestDto,

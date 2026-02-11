@@ -2,6 +2,7 @@ import { OauthProvider, PrismaClient } from "@prisma/client";
 import { GoogleOAuthService } from "./google-oauth.service";
 import {
   ConflictException,
+  InfrastructureException,
   NotFoundException,
   UnauthorizedException,
 } from "../../errors/error";
@@ -795,7 +796,7 @@ export class AuthService {
       userId = await redis.get(reauthKey);
     } catch (error) {
       console.error("Redis error during reauth lookup:", error);
-      throw new Error("REDIS_CONNECTION_ERROR");
+      throw new InfrastructureException("I001", "시스템 오류가 발생했습니다.");
     }
 
     if (!userId) {
@@ -829,12 +830,19 @@ export class AuthService {
       throw new UnauthorizedException("A017", "본인 확인에 실패했습니다.");
     }
 
-    // 재인증 성공 처리
-    await redis.set(RedisKeys.deleteAccountVerified(BigInt(userId)), "true", {
-      EX: RedisTTL.DELETE_ACCOUNT_VERIFIED,
-    });
-
-    await redis.del(reauthKey);
+    // Redis 장애 처리 추가
+    try {
+      await redis
+        .multi()
+        .set(RedisKeys.deleteAccountVerified(BigInt(userId)), "true", {
+          EX: RedisTTL.DELETE_ACCOUNT_VERIFIED,
+        })
+        .del(reauthKey)
+        .exec();
+    } catch (error) {
+      console.error("Redis error during reauth verification save:", error);
+      throw new InfrastructureException("I001", "시스템 오류가 발생했습니다.");
+    }
 
     return true;
   }
