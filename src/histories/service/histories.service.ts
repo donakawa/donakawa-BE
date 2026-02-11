@@ -167,13 +167,10 @@ export class HistoriesService {
       });
     }
 
-    const KST_OFFSET = 9 * 60;
+    const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-    const kstStart = new Date(year, month - 1, 1, 0, 0, 0);
-    const kstEnd = new Date(year, month, 1, 0, 0, 0);
-
-    const start = new Date(kstStart.getTime() - KST_OFFSET * 60 * 1000);
-    const end = new Date(kstEnd.getTime() - KST_OFFSET * 60 * 1000);
+    const start = new Date(Date.UTC(year, month - 1, 1) - KST_OFFSET_MS);
+    const end = new Date(Date.UTC(year, month, 1) - KST_OFFSET_MS);
 
 
     const histories = await this.historiesRepository.findMonthlyPurchasedItems(
@@ -186,7 +183,6 @@ export class HistoriesService {
     let totalAmount = 0;
 
     for (const h of histories) {
-      const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
       const utcDate = h.purchasedDate;
       const kstDate = new Date(utcDate.getTime() + KST_OFFSET_MS);
@@ -273,14 +269,20 @@ export class HistoriesService {
     const [y, m, d] = date.split("-").map(Number);
     const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-    const kstStart = new Date(y, m - 1, d, 0, 0, 0);
-    const kstEnd = new Date(y, m - 1, d + 1, 0, 0, 0);
+    const start = new Date(
+      Date.UTC(y, m - 1, d, 0, 0, 0) - KST_OFFSET_MS
+    );
 
+    const end = new Date(
+      Date.UTC(y, m - 1, d + 1, 0, 0, 0) - KST_OFFSET_MS
+    );
+
+    const validationDate = new Date(Date.UTC(y, m - 1, d));
     if (
-      Number.isNaN(kstStart.getTime()) ||
-      kstStart.getFullYear() !== y ||
-      kstStart.getMonth() !== m - 1 ||
-      kstStart.getDate() !== d
+      Number.isNaN(validationDate.getTime()) ||
+      validationDate.getUTCFullYear() !== y ||
+      validationDate.getUTCMonth() !== m - 1 ||
+      validationDate.getUTCDate() !== d
     ) {
       throw new AppError({
         errorCode: "H004",
@@ -288,9 +290,6 @@ export class HistoriesService {
         statusCode: 400,
       });
     }
-
-    const start = new Date(kstStart.getTime() - KST_OFFSET_MS);
-    const end = new Date(kstEnd.getTime() - KST_OFFSET_MS);
 
     const histories = await this.historiesRepository.findDailyPurchasedItems(
       userId,
