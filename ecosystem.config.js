@@ -19,9 +19,6 @@ module.exports = {
       min_uptime: "30s",
       kill_timeout: 5000,
 
-      // ✅ 메모리 제한 넘으면 재시작
-      max_memory_restart: "300M",
-
       // ✅ 운영에서는 watch 끄기
       watch: false,
 
