@@ -174,6 +174,18 @@ export class WishlistController extends Controller {
     return success(await this.wishlistService.addWishListManual(dto));
   }
   /**
+   * @summary 위시리스트 통계 정보 조회 (구매/포기 아이템 모두 포함)
+   * @description 구매/포기 아이템을 모두 포함하여 위시리스트 통계 정보를 조회합니다.
+   */
+  @Get("/items/analytics")
+  @Security("jwt")
+  public async getWishlistAnalytics(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<GetWishListAnalyticsResponseDto>> {
+    const userId = req.user!.id;
+    return success(await this.wishlistService.getWishlistAnalytics(userId));
+  }
+  /**
    * @summary 위시리스트 아이템 상세 조회 (위시/구매/포기 아이템 모두 포함)
    * @description 위시/구매/포기 아이템을 모두 포함하여 지정한 한개의 아이템을 상세 조회합니다.
    */
@@ -371,6 +383,7 @@ export class WishlistController extends Controller {
     });
     await this.wishlistService.setWishitemReason(dto);
   }
+
   /**
    * @summary 위시리스트 아이템 수정 (수동 등록 아이템 만)
    * @description 위시/구매/포기 아이템을 모두 포함하여 수동으로 등록한 아이템의 정보를 수정 합니다.
@@ -402,17 +415,5 @@ export class WishlistController extends Controller {
     return success(
       await this.wishlistService.updateWishitemInfo(itemId, userId, dto, file),
     );
-  }
-  /**
-   * @summary 위시리스트 통계 정보 조회 (구매/포기 아이템 모두 포함)
-   * @description 구매/포기 아이템을 모두 포함하여 위시리스트 통계 정보를 조회합니다.
-   */
-  @Get("/wishlist/items/analytics")
-  @Security("jwt")
-  public async getWishlistAnalytics(
-    @Request() req: ExpressRequest,
-  ): Promise<ApiResponse<GetWishListAnalyticsResponseDto>> {
-    const userId = req.user!.id;
-    return success(await this.wishlistService.getWishlistAnalytics(userId));
   }
 }
