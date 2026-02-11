@@ -200,7 +200,84 @@ export class AuthService {
 
     return { tokens: { accessToken, refreshToken }, isNewUser };
   }
+  async getGoogleConnectUrl(userId: bigint): Promise<string> {
+    return this.getConnectUrl(OauthProvider.GOOGLE, userId);
+  }
 
+  async getKakaoConnectUrl(userId: bigint): Promise<string> {
+    return this.getConnectUrl(OauthProvider.KAKAO, userId);
+  }
+
+  private async getConnectUrl(
+    provider: OauthProvider,
+    userId: bigint,
+  ): Promise<string> {
+    const randomId = randomBytes(32).toString("hex");
+    const state = `connect_${randomId}`;
+    const stateKey = RedisKeys.oauthConnectState(state);
+    await redis.set(stateKey, userId.toString(), { EX: RedisTTL.OAUTH_STATE });
+
+    if (provider === OauthProvider.GOOGLE) {
+      return this.googleOAuthService.getAuthUrl(state);
+    } else if (provider === OauthProvider.KAKAO) {
+      return this.kakaoOAuthService.getAuthUrl(state);
+    }
+    throw new Error(`Unsupported OAuth provider: ${provider}`);
+  }
+
+  async handleGoogleConnect(state: string, code: string): Promise<boolean> {
+    return this.handleOAuthConnect(OauthProvider.GOOGLE, state, code);
+  }
+
+  async handleKakaoConnect(state: string, code: string): Promise<boolean> {
+    return this.handleOAuthConnect(OauthProvider.KAKAO, state, code);
+  }
+
+  private async handleOAuthConnect(
+    provider: OauthProvider,
+    state: string,
+    code: string,
+  ): Promise<boolean> {
+    if (!state.startsWith("connect_")) return false;
+
+    const connectKey = RedisKeys.oauthConnectState(state);
+    const userId = await redis.get(connectKey);
+    if (!userId)
+      throw new UnauthorizedException("A018", "연동 세션이 만료되었습니다.");
+
+    const user = await this.authRepository.findUserById(BigInt(userId));
+    if (!user)
+      throw new NotFoundException("U001", "사용자를 찾을 수 없습니다.");
+
+    let oauthEmail: string, oauthUid: string;
+    if (provider === OauthProvider.GOOGLE) {
+      const info = await this.googleOAuthService.getUserInfo(code);
+      oauthEmail = info.email;
+      oauthUid = info.googleUid;
+    } else {
+      const info = await this.kakaoOAuthService.getUserInfo(code);
+      oauthEmail = info.email;
+      oauthUid = info.kakaoUid;
+    }
+
+    if (user.email !== oauthEmail) {
+      throw new UnauthorizedException(
+        "A019",
+        "계정의 이메일과 소셜 계정의 이메일이 일치하지 않습니다.",
+      );
+    }
+
+    const existingOauth = await this.authRepository.findOauthByUserId(
+      BigInt(userId),
+      provider,
+    );
+    if (existingOauth)
+      throw new ConflictException("U013", "이미 연동된 소셜 계정입니다.");
+
+    await this.authRepository.createOauth(BigInt(userId), provider, oauthUid);
+    await redis.del(connectKey);
+    return true;
+  }
   // 유니크 닉네임 생성 헬퍼 메서드
   private async generateUniqueNickname(rawNickname: string): Promise<string> {
     const trimmed = rawNickname.trim().slice(0, 10);
