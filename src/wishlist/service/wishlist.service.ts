@@ -27,6 +27,7 @@ import {
   AddWishlistResponseDto,
   CreateWishitemFolderResponseDto,
   GetCrawlResultResponseDto,
+  GetWishListAnalyticsResponseDto,
   ModifyWishitemResponseDto,
   ShowWishitemDetailResponseDto,
   ShowWishitemFoldersResponseDto,
@@ -991,5 +992,27 @@ export class WishlistService {
     }
     const result = await this.fetchWishitemDetails(itemId, userId, "MANUAL");
     return new ModifyWishitemResponseDto(result);
+  }
+  async getWishlistAnalytics(userId: string) {
+    const droppedItemsTotalCount =
+      await this.wishlistRepository.countAddedItems(userId, "DROPPED");
+    const droppedItemsTotalPrice =
+      await this.wishlistRepository.sumAddedItemsPrice(userId, "DROPPED");
+    const boughtItemsTotalCount = await this.wishlistRepository.countAddedItems(
+      userId,
+      "BOUGHT",
+    );
+    const boughtItemsTotalPrice =
+      await this.wishlistRepository.sumAddedItemsPrice(userId, "BOUGHT");
+    return new GetWishListAnalyticsResponseDto({
+      droppedItems: {
+        totalCount: droppedItemsTotalCount,
+        totalPrice: droppedItemsTotalPrice,
+      },
+      boughtItems: {
+        totalCount: boughtItemsTotalCount,
+        totalPrice: boughtItemsTotalPrice,
+      },
+    });
   }
 }
