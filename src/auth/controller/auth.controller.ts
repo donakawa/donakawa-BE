@@ -170,6 +170,9 @@ export class AuthController {
       loginHandler: this.authService.handleGoogleCallback.bind(
         this.authService,
       ),
+      connectHandler: this.authService.handleGoogleConnect.bind(
+        this.authService,
+      ), // 추가
       provider: "google",
     });
   }
@@ -202,6 +205,9 @@ export class AuthController {
       req,
       reauthHandler: this.authService.handleKakaoReauth.bind(this.authService),
       loginHandler: this.authService.handleKakaoCallback.bind(this.authService),
+      connectHandler: this.authService.handleKakaoConnect.bind(
+        this.authService,
+      ), // 추가
       provider: "kakao",
     });
   }
@@ -426,18 +432,56 @@ export class AuthController {
   private async handleOAuthCallback(
     params: OAuthCallbackParams,
   ): Promise<void> {
-    const { code, state, req, reauthHandler, loginHandler, provider } = params;
+    const {
+      code,
+      state,
+      req,
+      reauthHandler,
+      loginHandler,
+      connectHandler,
+      provider,
+    } = params;
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
     try {
+      // 계정 연동 처리 추가
+      if (state.startsWith("connect_")) {
+        try {
+          const connectResult = await connectHandler(state, code);
+          if (connectResult) {
+            req.res!.redirect(
+              `${frontendUrl}/mypage/setting?connect=success&provider=${provider}`,
+            );
+            return;
+          }
+          // connect 플로우에서 false 반환 시에도 실패 리다이렉트
+          req.res!.redirect(
+            `${frontendUrl}/mypage/setting?connect=failed&error=unknown`,
+          );
+          return;
+        } catch (connectError: any) {
+          console.error("Connect error:", connectError);
+          if (connectError instanceof InfrastructureException) {
+            req.res!.redirect(
+              `${frontendUrl}/mypage/setting?system_error=true`,
+            );
+            return;
+          }
+          const errorCode = connectError.errorCode || "unknown";
+          req.res!.redirect(
+            `${frontendUrl}/mypage/setting?connect=failed&error=${errorCode}`,
+          );
+          return;
+        }
+      }
       // 재인증 처리
       try {
         const reauthResult = await reauthHandler(state, code);
 
         if (reauthResult) {
           req.res!.redirect(
-            `${frontendUrl}/mypage/settings/withdrawal?reauth=success`,
+            `${frontendUrl}/mypage/setting/withdrawal?reauth=success`,
           );
           return;
         }
@@ -447,13 +491,13 @@ export class AuthController {
         // 인스턴스 체크로 개선
         if (reauthError instanceof InfrastructureException) {
           req.res!.redirect(
-            `${frontendUrl}/mypage/settings/withdrawal?system_error=true`,
+            `${frontendUrl}/mypage/setting/withdrawal?system_error=true`,
           );
           return;
         }
 
         req.res!.redirect(
-          `${frontendUrl}/mypage/settings/withdrawal?reauth=failed`,
+          `${frontendUrl}/mypage/setting/withdrawal?reauth=failed`,
         );
         return;
       }
@@ -475,6 +519,34 @@ export class AuthController {
       );
     }
   }
+  /**
+   * @summary 구글 계정 연동 API
+   */
+  @Get("/connect/google")
+  @Security("jwt")
+  public async connectGoogleAccount(
+    @Request() req: ExpressRequest,
+  ): Promise<void> {
+    const user = req.user;
+    if (!user?.id)
+      throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
+    const authUrl = await this.authService.getGoogleConnectUrl(BigInt(user.id));
+    req.res!.redirect(authUrl);
+  }
+  /**
+   * @summary 카카오 계정 연동 API
+   */
+  @Get("/connect/kakao")
+  @Security("jwt")
+  public async connectKakaoAccount(
+    @Request() req: ExpressRequest,
+  ): Promise<void> {
+    const user = req.user;
+    if (!user?.id)
+      throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
+    const authUrl = await this.authService.getKakaoConnectUrl(BigInt(user.id));
+    req.res!.redirect(authUrl);
+  }
 }
 interface OAuthCallbackParams {
   code: string;
@@ -485,5 +557,6 @@ interface OAuthCallbackParams {
     code: string,
     state: string,
   ) => Promise<{ tokens: any; isNewUser: boolean }>;
+  connectHandler: (state: string, code: string) => Promise<boolean>; // 추가
   provider: "google" | "kakao";
 }
