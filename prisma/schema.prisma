@@ -60,7 +60,6 @@ model TargetBudget {
   incomeDay       Int?       @map("income_day")
   fixedExpense    Int?      @map("fixed_expense")
   monthlySaving   Int?      @map("monthly_saving")
-  recommendSaving Int?      @map("recommend_saving")
   spendStrategy   Int?      @map("spend_strategy")
   shoppingBudget  Int?      @map("shopping_budget")
 
