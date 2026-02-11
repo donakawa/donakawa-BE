@@ -106,9 +106,9 @@ export class HistoriesService {
                 const kstDate = new Date(
                   purchased.purchasedDate.getTime() + KST_OFFSET_MS
                 );
-                return `${kstDate.getFullYear()}-${String(
-                  kstDate.getMonth() + 1
-                ).padStart(2, "0")}-${String(kstDate.getDate()).padStart(2, "0")}`;
+                return `${kstDate.getUTCFullYear()}-${String(
+                  kstDate.getUTCMonth() + 1
+                ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
               })()
               : ""
           };
@@ -139,9 +139,9 @@ export class HistoriesService {
               const kstDate = new Date(
                 purchased.purchasedDate.getTime() + KST_OFFSET_MS
               );
-              return `${kstDate.getFullYear()}-${String(
-                kstDate.getMonth() + 1
-              ).padStart(2, "0")}-${String(kstDate.getDate()).padStart(2, "0")}`;
+              return `${kstDate.getUTCFullYear()}-${String(
+                kstDate.getUTCMonth() + 1
+              ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
             })()
             : ""
         };
@@ -187,9 +187,9 @@ export class HistoriesService {
       const utcDate = h.purchasedDate;
       const kstDate = new Date(utcDate.getTime() + KST_OFFSET_MS);
 
-      const date = `${kstDate.getFullYear()}-${String(
-        kstDate.getMonth() + 1,
-      ).padStart(2, "0")}-${String(kstDate.getDate()).padStart(2, "0")}`;
+      const date = `${kstDate.getUTCFullYear()}-${String(
+        kstDate.getUTCMonth() + 1,
+      ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
 
       if (!itemsByDate[date]) {
         itemsByDate[date] = [];
