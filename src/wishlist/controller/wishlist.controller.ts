@@ -44,6 +44,7 @@ import {
   AddWishlistResponseDto,
   CreateWishitemFolderResponseDto,
   GetCrawlResultResponseDto,
+  GetWishListAnalyticsResponseDto,
   ModifyWishitemResponseDto,
   ShowWishitemDetailResponseDto,
   ShowWishitemFoldersResponseDto,
@@ -401,5 +402,17 @@ export class WishlistController extends Controller {
     return success(
       await this.wishlistService.updateWishitemInfo(itemId, userId, dto, file),
     );
+  }
+  /**
+   * @summary 위시리스트 통계 정보 조회 (구매/포기 아이템 모두 포함)
+   * @description 구매/포기 아이템을 모두 포함하여 위시리스트 통계 정보를 조회합니다.
+   */
+  @Get("/wishlist/items/analytics")
+  @Security("jwt")
+  public async getWishlistAnalytics(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<GetWishListAnalyticsResponseDto>> {
+    const userId = req.user!.id;
+    return success(await this.wishlistService.getWishlistAnalytics(userId));
   }
 }

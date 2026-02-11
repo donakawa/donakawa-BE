@@ -209,3 +209,14 @@ export class ModifyWishitemResponseDto {
     this.status = data.status;
   }
 }
+export class GetWishListAnalyticsResponseDto {
+  droppedItems: { totalCount: number; totalPrice: number };
+  boughtItems: { totalCount: number; totalPrice: number };
+  constructor(param: {
+    droppedItems: { totalCount: number; totalPrice: number };
+    boughtItems: { totalCount: number; totalPrice: number };
+  }) {
+    this.droppedItems = param.droppedItems;
+    this.boughtItems = param.boughtItems;
+  }
+}

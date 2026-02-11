@@ -315,6 +315,25 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GetWishListAnalyticsResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "droppedItems": {"dataType":"nestedObjectLiteral","nestedProperties":{"totalPrice":{"dataType":"double","required":true},"totalCount":{"dataType":"double","required":true}},"required":true},
+            "boughtItems": {"dataType":"nestedObjectLiteral","nestedProperties":{"totalPrice":{"dataType":"double","required":true},"totalCount":{"dataType":"double","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_GetWishListAnalyticsResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"GetWishListAnalyticsResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "CreateReviewResponseDto": {
         "dataType": "refObject",
         "properties": {
@@ -1677,6 +1696,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'modifyWishitem',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsWishlistController_getWishlistAnalytics: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/wishlist/wishlist/items/analytics',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(WishlistController)),
+            ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.getWishlistAnalytics)),
+
+            async function WishlistController_getWishlistAnalytics(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsWishlistController_getWishlistAnalytics, request, response });
+
+                const controller = new WishlistController();
+
+              await templateService.apiHandler({
+                methodName: 'getWishlistAnalytics',
                 controller,
                 response,
                 next,

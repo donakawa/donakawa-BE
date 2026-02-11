@@ -248,4 +248,29 @@ left join store_platform s on p.store_platform_id = s.id where user_id = ${userI
       },
     });
   }
+  async countAddedItems(userId: string, status?: WishitemStatus) {
+    const autoCount = await this.prisma.addedItemAuto.count({
+      where: { userId: BigInt(userId), ...(status ? { status } : {}) },
+    });
+    const manualCount = await this.prisma.addedItemManual.count({
+      where: { userId: BigInt(userId), ...(status ? { status } : {}) },
+    });
+    return autoCount + manualCount;
+  }
+  async sumAddedItemsPrice(userId: string, status?: WishitemStatus) {
+    const autoItems = await this.prisma.addedItemAuto.findMany({
+      where: { userId: BigInt(userId), ...(status ? { status } : {}) },
+      include: { product: true },
+    });
+    const manualItems = await this.prisma.addedItemManual.findMany({
+      where: { userId: BigInt(userId), ...(status ? { status } : {}) },
+    });
+    const autoSum = autoItems.reduce((sum, item) => {
+      return sum + (item.product?.price || 0);
+    }, 0);
+    const manualSum = manualItems.reduce((sum, item) => {
+      return sum + (item.price || 0);
+    }, 0);
+    return autoSum + manualSum;
+  }
 }
