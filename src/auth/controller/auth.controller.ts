@@ -455,6 +455,11 @@ export class AuthController {
             );
             return;
           }
+          // connect 플로우에서 false 반환 시에도 실패 리다이렉트
+          req.res!.redirect(
+            `${frontendUrl}/mypage/setting?connect=failed&error=unknown`,
+          );
+          return;
         } catch (connectError: any) {
           console.error("Connect error:", connectError);
           if (connectError instanceof InfrastructureException) {

@@ -266,7 +266,15 @@ export class AuthService {
         "계정의 이메일과 소셜 계정의 이메일이 일치하지 않습니다.",
       );
     }
-
+    // 해당 소셜 계정이 다른 사용자에게 이미 연동되어 있는지 확인
+    const existingUserWithOauth =
+      await this.authRepository.findUserBySocialProvider(provider, oauthUid);
+    if (existingUserWithOauth) {
+      throw new ConflictException(
+        "U014",
+        "해당 소셜 계정은 이미 다른 계정에 연동되어 있습니다.",
+      );
+    }
     const existingOauth = await this.authRepository.findOauthByUserId(
       BigInt(userId),
       provider,
