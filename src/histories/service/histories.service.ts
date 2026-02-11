@@ -75,6 +75,7 @@ export class HistoriesService {
 
   async getMyReviews(userId: bigint) {
     const reviews = await this.historiesRepository.findMyReviews(userId);
+    const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
     const mapped = await Promise.all(
       reviews.map(async (review) => {
@@ -101,8 +102,15 @@ export class HistoriesService {
             purchaseReasons,
             satisfactionScore: review.satisfaction ?? 0,
             purchasedAt: purchased
-              ? purchased.purchasedDate.toISOString().split("T")[0]
-              : "",
+              ? (() => {
+                const kstDate = new Date(
+                  purchased.purchasedDate.getTime() + KST_OFFSET_MS
+                );
+                return `${kstDate.getFullYear()}-${String(
+                  kstDate.getMonth() + 1
+                ).padStart(2, "0")}-${String(kstDate.getDate()).padStart(2, "0")}`;
+              })()
+              : ""
           };
         }
 
@@ -127,8 +135,15 @@ export class HistoriesService {
           purchaseReasons: purchaseReasons,
           satisfactionScore: review.satisfaction ?? 0,
           purchasedAt: purchased
-            ? purchased.purchasedDate.toISOString().split("T")[0]
-            : "",
+            ? (() => {
+              const kstDate = new Date(
+                purchased.purchasedDate.getTime() + KST_OFFSET_MS
+              );
+              return `${kstDate.getFullYear()}-${String(
+                kstDate.getMonth() + 1
+              ).padStart(2, "0")}-${String(kstDate.getDate()).padStart(2, "0")}`;
+            })()
+            : ""
         };
       }),
     );
@@ -152,8 +167,14 @@ export class HistoriesService {
       });
     }
 
-    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
-    const end = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+    const KST_OFFSET = 9 * 60;
+
+    const kstStart = new Date(year, month - 1, 1, 0, 0, 0);
+    const kstEnd = new Date(year, month, 1, 0, 0, 0);
+
+    const start = new Date(kstStart.getTime() - KST_OFFSET * 60 * 1000);
+    const end = new Date(kstEnd.getTime() - KST_OFFSET * 60 * 1000);
+
 
     const histories = await this.historiesRepository.findMonthlyPurchasedItems(
       userId,
@@ -165,8 +186,14 @@ export class HistoriesService {
     let totalAmount = 0;
 
     for (const h of histories) {
-      const d = h.purchasedDate;
-      const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+      const utcDate = h.purchasedDate;
+      const kstDate = new Date(utcDate.getTime() + KST_OFFSET_MS);
+
+      const date = `${kstDate.getFullYear()}-${String(
+        kstDate.getMonth() + 1,
+      ).padStart(2, "0")}-${String(kstDate.getDate()).padStart(2, "0")}`;
 
       if (!itemsByDate[date]) {
         itemsByDate[date] = [];
@@ -244,13 +271,16 @@ export class HistoriesService {
     }
 
     const [y, m, d] = date.split("-").map(Number);
-    const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
-    const end = new Date(Date.UTC(y, m - 1, d + 1, 0, 0, 0));
+    const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+    const kstStart = new Date(y, m - 1, d, 0, 0, 0);
+    const kstEnd = new Date(y, m - 1, d + 1, 0, 0, 0);
+
     if (
-      Number.isNaN(start.getTime()) ||
-      start.getUTCFullYear() !== y ||
-      start.getUTCMonth() !== m - 1 ||
-      start.getUTCDate() !== d
+      Number.isNaN(kstStart.getTime()) ||
+      kstStart.getFullYear() !== y ||
+      kstStart.getMonth() !== m - 1 ||
+      kstStart.getDate() !== d
     ) {
       throw new AppError({
         errorCode: "H004",
@@ -259,7 +289,8 @@ export class HistoriesService {
       });
     }
 
-    // const end = new Date(Date.UTC(y, m - 1, d + 1));
+    const start = new Date(kstStart.getTime() - KST_OFFSET_MS);
+    const end = new Date(kstEnd.getTime() - KST_OFFSET_MS);
 
     const histories = await this.historiesRepository.findDailyPurchasedItems(
       userId,
