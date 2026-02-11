@@ -11,7 +11,7 @@ module.exports = {
 
       // ✅ 멀티코어 무중단 클러스터
       instances: "1",
-      exec_mode: "cluster",
+      exec_mode: "fork",
 
       // ✅ 기본 안정성 옵션
       autorestart: true,
