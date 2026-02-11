@@ -50,3 +50,13 @@ export class BadRequestException extends AppError {
     });
   }
 }
+export class InfrastructureException extends AppError {
+  constructor(errorCode: string, message: string, data?: any) {
+    super({
+      errorCode,
+      statusCode: 500,
+      message,
+      data,
+    });
+  }
+}
