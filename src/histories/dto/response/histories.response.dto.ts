@@ -29,7 +29,7 @@ export class ReviewItemResponseDto {
   itemName!: string;
   price!: number;
   imageUrl!: string | null;
-  purchaseReasons!: string[];
+  purchaseReasons!: string | null;
   satisfactionScore!: number;
   purchasedAt!: string;
 }

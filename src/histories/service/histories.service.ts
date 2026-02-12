@@ -85,11 +85,7 @@ export class HistoriesService {
           const product = item.product;
           const purchased = item.purchasedHistory[0];
 
-          const purchaseReasons = purchased?.purchasedReason
-            ? [purchased.purchasedReason.reason]
-            : purchased?.reason
-              ? purchased.reason.split(",")
-              : [];
+          const purchaseReasons = purchased.reason;
 
           const imageUrl = await this.getItemImageUrl(item.id, "AUTO");
 
@@ -121,11 +117,7 @@ export class HistoriesService {
         const item = review.addedItemManual!;
         const purchased = item.purchasedHistory[0];
 
-        const purchaseReasons = purchased?.purchasedReason
-          ? [purchased.purchasedReason.reason]
-          : purchased?.reason
-            ? purchased.reason.split(",")
-            : [];
+        const purchaseReasons = purchased.reason;
 
         const imageUrl = await this.getItemImageUrl(item.id, "MANUAL");
 
@@ -135,7 +127,7 @@ export class HistoriesService {
           itemName: item.name,
           price: item.price,
           imageUrl,
-          purchaseReasons: purchaseReasons,
+          purchaseReasons,
           satisfactionScore: review.satisfaction ?? 0,
           purchasedAt: purchased
             ? (() => {
