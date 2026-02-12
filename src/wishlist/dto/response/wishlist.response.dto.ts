@@ -42,8 +42,7 @@ export class GetCrawlResultResponseDto {
     this.productId = entity.productId;
     this.price = entity.price;
     this.updatedAt =
-      entity.updatedAt?.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) ??
-      new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+      entity.updatedAt?.toISOString() ?? new Date().toISOString();
     this.imageUrl = imageUrl;
   }
 }
@@ -52,9 +51,7 @@ export class AddWishListFromCacheResponseDto {
   createdAt!: string;
   constructor(entity: AddedItemAuto) {
     this.id = entity.id.toString();
-    this.createdAt =
-      entity.createdAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) ??
-      new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+    this.createdAt = entity.createdAt.toISOString() ?? new Date().toISOString();
   }
 }
 export class AddWishlistResponseDto {
@@ -62,9 +59,7 @@ export class AddWishlistResponseDto {
   createdAt!: string;
   constructor(entity: AddedItemManual) {
     this.id = entity.id.toString();
-    this.createdAt =
-      entity.createdAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) ??
-      new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+    this.createdAt = entity.createdAt.toISOString() ?? new Date().toISOString();
   }
 }
 export class ShowWishitemDetailResponseDto {
@@ -106,14 +101,10 @@ export class ShowWishitemDetailResponseDto {
     this.productUrl = param.productUrl;
     this.reason = param.reason;
     this.refreshedAt = param.refreshedAt
-      ? param.refreshedAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
+      ? param.refreshedAt.toISOString()
       : null;
-    this.addedAt = param.addedAt
-      ? param.addedAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-      : null;
-    this.updatedAt = param.updatedAt
-      ? param.updatedAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-      : null;
+    this.addedAt = param.addedAt ? param.addedAt.toISOString() : null;
+    this.updatedAt = param.updatedAt ? param.updatedAt.toISOString() : null;
     this.status = param.status;
   }
 }
@@ -214,15 +205,9 @@ export class ModifyWishitemResponseDto {
     this.photoUrl = data.photoUrl;
     this.productUrl = data.productUrl;
     this.reason = data.reason;
-    this.refreshedAt = data.refreshedAt
-      ? data.refreshedAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-      : null;
-    this.addedAt = data.addedAt
-      ? data.addedAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-      : null;
-    this.updatedAt = data.updatedAt
-      ? data.updatedAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-      : null;
+    this.refreshedAt = data.refreshedAt ? data.refreshedAt.toISOString() : null;
+    this.addedAt = data.addedAt ? data.addedAt.toISOString() : null;
+    this.updatedAt = data.updatedAt ? data.updatedAt.toISOString() : null;
     this.status = data.status;
   }
 }
