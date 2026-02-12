@@ -202,7 +202,7 @@ export class WishlistService {
     if (result.photoFileId)
       imageUrl = await this.filesService.generateUrl(
         result.photoFileId.toString(),
-        60 * 10,
+        60 * 60,
       );
     if (!imageUrl) imageUrl = undefined;
     return new GetCrawlResultResponseDto(
@@ -351,7 +351,7 @@ export class WishlistService {
       const productUrl = urlTemplate.replace("${productId}", productId);
       const photoFileId = wishitem.product.photoFileId;
       const photoUrl = photoFileId
-        ? await this.filesService.generateUrl(photoFileId.toString(), 60 * 10)
+        ? await this.filesService.generateUrl(photoFileId.toString(), 60 * 60)
         : null;
       return new WishItemPayload({
         id: wishitem.id.toString(),
@@ -403,7 +403,7 @@ export class WishlistService {
         );
       const photoFileId = wishitem.photoFileId;
       const photoUrl = photoFileId
-        ? await this.filesService.generateUrl(photoFileId.toString(), 60 * 10)
+        ? await this.filesService.generateUrl(photoFileId.toString(), 60 * 60)
         : null;
       const refreshedAt = wishitem.updatedAt
         ? wishitem.updatedAt
@@ -469,7 +469,7 @@ export class WishlistService {
         const url = row.photoFileId
           ? await this.filesService.generateUrl(
               row.photoFileId.toString(),
-              60 * 10,
+              60 * 60,
             )
           : null;
         return [row.cursor, url] as const;
@@ -847,7 +847,7 @@ export class WishlistService {
         const url = row.photoFileId
           ? await this.filesService.generateUrl(
               row.photoFileId.toString(),
-              60 * 10,
+              60 * 60,
             )
           : null;
         return [row.cursor, url] as const;

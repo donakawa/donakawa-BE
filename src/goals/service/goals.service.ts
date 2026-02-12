@@ -229,7 +229,7 @@ export class GoalsService {
         if (r.addedItemManual) {
           const fileId = r.addedItemManual.files?.id;
           const imageUrl = fileId
-            ? await this.filesService.generateUrl(fileId.toString(), 60 * 10)
+            ? await this.filesService.generateUrl(fileId.toString(), 60 * 60)
             : null;
 
           return {
@@ -245,7 +245,7 @@ export class GoalsService {
         // 자동 추가
         const fileId = r.addedItemAuto?.product.files?.id;
         const imageUrl = fileId
-          ? await this.filesService.generateUrl(fileId.toString(), 60 * 10)
+          ? await this.filesService.generateUrl(fileId.toString(), 60 * 60)
           : null;
 
         return {
