@@ -29,7 +29,7 @@ export class ReviewItemResponseDto {
   itemName!: string;
   price!: number;
   imageUrl!: string | null;
-  purchaseReasons!: string[];
+  purchaseReasons!: string | null;
   satisfactionScore!: number;
   purchasedAt!: string;
 }
@@ -76,6 +76,7 @@ export interface DailyHistoryItemDto {
   thumbnailUrl: string | null;
   purchasedAt: "MORNING" | "EVENING" | "NIGHT";
   satisfaction: number | null;
+  reason: string | null;
 }
 
 export interface DailyHistorySummaryDto {
@@ -95,7 +96,7 @@ export interface HistoryItemDto {
   itemName: string;
   price: number;
   imageUrl: string | null;
-  purchaseReasons: string[];
+  purchaseReasons: string | null;
   purchasedAt: string; // yyyy-MM-dd
   itemType: "AUTO" | "MANUAL";
 }

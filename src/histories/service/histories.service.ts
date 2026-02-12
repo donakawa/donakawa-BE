@@ -85,11 +85,7 @@ export class HistoriesService {
           const product = item.product;
           const purchased = item.purchasedHistory[0];
 
-          const purchaseReasons = purchased?.purchasedReason
-            ? [purchased.purchasedReason.reason]
-            : purchased?.reason
-              ? purchased.reason.split(",")
-              : [];
+          const purchaseReasons = purchased.reason;
 
           const imageUrl = await this.getItemImageUrl(item.id, "AUTO");
 
@@ -121,11 +117,7 @@ export class HistoriesService {
         const item = review.addedItemManual!;
         const purchased = item.purchasedHistory[0];
 
-        const purchaseReasons = purchased?.purchasedReason
-          ? [purchased.purchasedReason.reason]
-          : purchased?.reason
-            ? purchased.reason.split(",")
-            : [];
+        const purchaseReasons = purchased.reason;
 
         const imageUrl = await this.getItemImageUrl(item.id, "MANUAL");
 
@@ -135,7 +127,7 @@ export class HistoriesService {
           itemName: item.name,
           price: item.price,
           imageUrl,
-          purchaseReasons: purchaseReasons,
+          purchaseReasons,
           satisfactionScore: review.satisfaction ?? 0,
           purchasedAt: purchased
             ? (() => {
@@ -314,6 +306,7 @@ export class HistoriesService {
             thumbnailUrl,
             purchasedAt: h.purchasedAt,
             satisfaction: review?.satisfaction ?? null,
+            reason: h.reason ?? null,
           };
         }
 
@@ -331,6 +324,7 @@ export class HistoriesService {
           thumbnailUrl,
           purchasedAt: h.purchasedAt,
           satisfaction: review?.satisfaction ?? null,
+          reason: h.reason ?? null,
         };
       }),
     );
@@ -380,11 +374,7 @@ export class HistoriesService {
           kstDate.getUTCMonth() + 1,
         ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
 
-        const purchaseReasons = h.purchasedReason
-          ? [h.purchasedReason.reason]
-          : h.reason
-            ? h.reason.split(",")
-            : [];
+        const purchaseReasons = h.reason
 
         if (h.addedItemAuto) {
           const item = h.addedItemAuto;
@@ -450,7 +440,7 @@ export class HistoriesService {
     > = {};
 
     histories.forEach((h) => {
-      const reason = h.purchasedReason?.reason;
+      const reason = h.reason;
       const reasons = reason ? [reason] : [];
       let price = 0;
       let satisfaction: number | null = null;
@@ -510,6 +500,22 @@ export class HistoriesService {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
+    const dropped = await this.historiesRepository.findDroppedItems(
+      userId,
+      from,
+      to,
+    );
+
+    let savedAmount = 0;
+
+    dropped.autoItems.forEach((item) => {
+      savedAmount += item.product.price;
+    });
+
+    dropped.manualItems.forEach((item) => {
+      savedAmount += item.price;
+    });
+
     return {
       period: {
         from: from.toISOString().split("T")[0],
@@ -518,7 +524,7 @@ export class HistoriesService {
       },
       summary: {
         totalSpent,
-        savedAmount: Math.floor(totalSpent * 0.1),
+        savedAmount,
         averageSatisfaction:
           satisfactionCount === 0
             ? 0
@@ -555,7 +561,7 @@ export class HistoriesService {
     totalCount: number,
   ): AnalyticsResponseDto {
     const labels = [
-      { key: "MORNING", name: "아침" },
+      { key: "MORNING", name: "낮" },
       { key: "EVENING", name: "저녁" },
       { key: "NIGHT", name: "새벽" },
     ];
