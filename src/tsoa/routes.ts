@@ -513,6 +513,7 @@ const models: TsoaRoute.Models = {
             "imageUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "purchaseReasons": {"dataType":"array","array":{"dataType":"string"},"required":true},
             "purchasedAt": {"dataType":"string","required":true},
+            "itemType": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["MANUAL"]}],"required":true},
         },
         "additionalProperties": false,
     },
