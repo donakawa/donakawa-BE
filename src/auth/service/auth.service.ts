@@ -120,7 +120,7 @@ export class AuthService {
     }
     if (PasswordUtil.isSocialUser(user.password)) {
       throw new UnauthorizedException(
-        "U002",
+        "U003",
         "비밀번호로 로그인할 수 없는 계정입니다. 소셜 로그인을 이용하거나 비밀번호를 설정해주세요.",
       );
     }
