@@ -17,6 +17,7 @@ import {
 } from "../../errors/error";
 import { ShoppingBudgetCalculator } from "./shopping-budget-calculator.service";
 import { FilesService } from "../../files/service/files.service";
+import { PurchasedAt } from "@prisma/client";
 
 export class GoalsService {
   constructor(
@@ -68,6 +69,22 @@ export class GoalsService {
         "incomeDate는 1에서 31 사이의 값이어야 합니다.",
       );
     }
+  }
+
+  // 구매 시간대 + enum 값에 따른 시간 보정
+  private adjustPurchasedDate(
+    purchasedDate: Date,
+    purchasedAt: PurchasedAt,
+  ): Date {
+    const hourOffsetMap: Record<PurchasedAt, number> = {
+      MORNING: 9,
+      EVENING: 18,
+      NIGHT: 23,
+    };
+
+    const offsetMs = hourOffsetMap[purchasedAt] * 60 * 60 * 1000;
+
+    return new Date(purchasedDate.getTime() + offsetMs);
   }
 
   // 목표 예산 등록
@@ -274,12 +291,20 @@ export class GoalsService {
       .map((r) => {
         const wishCreated =
           r.addedItemAuto?.createdAt ?? r.addedItemManual?.createdAt;
-        const purchasedAt =
-          r.addedItemAuto?.purchasedHistory[0]?.purchasedDate ??
-          r.addedItemManual?.purchasedHistory[0]?.purchasedDate;
-        if (!wishCreated || !purchasedAt) return null;
+
+        const purchaseHistory =
+          r.addedItemAuto?.purchasedHistory[0] ??
+          r.addedItemManual?.purchasedHistory[0];
+
+        if (!wishCreated || !purchaseHistory) return null;
+
+        const adjustedPurchasedDate = this.adjustPurchasedDate(
+          purchaseHistory.purchasedDate,
+          purchaseHistory.purchasedAt,
+        );
+
         return Math.floor(
-          (purchasedAt.getTime() - wishCreated.getTime()) /
+          (adjustedPurchasedDate.getTime() - wishCreated.getTime()) /
             (1000 * 60 * 60 * 24),
         );
       })
