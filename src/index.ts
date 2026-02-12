@@ -35,7 +35,7 @@ async function bootstrap() {
   app.use(express.json());
   app.use(
     cors({
-      origin: ["http://localhost:3000", process.env.FRONTEND_URL].filter(
+      origin: ["http://localhost:5173", process.env.FRONTEND_URL].filter(
         (origin): origin is string => Boolean(origin),
       ),
       credentials: true,
