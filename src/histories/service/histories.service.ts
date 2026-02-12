@@ -374,9 +374,7 @@ export class HistoriesService {
 
     const items: HistoryItemDto[] = await Promise.all(
       histories.map(async (h) => {
-        const date = h.purchasedDate
-          .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-          .split("T")[0];
+        const date = h.purchasedDate.toISOString().split("T")[0];
 
         const purchaseReasons = h.purchasedReason
           ? [h.purchasedReason.reason]
@@ -508,12 +506,8 @@ export class HistoriesService {
 
     return {
       period: {
-        from: from
-          .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-          .split("T")[0],
-        to: to
-          .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-          .split("T")[0],
+        from: from.toISOString().split("T")[0],
+        to: to.toISOString().split("T")[0],
         days: 30,
       },
       summary: {
