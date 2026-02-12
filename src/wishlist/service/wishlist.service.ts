@@ -217,10 +217,11 @@ export class WishlistService {
       data.userId,
       data.reason,
     );
-    const isAlreadyExist =
-      (await this.wishlistRepository.findAddedItemAutoByProductId(
+    const existItem =
+      await this.wishlistRepository.findAddedItemAutoByProductId(
         command.cacheId,
-      )) !== null;
+      );
+    const isAlreadyExist = existItem?.userId === BigInt(command.userId);
     if (isAlreadyExist) {
       throw new ConflictException(
         "WISHLIST_ALREADY_EXIST",
