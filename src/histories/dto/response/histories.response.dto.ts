@@ -96,7 +96,7 @@ export interface HistoryItemDto {
   itemName: string;
   price: number;
   imageUrl: string | null;
-  purchaseReasons: string[];
+  purchaseReasons: string | null;
   purchasedAt: string; // yyyy-MM-dd
   itemType: "AUTO" | "MANUAL";
 }

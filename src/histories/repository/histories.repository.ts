@@ -295,7 +295,7 @@ export class HistoriesRepository {
         where: {
           userId,
           status: "DROPPED",
-          createdAt: {
+          updatedAt: {
             gte: start,
             lte: end,
           },
@@ -308,7 +308,7 @@ export class HistoriesRepository {
         where: {
           userId,
           status: "DROPPED",
-          createdAt: {
+          updatedAt: {
             gte: start,
             lte: end,
           },

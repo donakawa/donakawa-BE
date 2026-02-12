@@ -382,11 +382,7 @@ export class HistoriesService {
           kstDate.getUTCMonth() + 1,
         ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
 
-        const purchaseReasons = h.purchasedReason
-          ? [h.purchasedReason.reason]
-          : h.reason
-            ? h.reason.split(",")
-            : [];
+        const purchaseReasons = h.reason
 
         if (h.addedItemAuto) {
           const item = h.addedItemAuto;
