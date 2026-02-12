@@ -40,7 +40,9 @@ export class ChatsService {
     return {
       id: Number(chat.id),
       currentStep: 1,
-      createdAt: chat.createdAt.toISOString(),
+      createdAt: chat.createdAt.toLocaleString("ko-KR", {
+        timeZone: "Asia/Seoul",
+      }),
     };
   }
 
@@ -50,7 +52,9 @@ export class ChatsService {
     return chats.map((chat) => ({
       id: Number(chat.id),
       title: chat.title,
-      createdAt: chat.createdAt.toISOString(),
+      createdAt: chat.createdAt.toLocaleString("ko-KR", {
+        timeZone: "Asia/Seoul",
+      }),
     }));
   }
 
