@@ -314,6 +314,7 @@ export class HistoriesService {
             thumbnailUrl,
             purchasedAt: h.purchasedAt,
             satisfaction: review?.satisfaction ?? null,
+            reason: h.reason ?? null,
           };
         }
 
@@ -331,6 +332,7 @@ export class HistoriesService {
           thumbnailUrl,
           purchasedAt: h.purchasedAt,
           satisfaction: review?.satisfaction ?? null,
+          reason: h.reason ?? null,
         };
       }),
     );
@@ -450,7 +452,7 @@ export class HistoriesService {
     > = {};
 
     histories.forEach((h) => {
-      const reason = h.purchasedReason?.reason;
+      const reason = h.reason;
       const reasons = reason ? [reason] : [];
       let price = 0;
       let satisfaction: number | null = null;
@@ -510,6 +512,22 @@ export class HistoriesService {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
+    const dropped = await this.historiesRepository.findDroppedItems(
+      userId,
+      from,
+      to,
+    );
+
+    let savedAmount = 0;
+
+    dropped.autoItems.forEach((item) => {
+      savedAmount += item.product.price;
+    });
+
+    dropped.manualItems.forEach((item) => {
+      savedAmount += item.price;
+    });
+
     return {
       period: {
         from: from.toISOString().split("T")[0],
@@ -518,7 +536,7 @@ export class HistoriesService {
       },
       summary: {
         totalSpent,
-        savedAmount: Math.floor(totalSpent * 0.1),
+        savedAmount,
         averageSatisfaction:
           satisfactionCount === 0
             ? 0
@@ -555,7 +573,7 @@ export class HistoriesService {
     totalCount: number,
   ): AnalyticsResponseDto {
     const labels = [
-      { key: "MORNING", name: "아침" },
+      { key: "MORNING", name: "낮" },
       { key: "EVENING", name: "저녁" },
       { key: "NIGHT", name: "새벽" },
     ];

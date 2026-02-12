@@ -76,6 +76,7 @@ export interface DailyHistoryItemDto {
   thumbnailUrl: string | null;
   purchasedAt: "MORNING" | "EVENING" | "NIGHT";
   satisfaction: number | null;
+  reason: string | null;
 }
 
 export interface DailyHistorySummaryDto {

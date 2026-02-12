@@ -43,7 +43,7 @@ type HistoryItemWithRelations = Prisma.PurchasedHistoryGetPayload<{
 }>;
 
 export class HistoriesRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) { }
 
   async findAutoItem(itemId: bigint, userId: bigint) {
     return this.prisma.addedItemAuto.findFirst({
@@ -264,7 +264,6 @@ export class HistoriesRepository {
         OR: [{ addedItemAuto: { userId } }, { addedItemManual: { userId } }],
       },
       include: {
-        purchasedReason: true,
         addedItemAuto: {
           include: {
             product: true,
@@ -284,6 +283,40 @@ export class HistoriesRepository {
         },
       },
     });
+  }
+
+  async findDroppedItems(
+    userId: bigint,
+    start: Date,
+    end: Date,
+  ) {
+    const [autoItems, manualItems] = await Promise.all([
+      this.prisma.addedItemAuto.findMany({
+        where: {
+          userId,
+          status: "DROPPED",
+          createdAt: {
+            gte: start,
+            lte: end,
+          },
+        },
+        include: {
+          product: true,
+        },
+      }),
+      this.prisma.addedItemManual.findMany({
+        where: {
+          userId,
+          status: "DROPPED",
+          createdAt: {
+            gte: start,
+            lte: end,
+          },
+        },
+      }),
+    ]);
+
+    return { autoItems, manualItems };
   }
 
   async findAllByUser(userId: bigint) {
