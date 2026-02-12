@@ -400,6 +400,7 @@ export class HistoriesService {
             imageUrl,
             purchaseReasons,
             purchasedAt: date,
+            itemType: "AUTO",
           };
         }
 
@@ -416,6 +417,7 @@ export class HistoriesService {
           imageUrl,
           purchaseReasons,
           purchasedAt: date,
+          itemType: "MANUAL",
         };
       }),
     );
