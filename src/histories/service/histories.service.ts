@@ -374,7 +374,11 @@ export class HistoriesService {
 
     const items: HistoryItemDto[] = await Promise.all(
       histories.map(async (h) => {
-        const date = h.purchasedDate.toISOString().split("T")[0];
+        const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+        const kstDate = new Date(h.purchasedDate.getTime() + KST_OFFSET_MS);
+        const date = `${kstDate.getUTCFullYear()}-${String(
+          kstDate.getUTCMonth() + 1,
+        ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
 
         const purchaseReasons = h.purchasedReason
           ? [h.purchasedReason.reason]
