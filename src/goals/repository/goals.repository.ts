@@ -141,7 +141,7 @@ export class GoalsRepository {
             purchasedHistory: {
               orderBy: { purchasedDate: "desc" },
               take: 1,
-              select: { id: true, purchasedDate: true },
+              select: { id: true, purchasedDate: true, purchasedAt: true },
             },
           },
         },
@@ -155,7 +155,7 @@ export class GoalsRepository {
             purchasedHistory: {
               orderBy: { purchasedDate: "desc" },
               take: 1,
-              select: { id: true, purchasedDate: true },
+              select: { id: true, purchasedDate: true, purchasedAt: true },
             },
           },
         },
