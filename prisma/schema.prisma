@@ -19,9 +19,9 @@ model User {
   password  String?   @db.VarChar(100)
   nickname  String    @db.VarChar(10)
   goal      String?    @db.VarChar(10)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
-  deletedAt DateTime? @map("deleted_at") @db.Timestamp()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamp(6)
 
   targetBudget    TargetBudget[]
   oauth           Oauth[]
@@ -94,8 +94,8 @@ model AddedItemAuto {
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   status         AddedItemStatus @default(WISHLISTED)
   reason         String          @default("") @db.Text()
-  createdAt      DateTime        @default(now()) @db.Timestamp()
-  updatedAt      DateTime?       @updatedAt @db.Timestamp()
+  createdAt      DateTime        @default(now()) @db.Timestamp(6)
+  updatedAt      DateTime?       @updatedAt @db.Timestamp(6)
 
   purchasedHistory PurchasedHistory[]
   review           Review[]
@@ -126,7 +126,7 @@ model Product {
   files           Files?        @relation(fields: [photoFileId], references: [id])
   photoFileId     BigInt?       @map("photo_file_id") @unique
   productId       String        @db.VarChar(500) @map("product_id")
-  updatedAt       DateTime?     @default(now()) @updatedAt @db.Timestamp()
+  updatedAt       DateTime?     @default(now()) @updatedAt @db.Timestamp(6)
 
   addedItemAuto AddedItemAuto[]
   @@unique([productId, storePlatformId])
@@ -179,8 +179,8 @@ model AddedItemManual {
   brand          String          @db.VarChar(50)
   reason         String          @db.VarChar(50)
   status         AddedItemStatus @default(WISHLISTED)
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt      DateTime?       @updatedAt @map("updated_at") @db.Timestamp()
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime?       @updatedAt @map("updated_at") @db.Timestamp(6)
 
   purchasedHistory PurchasedHistory[]
   review           Review[]
@@ -198,8 +198,8 @@ model Review {
   addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id], onDelete: Cascade)
   satisfaction    Float?
   frequency       Int?
-  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt       DateTime?        @updatedAt @map("updated_at") @db.Timestamp()
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime?        @updatedAt @map("updated_at") @db.Timestamp(6)
 
   @@map("review")
 }
@@ -230,8 +230,8 @@ model AiChatHeader {
 
   title     String
 
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp()
-  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(6)
 
   aiChatMessage AiChatMessage[]
   aiChatResult  AiChatResult?
@@ -247,7 +247,7 @@ model AiChatMessage {
   
   sender       Sender
   content      String       @db.Text()
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamp()
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
 
   @@map("ai_chat_message")
 }
@@ -271,7 +271,7 @@ model AiChatResult {
   header    AiChatHeader     @relation(fields: [headerId], references: [id], onDelete: Cascade)
 
   decision  String
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamp()
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
 
   @@map("ai_chat_result")
 }
@@ -285,7 +285,7 @@ model Files {
   id            BigInt        @id @default(autoincrement())
   type          FileType
   name          String        @db.VarChar(300) @unique
-  createdAt     DateTime      @db.Timestamp() @default(now()) @map("created_at")
+  createdAt     DateTime      @db.Timestamp(6) @default(now()) @map("created_at")
 
   product Product?
   addedItemManual AddedItemManual?
