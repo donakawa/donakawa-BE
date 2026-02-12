@@ -36,6 +36,9 @@ export class HistoriesController {
   private readonly historiesService: HistoriesService =
     container.histories.service;
 
+  /**
+   * @summary 후기 작성 API
+   */
   @Security("jwt")
   @Post("/items/{itemId}/review")
   public async createReview(
@@ -56,6 +59,9 @@ export class HistoriesController {
     return success(CreateReviewResponseDto.from(review));
   }
 
+  /**
+   * @summary 작성한 후기 목록 조회 API
+   */
   @Security("jwt")
   @Get("/reviews")
   public async getMyReviews(
@@ -67,6 +73,9 @@ export class HistoriesController {
     return success(result);
   }
 
+  /**
+   * @summary 특정 달의 기록 조회 API
+   */
   @Security("jwt")
   @Get("/calendar")
   public async getMonthlyCalendar(
@@ -85,6 +94,9 @@ export class HistoriesController {
     return success(result);
   }
 
+  /**
+   * @summary 특정 날짜의 후기 조회 API
+   */
   @Security("jwt")
   @Get()
   public async getDailyHistories(
@@ -98,6 +110,9 @@ export class HistoriesController {
     return success(result);
   }
 
+  /**
+   * @summary 작성하지 않은 후기 목록 조회 API
+   */
   @Security("jwt")
   @Get("/items")
   public async getHistoryItems(
@@ -114,6 +129,9 @@ export class HistoriesController {
     return success(result);
   }
 
+  /**
+   * @summary 최근 한 달 리포트 조회 API
+   */
   @Security("jwt")
   @Get("/report")
   public async getRecentMonthReport(
@@ -126,6 +144,9 @@ export class HistoriesController {
     return success(result);
   }
 
+  /**
+   * @summary 요일/시간 통계 조회 API
+   */
   @Security("jwt")
   @Get("/analytics")
   public async getAnalytics(
