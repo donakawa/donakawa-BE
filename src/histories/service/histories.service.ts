@@ -630,7 +630,7 @@ export class HistoriesService {
 
     if (!photoFileId) return null;
 
-    return this.filesService.generateUrl(photoFileId.toString(), 60 * 10);
+    return this.filesService.generateUrl(photoFileId.toString(), 60 * 60);
   }
 
   public async getAiComment(userId: bigint): Promise<AiCommentResponseDto> {
