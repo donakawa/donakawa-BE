@@ -22,7 +22,7 @@ export class HistoriesService {
     private readonly historiesRepository: HistoriesRepository,
     private readonly filesService: FilesService,
     private readonly aiCommentService: AiCommentService,
-  ) {}
+  ) { }
 
   async createReview(
     userId: bigint,
@@ -103,16 +103,16 @@ export class HistoriesService {
             satisfactionScore: review.satisfaction ?? 0,
             purchasedAt: purchased
               ? (() => {
-                  const kstDate = new Date(
-                    purchased.purchasedDate.getTime() + KST_OFFSET_MS,
-                  );
-                  return `${kstDate.getUTCFullYear()}-${String(
-                    kstDate.getUTCMonth() + 1,
-                  ).padStart(
-                    2,
-                    "0",
-                  )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
-                })()
+                const kstDate = new Date(
+                  purchased.purchasedDate.getTime() + KST_OFFSET_MS,
+                );
+                return `${kstDate.getUTCFullYear()}-${String(
+                  kstDate.getUTCMonth() + 1,
+                ).padStart(
+                  2,
+                  "0",
+                )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
+              })()
               : "",
           };
         }
@@ -139,16 +139,16 @@ export class HistoriesService {
           satisfactionScore: review.satisfaction ?? 0,
           purchasedAt: purchased
             ? (() => {
-                const kstDate = new Date(
-                  purchased.purchasedDate.getTime() + KST_OFFSET_MS,
-                );
-                return `${kstDate.getUTCFullYear()}-${String(
-                  kstDate.getUTCMonth() + 1,
-                ).padStart(
-                  2,
-                  "0",
-                )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
-              })()
+              const kstDate = new Date(
+                purchased.purchasedDate.getTime() + KST_OFFSET_MS,
+              );
+              return `${kstDate.getUTCFullYear()}-${String(
+                kstDate.getUTCMonth() + 1,
+              ).padStart(
+                2,
+                "0",
+              )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
+            })()
             : "",
         };
       }),
@@ -498,8 +498,8 @@ export class HistoriesService {
           data.satisfactionCount === 0
             ? 0
             : Number(
-                (data.satisfactionSum / data.satisfactionCount).toFixed(1),
-              ),
+              (data.satisfactionSum / data.satisfactionCount).toFixed(1),
+            ),
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
@@ -602,7 +602,11 @@ export class HistoriesService {
     };
 
     histories.forEach((h) => {
-      const dayIndex = h.purchasedDate.getUTCDay();
+      const kstDate = new Date(
+        h.purchasedDate.getTime() + 9 * 60 * 60 * 1000
+      );
+
+      const dayIndex = kstDate.getUTCDay();
       const label = labels[dayIndex].key;
       countMap[label]++;
     });
