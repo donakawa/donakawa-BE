@@ -111,7 +111,9 @@ export class WishlistService {
     const jobId = uuid();
     const message = new CrawlRequestMessage(jobId, cleanUrl);
     await this.crawlQueueClient.enqueueCrawl(message);
-    const sentAt = new Date().toISOString();
+    const sentAt = new Date().toLocaleString("ko-KR", {
+      timeZone: "Asia/Seoul",
+    });
     await valkeyClient.valkeyPub.set(
       `status:crawl:${jobId}:status`,
       "PENDING",

@@ -22,7 +22,7 @@ export class HistoriesService {
     private readonly historiesRepository: HistoriesRepository,
     private readonly filesService: FilesService,
     private readonly aiCommentService: AiCommentService,
-  ) { }
+  ) {}
 
   async createReview(
     userId: bigint,
@@ -103,14 +103,17 @@ export class HistoriesService {
             satisfactionScore: review.satisfaction ?? 0,
             purchasedAt: purchased
               ? (() => {
-                const kstDate = new Date(
-                  purchased.purchasedDate.getTime() + KST_OFFSET_MS
-                );
-                return `${kstDate.getUTCFullYear()}-${String(
-                  kstDate.getUTCMonth() + 1
-                ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
-              })()
-              : ""
+                  const kstDate = new Date(
+                    purchased.purchasedDate.getTime() + KST_OFFSET_MS,
+                  );
+                  return `${kstDate.getUTCFullYear()}-${String(
+                    kstDate.getUTCMonth() + 1,
+                  ).padStart(
+                    2,
+                    "0",
+                  )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
+                })()
+              : "",
           };
         }
 
@@ -136,14 +139,17 @@ export class HistoriesService {
           satisfactionScore: review.satisfaction ?? 0,
           purchasedAt: purchased
             ? (() => {
-              const kstDate = new Date(
-                purchased.purchasedDate.getTime() + KST_OFFSET_MS
-              );
-              return `${kstDate.getUTCFullYear()}-${String(
-                kstDate.getUTCMonth() + 1
-              ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
-            })()
-            : ""
+                const kstDate = new Date(
+                  purchased.purchasedDate.getTime() + KST_OFFSET_MS,
+                );
+                return `${kstDate.getUTCFullYear()}-${String(
+                  kstDate.getUTCMonth() + 1,
+                ).padStart(
+                  2,
+                  "0",
+                )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
+              })()
+            : "",
         };
       }),
     );
@@ -172,7 +178,6 @@ export class HistoriesService {
     const start = new Date(Date.UTC(year, month - 1, 1) - KST_OFFSET_MS);
     const end = new Date(Date.UTC(year, month, 1) - KST_OFFSET_MS);
 
-
     const histories = await this.historiesRepository.findMonthlyPurchasedItems(
       userId,
       start,
@@ -183,7 +188,6 @@ export class HistoriesService {
     let totalAmount = 0;
 
     for (const h of histories) {
-
       const utcDate = h.purchasedDate;
       const kstDate = new Date(utcDate.getTime() + KST_OFFSET_MS);
 
@@ -269,13 +273,9 @@ export class HistoriesService {
     const [y, m, d] = date.split("-").map(Number);
     const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-    const start = new Date(
-      Date.UTC(y, m - 1, d, 0, 0, 0) - KST_OFFSET_MS
-    );
+    const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0) - KST_OFFSET_MS);
 
-    const end = new Date(
-      Date.UTC(y, m - 1, d + 1, 0, 0, 0) - KST_OFFSET_MS
-    );
+    const end = new Date(Date.UTC(y, m - 1, d + 1, 0, 0, 0) - KST_OFFSET_MS);
 
     const validationDate = new Date(Date.UTC(y, m - 1, d));
     if (
@@ -374,7 +374,9 @@ export class HistoriesService {
 
     const items: HistoryItemDto[] = await Promise.all(
       histories.map(async (h) => {
-        const date = h.purchasedDate.toISOString().split("T")[0];
+        const date = h.purchasedDate
+          .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
+          .split("T")[0];
 
         const purchaseReasons = h.purchasedReason
           ? [h.purchasedReason.reason]
@@ -498,16 +500,20 @@ export class HistoriesService {
           data.satisfactionCount === 0
             ? 0
             : Number(
-              (data.satisfactionSum / data.satisfactionCount).toFixed(1),
-            ),
+                (data.satisfactionSum / data.satisfactionCount).toFixed(1),
+              ),
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
     return {
       period: {
-        from: from.toISOString().split("T")[0],
-        to: to.toISOString().split("T")[0],
+        from: from
+          .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
+          .split("T")[0],
+        to: to
+          .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
+          .split("T")[0],
         days: 30,
       },
       summary: {
