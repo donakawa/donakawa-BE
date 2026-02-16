@@ -77,9 +77,9 @@ export class GoalsService {
     purchasedAt: PurchasedAt,
   ): Date {
     const hourOffsetMap: Record<PurchasedAt, number> = {
-      MORNING: 9,
-      EVENING: 18,
-      NIGHT: 23,
+      MORNING: 18,
+      EVENING: 23,
+      NIGHT: 6,
     };
 
     const offsetMs = hourOffsetMap[purchasedAt] * 60 * 60 * 1000;
@@ -182,7 +182,7 @@ export class GoalsService {
       cycleStart,
     );
 
-    const resetSpend = now >= budget.incomeDate! ? 0 : totalSpend;
+    const resetSpend = totalSpend;
     const shoppingBudget = budget.shoppingBudget ?? 0;
     const remainingBudget = shoppingBudget - resetSpend;
 
