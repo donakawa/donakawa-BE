@@ -164,7 +164,7 @@ export class GoalsService {
 
     let nextIncomeDate = new Date(budget.incomeDate!);
     nextIncomeDate.setUTCHours(0, 0, 0, 0);
-    const originalIncomeDay = budget.incomeDay ?? nextIncomeDate.getDate();
+    const originalIncomeDay = budget.incomeDay ?? nextIncomeDate.getUTCDate();
 
     if (now >= nextIncomeDate) {
       nextIncomeDate = this.makeNextCycleDate(
@@ -181,7 +181,7 @@ export class GoalsService {
 
     const cycleStart = new Date(nextIncomeDate);
     cycleStart.setMonth(cycleStart.getMonth() - 1);
-    cycleStart.setUTCHours(0, 0, 0, 0);
+    cycleStart.setUTCHours(-9, 0, 0, 0);
 
     const totalSpend = await this.goalsRepository.getTotalSpendByUser(
       userId,
