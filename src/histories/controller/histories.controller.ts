@@ -26,9 +26,11 @@ import {
   MonthlyReportResponseDto,
   AnalyticsResponseDto,
   AiCommentResponseDto,
+  GetReviewResponseDto,
 } from "../dto/response/histories.response.dto";
 import { HistoriesService } from "../service/histories.service";
 import { AiCommentService } from "../service/aicomment.sevice";
+import { WishItemType } from "@prisma/client";
 
 @Route("/histories")
 @Tags("Histories")
@@ -171,6 +173,28 @@ export class HistoriesController {
     const userId = BigInt(req.user!.id);
 
     const result = await this.historiesService.getAiComment(userId);
+    return success(result);
+  }
+
+  /**
+  * @summary 특정 아이템 리뷰 상세 조회
+  */
+  @Security("jwt")
+  @Get("/items/{itemId}/review")
+  public async getItemReview(
+    @Path() itemId: number,
+    @Query() itemType: WishItemType,
+    @Request() req: ExpressRequest
+  ): Promise<ApiResponse<GetReviewResponseDto>> {
+
+    const userId = BigInt(req.user!.id);
+
+    const result = await this.historiesService.getItemReview(
+      userId,
+      BigInt(itemId),
+      itemType
+    );
+
     return success(result);
   }
 }

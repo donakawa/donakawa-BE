@@ -359,4 +359,68 @@ export class HistoriesRepository {
 
     return item?.photoFileId ?? null;
   }
+
+  async findAutoItemWithReview(
+    userId: bigint,
+    itemId: bigint
+  ) {
+    return this.prisma.addedItemAuto.findFirst({
+      where: {
+        id: itemId,
+        userId,
+      },
+      include: {
+        product: {
+          include: {
+            files: true,
+          },
+        },
+        purchasedHistory: {
+          include: {
+            purchasedReason: true,
+          },
+          orderBy: {
+            purchasedDate: "desc",
+          },
+          take: 1,
+        },
+        review: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
+      },
+    });
+  }
+
+  async findManualItemWithReview(
+    userId: bigint,
+    itemId: bigint
+  ) {
+    return this.prisma.addedItemManual.findFirst({
+      where: {
+        id: itemId,
+        userId,
+      },
+      include: {
+        files: true,
+        purchasedHistory: {
+          include: {
+            purchasedReason: true,
+          },
+          orderBy: {
+            purchasedDate: "desc",
+          },
+          take: 1,
+        },
+        review: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
+      },
+    });
+  }
 }

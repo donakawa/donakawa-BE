@@ -9,12 +9,13 @@ import {
   MonthlyReportResponseDto,
   AnalyticsResponseDto,
   AiCommentResponseDto,
+  GetReviewResponseDto,
 } from "../dto/response/histories.response.dto";
 import {
   ReviewStatus,
   AnalyticsMetric,
 } from "../dto/request/histories.request.dto";
-import { Prisma } from "@prisma/client";
+import { Prisma, WishItemType } from "@prisma/client";
 import { AiCommentService } from "./aicomment.sevice";
 
 export class HistoriesService {
@@ -653,5 +654,121 @@ export class HistoriesService {
     // userId를 string으로 변환해서 GptService 호출
     const result = await this.aiCommentService.getAiComment(userId.toString());
     return result;
+  }
+
+  async getItemReview(
+    userId: bigint,
+    itemId: bigint,
+    itemType: WishItemType
+  ): Promise<GetReviewResponseDto> {
+
+    if (itemType === "AUTO") {
+      const item = await this.historiesRepository.findAutoItemWithReview(
+        userId,
+        itemId
+      );
+
+      if (!item) {
+        throw new AppError({
+          errorCode: "H005",
+          message: "해당 아이템을 찾을 수 없습니다",
+          statusCode: 404,
+        });
+      }
+
+      const purchase = item.purchasedHistory[0];
+
+      if (!purchase) {
+        throw new AppError({
+          errorCode: "H006",
+          message: "구매 이력이 존재하지 않습니다.",
+          statusCode: 404,
+        });
+      }
+
+      const review = item.review[0];
+      const imageUrl = await this.getItemImageUrl(item.id, "AUTO");
+      const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+      const kstDate = new Date(purchase.purchasedDate.getTime() + KST_OFFSET_MS);
+      const date = `${kstDate.getUTCFullYear()}-${String(
+        kstDate.getUTCMonth() + 1,
+      ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
+
+      return {
+        itemId: Number(item.id),
+        itemType,
+        purchasedDate: date,
+        purchasedAt: purchase.purchasedAt,
+        product: {
+          name: item.product.name,
+          price: item.product.price,
+          imageUrl,
+        },
+        purchaseReason:
+          purchase.reason ?? null,
+        review: review
+          ? {
+            reviewId: Number(review.id),
+            satisfaction: review.satisfaction,
+            usageFrequency: review.frequency,
+            createdAt: review.createdAt.toISOString(),
+          }
+          : null,
+      };
+    }
+
+    // MANUAL
+    const item = await this.historiesRepository.findManualItemWithReview(
+      userId,
+      itemId
+    );
+
+    if (!item) {
+      throw new AppError({
+        errorCode: "H005",
+        message: "해당 아이템을 찾을 수 없습니다",
+        statusCode: 404,
+      });
+    }
+
+    const purchase = item.purchasedHistory[0];
+
+    if (!purchase) {
+      throw new AppError({
+        errorCode: "H006",
+        message: "구매 이력이 존재하지 않습니다.",
+        statusCode: 404,
+      });
+    }
+    
+    const review = item.review[0];
+    const imageUrl = await this.getItemImageUrl(item.id, "MANUAL");
+    const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+    const kstDate = new Date(purchase.purchasedDate.getTime() + KST_OFFSET_MS);
+    const date = `${kstDate.getUTCFullYear()}-${String(
+      kstDate.getUTCMonth() + 1,
+    ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
+
+    return {
+      itemId: Number(item.id),
+      itemType,
+      purchasedDate: date,
+      purchasedAt: purchase.purchasedAt,
+      product: {
+        name: item.name,
+        price: item.price,
+        imageUrl: imageUrl,
+      },
+      purchaseReason:
+        purchase.reason ?? null,
+      review: review
+        ? {
+          reviewId: Number(review.id),
+          satisfaction: review.satisfaction,
+          usageFrequency: review.frequency,
+          createdAt: review.createdAt.toISOString(),
+        }
+        : null,
+    };
   }
 }

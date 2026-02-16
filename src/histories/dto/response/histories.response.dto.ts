@@ -1,3 +1,5 @@
+import { PurchasedAt, WishItemType } from "@prisma/client";
+
 export class CreateReviewResponseDto {
   reviewId!: number;
   itemId!: number;
@@ -145,4 +147,23 @@ export interface AnalyticsResponseDto {
 export interface AiCommentResponseDto {
   comment: string;
   type: "positive" | "negative";
+}
+
+export interface GetReviewResponseDto {
+  itemId: number;
+  itemType: WishItemType;
+  purchasedDate: string; // YYYY-MM-DD
+  purchasedAt: PurchasedAt;
+  product: {
+    name: string;
+    price: number;
+    imageUrl: string | null;
+  };
+  purchaseReason: string | null;
+  review: {
+    reviewId: number;
+    satisfaction: number | null;
+    usageFrequency: number | null;
+    createdAt: string;
+  } | null;
 }
