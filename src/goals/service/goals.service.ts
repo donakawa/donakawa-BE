@@ -160,7 +160,10 @@ export class GoalsService {
     }
 
     const now = new Date();
-    let nextIncomeDate = budget.incomeDate!;
+    now.setUTCHours(0, 0, 0, 0);
+
+    let nextIncomeDate = new Date(budget.incomeDate!);
+    nextIncomeDate.setUTCHours(0, 0, 0, 0);
     const originalIncomeDay = budget.incomeDay ?? nextIncomeDate.getDate();
 
     if (now >= nextIncomeDate) {
@@ -169,6 +172,8 @@ export class GoalsService {
         originalIncomeDay,
       );
 
+      nextIncomeDate.setUTCHours(0, 0, 0, 0);
+
       await this.goalsRepository.updateTargetBudget(budget.id, {
         incomeDate: nextIncomeDate,
       });
@@ -176,19 +181,18 @@ export class GoalsService {
 
     const cycleStart = new Date(nextIncomeDate);
     cycleStart.setMonth(cycleStart.getMonth() - 1);
-    cycleStart.setHours(0, 0, 0, 0);
+    cycleStart.setUTCHours(0, 0, 0, 0);
 
     const totalSpend = await this.goalsRepository.getTotalSpendByUser(
       userId,
       cycleStart,
     );
 
-    const resetSpend = totalSpend;
     const shoppingBudget = budget.shoppingBudget ?? 0;
-    const remainingBudget = shoppingBudget - resetSpend;
+    const remainingBudget = shoppingBudget - totalSpend;
 
     return new BudgetSpendResponseDto({
-      totalSpend: resetSpend,
+      totalSpend,
       remainingBudget,
     });
   }
