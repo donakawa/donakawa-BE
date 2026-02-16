@@ -176,6 +176,7 @@ export class GoalsService {
 
     const cycleStart = new Date(nextIncomeDate);
     cycleStart.setMonth(cycleStart.getMonth() - 1);
+    cycleStart.setHours(0, 0, 0, 0);
 
     const totalSpend = await this.goalsRepository.getTotalSpendByUser(
       userId,
