@@ -671,12 +671,21 @@ export class HistoriesService {
       if (!item) {
         throw new AppError({
           errorCode: "H005",
-          message: "해당되는 후기가 없습니다.",
+          message: "해당 아이템을 찾을 수 없습니다",
           statusCode: 404,
         });
       }
 
       const purchase = item.purchasedHistory[0];
+
+      if (!purchase) {
+        throw new AppError({
+          errorCode: "H006",
+          message: "구매 이력이 존재하지 않습니다.",
+          statusCode: 404,
+        });
+      }
+
       const review = item.review[0];
       const imageUrl = await this.getItemImageUrl(item.id, "AUTO");
       const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -717,12 +726,21 @@ export class HistoriesService {
     if (!item) {
       throw new AppError({
         errorCode: "H005",
-        message: "해당되는 후기가 없습니다.",
+        message: "해당 아이템을 찾을 수 없습니다",
         statusCode: 404,
       });
     }
 
     const purchase = item.purchasedHistory[0];
+
+    if (!purchase) {
+      throw new AppError({
+        errorCode: "H006",
+        message: "구매 이력이 존재하지 않습니다.",
+        statusCode: 404,
+      });
+    }
+    
     const review = item.review[0];
     const imageUrl = await this.getItemImageUrl(item.id, "MANUAL");
     const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
