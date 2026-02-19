@@ -777,7 +777,13 @@ export class AuthService {
         "본인 확인이 필요합니다. 비밀번호 확인 혹은 소셜 계정으로 재인증해주세요.",
       );
     }
-
+    // 카카오 연결 끊기 (트랜잭션 전에 처리 — 실패해도 탈퇴는 진행)
+    const kakaoOauth = user.oauth.find(
+      (o) => o.provider === OauthProvider.KAKAO,
+    );
+    if (kakaoOauth) {
+      await this.kakaoOAuthService.unlinkUser(kakaoOauth.uid);
+    }
     await this.prisma.$transaction(async (tx) => {
       await this.authRepository.deleteUser(userId, tx);
     });

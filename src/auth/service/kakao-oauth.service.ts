@@ -31,6 +31,36 @@ export class KakaoOAuthService {
     return `https://kauth.kakao.com/oauth/authorize?${params.toString()}`;
   }
 
+  // 카카오 연결 끊기 (회원 탈퇴 시 호출)
+  async unlinkUser(kakaoUid: string): Promise<void> {
+    const adminKey = process.env.KAKAO_ADMIN_KEY;
+    if (!adminKey) {
+      console.warn(
+        "KAKAO_ADMIN_KEY가 설정되지 않아 카카오 연결 끊기를 건너뜁니다.",
+      );
+      return;
+    }
+
+    try {
+      await axios.post(
+        "https://kapi.kakao.com/v1/user/unlink",
+        new URLSearchParams({
+          target_id_type: "user_id",
+          target_id: kakaoUid,
+        }),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: `KakaoAK ${adminKey}`,
+          },
+        },
+      );
+    } catch (error) {
+      // 연결 끊기 실패가 탈퇴 자체를 막지 않도록 로그만 남김
+      console.error("카카오 연결 끊기 실패:", error);
+    }
+  }
+
   // Authorization code로 Access Token 받기
   private async getAccessToken(code: string): Promise<string> {
     try {
