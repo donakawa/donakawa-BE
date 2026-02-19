@@ -53,7 +53,7 @@ export class AiCommentService {
 
     // OpenAI 호출
     const completion = await this.openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-4.1",
       messages: [{ role: "user", content: prompt }],
     });
 
