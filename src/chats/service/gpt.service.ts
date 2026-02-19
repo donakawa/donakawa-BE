@@ -25,7 +25,7 @@ export class GptService {
 
     //  구매 여부 판단
     const decisionResponse = await this.client.responses.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-4.1",
       input: `
     너는 소비 결정을 도와주는 AI야.
 
