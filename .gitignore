@@ -6,3 +6,5 @@ node_modules
 
 dist
 /prisma/migrations
+.DS_Store
+**/.DS_Store
