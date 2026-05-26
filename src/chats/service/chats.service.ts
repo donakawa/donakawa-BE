@@ -1,23 +1,69 @@
 import { ChatsRepository } from "../repository/chats.repository";
-import { CreateChatRequest } from "../dto/request/chats.request.dto";
+import { CreateChatRequest, SelectOptionRequest } from "../dto/request/chats.request.dto";
 import {
   CreateChatResponse,
   ChatDetailResponse,
   ChatListResponse,
   FinishResponse,
   QuestionResponse,
-  GptResultResponse,
+  ResultResponse,
+  ResultType,
 } from "../dto/response/chats.response.dto";
 import { QUESTIONS } from "../constants/questions";
-import { SelectOptionRequest } from "../dto/request/chats.request.dto";
-import { GptService } from "./gpt.service";
+import { BadRequestException, NotFoundException } from "../../errors/error";
 import { GoalsRepository } from "../../goals/repository/goals.repository";
+import { FilesService } from "../../files/service/files.service";
+
+type DecisionType = "구매 추천" | "구매 보류";
+
+// option id 1=2점, 2=1점, 3=0점 → 총점 4점 이상이면 구매 추천
+function computeDecision(selections: { content: string }[]): DecisionType {
+  const score = selections.reduce((sum, sel) => {
+    const optionId = parseInt(sel.content, 10);
+    return sum + (3 - optionId);
+  }, 0);
+  return score >= 4 ? "구매 추천" : "구매 보류";
+}
+
+function computeResult(
+  decision: DecisionType,
+  remainingBudget: number,
+  daysUntilReset: number,
+  itemPrice: number,
+): { resultType: ResultType; message: string } {
+  const canAfford = remainingBudget >= itemPrice;
+  const budgetFormatted = remainingBudget.toLocaleString("ko-KR");
+
+  if (decision === "구매 추천") {
+    if (canAfford) {
+      return {
+        resultType: "RECOMMEND_AFFORDABLE",
+        message: `이 정도면 필요한 것 같아! 예산이\n${budgetFormatted}원 남았고 ${daysUntilReset}일 후 갱신돼!`,
+      };
+    }
+    return {
+      resultType: "RECOMMEND_OVER_BUDGET",
+      message: `정말 필요한 거 맞아?\n이러다가 거지가 되게 생겼어`,
+    };
+  }
+
+  if (canAfford) {
+    return {
+      resultType: "HOLD_AFFORDABLE",
+      message: `꼭 필요하진 않아 보여... 예산이\n${budgetFormatted}원 남았고 ${daysUntilReset}일 후 갱신돼`,
+    };
+  }
+  return {
+    resultType: "HOLD_OVER_BUDGET",
+    message: `사고 싶은 건 알겠지만... 예산이\n${budgetFormatted}원 남았고 ${daysUntilReset}일 더 참아야 해`,
+  };
+}
 
 export class ChatsService {
   constructor(
     private readonly chatsRepository: ChatsRepository,
-    private readonly gptService: GptService,
     private readonly goalsRepository: GoalsRepository,
+    private readonly filesService: FilesService,
   ) {}
 
   async createChat(
@@ -27,8 +73,7 @@ export class ChatsService {
     const { type, wishItemId } = body;
 
     const item = await this.chatsRepository.findChatItem(type, wishItemId);
-
-    if (!item) throw new Error("Item not found");
+    if (!item) throw new NotFoundException("C001", "존재하지 않는 위시 아이템입니다.");
 
     const chat = await this.chatsRepository.createChat({
       userId,
@@ -60,26 +105,32 @@ export class ChatsService {
 
   async getChatDetail(chatId: number): Promise<ChatDetailResponse> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
-    if (!chat) throw new Error("Chat not found");
+    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
     const userMessages = chat.aiChatMessage.filter((m) => m.sender === "USER");
 
     let wishItem;
-
     if (chat.itemType === "AUTO") {
       const autoItem = chat.autoItem!;
-      const product = autoItem.product;
+      const imageUrl = autoItem.product.photoFileId
+        ? await this.filesService.generateUrl(autoItem.product.photoFileId.toString(), 60 * 60)
+        : null;
       wishItem = {
         id: Number(autoItem.id),
-        name: product.name,
-        price: product.price,
+        name: autoItem.product.name,
+        price: autoItem.product.price,
+        imageUrl,
       };
     } else {
       const item = chat.manualItem!;
+      const imageUrl = item.photoFileId
+        ? await this.filesService.generateUrl(item.photoFileId.toString(), 60 * 60)
+        : null;
       wishItem = {
         id: Number(item.id),
         name: item.name,
         price: item.price,
+        imageUrl,
       };
     }
 
@@ -95,19 +146,17 @@ export class ChatsService {
     };
   }
 
-  // 현재 step 기준 질문 반환
   async getCurrentQuestion(
     chatId: number,
   ): Promise<QuestionResponse | { message: string }> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
-    if (!chat) throw new Error("Chat not found");
+    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
     const answeredCount = chat.aiChatMessage.filter(
       (m) => m.sender === "USER",
     ).length;
 
     const nextStep = answeredCount + 1;
-
     if (nextStep > QUESTIONS.length) {
       return { message: "모든 질문이 완료되었습니다." };
     }
@@ -115,118 +164,88 @@ export class ChatsService {
     return QUESTIONS.find((q) => q.step === nextStep)!;
   }
 
-  async deleteChat(chatId: number): Promise<{ message: string }> {
-    await this.chatsRepository.deleteChat(chatId);
-    return { message: "채팅방이 삭제되었습니다." };
-  }
-
   async saveSelection(
     chatId: number,
     body: SelectOptionRequest,
   ): Promise<FinishResponse> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
-    if (!chat) throw new Error("Chat not found");
+    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
     const answeredCount = chat.aiChatMessage.filter(
       (m) => m.sender === "USER",
     ).length;
     if (body.step !== answeredCount + 1) {
-      throw new Error("Invalid step order");
+      throw new BadRequestException("C003", "올바르지 않은 질문 순서입니다.");
     }
 
     const question = QUESTIONS.find((q) => q.step === body.step);
-    if (!question) throw new Error("Invalid step");
+    if (!question) throw new BadRequestException("C003", "올바르지 않은 질문 순서입니다.");
 
     const option = question.options.find((o) => o.id === body.selectedOptionId);
-    if (!option) throw new Error("Invalid option");
+    if (!option) throw new BadRequestException("C004", "유효하지 않은 선택지입니다.");
 
-    await this.chatsRepository.createMessage(
-      Number(chat.id),
-      "USER",
-      option.label,
-    );
+    await Promise.all([
+      this.chatsRepository.createMessage(Number(chat.id), "USER", option.label),
+      this.chatsRepository.createSelection({
+        headerId: Number(chat.id),
+        step: body.step,
+        content: String(body.selectedOptionId),
+      }),
+    ]);
 
-    if (body.step < QUESTIONS.length) {
-      return { isFinished: false };
-    }
-    return { isFinished: true };
+    return { isFinished: body.step >= QUESTIONS.length };
   }
 
-  async resultChat(chatId: number): Promise<GptResultResponse> {
+  async resultChat(chatId: number): Promise<ResultResponse> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
-    if (!chat) throw new Error("Chat not found");
+    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
-    const answers = chat.aiChatMessage
-      .filter((m) => m.sender === "USER")
-      .map((m) => m.content);
-
-    const budget = chat.user.targetBudget;
-    if (!budget) {
-      throw new Error("User budget not found");
+    const selections = chat.aiChatSelection.sort((a, b) => a.step - b.step);
+    if (selections.length < QUESTIONS.length) {
+      throw new BadRequestException("C005", "아직 모든 질문에 답하지 않았습니다.");
     }
 
-    const nextIncomeDate = budget.incomeDate;
-
-    if (!nextIncomeDate) {
-      throw new Error("Income date not found");
+    const budget = [...chat.user.targetBudget].sort((a, b) =>
+      a.id < b.id ? 1 : -1,
+    )[0];
+    if (!budget || !budget.incomeDate) {
+      throw new NotFoundException("C006", "등록된 목표 예산이 없습니다.");
     }
 
-    // 갱신일까지 남은 일 수
     const now = new Date();
-    const diffMs = nextIncomeDate.getTime() - now.getTime();
-    const daysUntilBudgetReset = Math.max(
-      Math.ceil(diffMs / (1000 * 60 * 60 * 24)),
+    const nextIncomeDate = budget.incomeDate;
+    const daysUntilReset = Math.max(
+      Math.ceil((nextIncomeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
       0,
     );
 
-    // 이번 사이클 시작일
     const cycleStart = new Date(nextIncomeDate);
     cycleStart.setMonth(cycleStart.getMonth() - 1);
 
-    // 이번 사이클 사용 금액
     const totalSpend = await this.goalsRepository.getTotalSpendByUser(
-      chat.user.id.toString(), // bigint -> string
+      chat.user.id.toString(),
       cycleStart,
     );
-
-    // 남은 예산
     const remainingBudget = (budget.shoppingBudget ?? 0) - totalSpend;
 
-    const product = (() => {
-      if (chat.autoItem) {
-        return chat.autoItem.product;
-      }
+    const itemPrice = chat.autoItem?.product.price ?? chat.manualItem?.price ?? 0;
 
-      if (chat.manualItem) {
-        return {
-          name: chat.manualItem.name,
-          price: chat.manualItem.price,
-        };
-      }
-
-      throw new Error("Chat item not found");
-    })();
-
-    const { decision, message } = await this.gptService.finishDecision({
-      item: {
-        name: product.name,
-        price: product.price,
-      },
-      user: {
-        budgetLeft: remainingBudget,
-        daysUntilBudgetReset,
-      },
-      answers,
-    });
+    const decision = computeDecision(selections);
+    const { resultType, message } = computeResult(decision, remainingBudget, daysUntilReset, itemPrice);
 
     await this.chatsRepository.createChatResult({
       headerId: Number(chat.id),
       decision,
     });
 
-    return {
-      decision,
-      message,
-    };
+    return { resultType, decision, message };
+  }
+
+  async deleteChat(chatId: number): Promise<{ message: string }> {
+    const chat = await this.chatsRepository.findChatDetail(chatId);
+    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
+
+    await this.chatsRepository.deleteChat(chatId);
+    return { message: "채팅방이 삭제되었습니다." };
   }
 }
