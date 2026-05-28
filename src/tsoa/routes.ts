@@ -821,7 +821,7 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "id": {"dataType":"double","required":true},
-            "wishItem": {"dataType":"nestedObjectLiteral","nestedProperties":{"price":{"dataType":"double","required":true},"name":{"dataType":"string","required":true},"id":{"dataType":"double","required":true}},"required":true},
+            "wishItem": {"dataType":"nestedObjectLiteral","nestedProperties":{"imageUrl":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},"price":{"dataType":"double","required":true},"name":{"dataType":"string","required":true},"id":{"dataType":"double","required":true}},"required":true},
             "answers": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"selectedOption":{"dataType":"string","required":true},"step":{"dataType":"double","required":true}}},"required":true},
             "result": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "currentStep": {"dataType":"double","required":true},
@@ -856,9 +856,15 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "GptResultResponse": {
+    "ResultType": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["RECOMMEND_AFFORDABLE"]},{"dataType":"enum","enums":["RECOMMEND_OVER_BUDGET"]},{"dataType":"enum","enums":["HOLD_AFFORDABLE"]},{"dataType":"enum","enums":["HOLD_OVER_BUDGET"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ResultResponse": {
         "dataType": "refObject",
         "properties": {
+            "resultType": {"ref":"ResultType","required":true},
             "decision": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["구매 추천"]},{"dataType":"enum","enums":["구매 보류"]}],"required":true},
             "message": {"dataType":"string","required":true},
         },
