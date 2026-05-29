@@ -152,6 +152,30 @@ export class GoalsService {
     return new GoalsResponseDto(updated);
   }
 
+  // 목표 예산 재설정
+  async replaceTargetBudget(
+    userId: string,
+    body: GoalsRequestDto,
+  ): Promise<GoalsResponseDto> {
+    const isExist = await this.goalsRepository.findByUserId(userId);
+    if (!isExist) {
+      throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
+    }
+
+    const incomeDay = body.incomeDate ?? 1;
+    this.validateIncomeDate(incomeDay);
+    const { incomeDate: _, ...rest } = body;
+    const nextIncomeDate = this.makeNextIncomeDate(incomeDay);
+
+    const updated = await this.goalsRepository.replaceTargetBudget(userId, {
+      ...rest,
+      incomeDate: nextIncomeDate,
+      incomeDay,
+    });
+
+    return new GoalsResponseDto(updated);
+  }
+
   // 소비, 남은 예산 값 조회 (갱신일 자동 적용)
   async getBudgetSpend(userId: string) {
     const budget = await this.goalsRepository.findBudgetByUserId(userId);

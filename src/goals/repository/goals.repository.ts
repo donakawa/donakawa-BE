@@ -59,6 +59,30 @@ export class GoalsRepository {
     });
   }
 
+  // 목표 예산 재설정
+  async replaceTargetBudget(
+    userId: string,
+    data: CreateTargetBudgetInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<TargetBudget> {
+    const db = tx ?? this.prisma;
+
+    return db.targetBudget.update({
+      where: {
+        userId: BigInt(userId),
+      },
+      data: {
+        monthlyIncome: data.monthlyIncome,
+        incomeDate: data.incomeDate,
+        incomeDay: data.incomeDay,
+        fixedExpense: data.fixedExpense ?? null,
+        monthlySaving: data.monthlySaving ?? null,
+        spendStrategy: data.spendStrategy,
+        shoppingBudget: data.shoppingBudget,
+      },
+    });
+  }
+
   // 총 소비 금액 조회
   async getTotalSpendByUser(userId: string, since: Date): Promise<number> {
     const userIdBigInt = BigInt(userId);

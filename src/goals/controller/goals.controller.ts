@@ -5,6 +5,7 @@ import {
   Get,
   Post,
   Patch,
+  Put,
   Route,
   SuccessResponse,
   Tags,
@@ -92,6 +93,22 @@ export class GoalsController {
   ): Promise<ApiResponse<GoalsResponseDto>> {
     const userId = req.user!.id;
     const data = await this.goalsService.updateTargetBudget(userId, body);
+
+    return success(data);
+  }
+
+  /**
+   * @summary 목표 예산 재설정 API
+   */
+  @Put("/budget")
+  @Middlewares(validateBody(GoalsRequestDto))
+  @SuccessResponse("200", "목표 예산 재설정 성공")
+  public async replaceTargetBudget(
+    @Body() body: GoalsRequestDto,
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<GoalsResponseDto>> {
+    const userId = req.user!.id;
+    const data = await this.goalsService.replaceTargetBudget(userId, body);
 
     return success(data);
   }
