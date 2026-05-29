@@ -8,7 +8,6 @@ import {
   GoalsResponseDto,
   BudgetSpendResponseDto,
   CalcShoppingBudgetResponseDto,
-  SpendSummaryResponseDto,
 } from "../dto/response/goals.response.dto";
 import {
   ConflictException,
@@ -69,22 +68,6 @@ export class GoalsService {
         "incomeDate는 1에서 31 사이의 값이어야 합니다.",
       );
     }
-  }
-
-  // 구매 시간대 + enum 값에 따른 시간 보정
-  private adjustPurchasedDate(
-    purchasedDate: Date,
-    purchasedAt: PurchasedAt,
-  ): Date {
-    const hourOffsetMap: Record<PurchasedAt, number> = {
-      MORNING: 18,
-      EVENING: 23,
-      NIGHT: 6,
-    };
-
-    const offsetMs = hourOffsetMap[purchasedAt] * 60 * 60 * 1000;
-
-    return new Date(purchasedDate.getTime() + offsetMs);
   }
 
   // 목표 예산 등록
@@ -233,133 +216,5 @@ export class GoalsService {
     });
 
     return new CalcShoppingBudgetResponseDto(shoppingBudget);
-  }
-
-  // 만족 소비 조회
-  async getSatisfiedSpend(
-    userId: string,
-    cursor?: string,
-  ): Promise<SpendSummaryResponseDto> {
-    return this.getSpendSummary(userId, true, cursor);
-  }
-
-  // 후회 소비 조회
-  async getRegretSpend(
-    userId: string,
-    cursor?: string,
-  ): Promise<SpendSummaryResponseDto> {
-    return this.getSpendSummary(userId, false, cursor);
-  }
-
-  // 만족 소비, 후회 소비 공통 로직
-  async getSpendSummary(
-    userId: string,
-    isSatisfied: boolean,
-    cursor?: string,
-  ): Promise<SpendSummaryResponseDto> {
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-    const reviews = await this.goalsRepository.findSpendItems(
-      userId,
-      oneMonthAgo,
-      isSatisfied,
-      cursor,
-      10,
-    );
-
-    const itemsToUse = reviews.slice(0, 10);
-    const items = await Promise.all(
-      itemsToUse.map(async (r) => {
-        // 수동 추가
-        if (r.addedItemManual) {
-          const fileId = r.addedItemManual.files?.id;
-          const imageUrl = fileId
-            ? await this.filesService.generateUrl(fileId.toString(), 60 * 60)
-            : null;
-
-          return {
-            id: r.id.toString(),
-            itemId: r.addedItemManual.id.toString(),
-            type: "MANUAL" as const,
-            name: r.addedItemManual.name,
-            price: r.addedItemManual.price,
-            imageUrl,
-          };
-        }
-
-        // 자동 추가
-        const fileId = r.addedItemAuto?.product.files?.id;
-        const imageUrl = fileId
-          ? await this.filesService.generateUrl(fileId.toString(), 60 * 60)
-          : null;
-
-        return {
-          id: r.id.toString(),
-          itemId: r.addedItemAuto!.id.toString(),
-          type: "AUTO" as const,
-          name: r.addedItemAuto!.product.name,
-          price: r.addedItemAuto!.product.price,
-          imageUrl,
-        };
-      }),
-    );
-
-    // 평균 구매 결정 시간
-    const allRecentReviews = cursor
-      ? await this.goalsRepository.findSpendItems(
-          userId,
-          oneMonthAgo,
-          isSatisfied,
-          undefined,
-          1000,
-        )
-      : reviews;
-
-    const decisionDaysList = allRecentReviews
-      .map((r) => {
-        const wishCreated =
-          r.addedItemAuto?.createdAt ?? r.addedItemManual?.createdAt;
-
-        const purchaseHistory =
-          r.addedItemAuto?.purchasedHistory[0] ??
-          r.addedItemManual?.purchasedHistory[0];
-
-        if (!wishCreated || !purchaseHistory) return null;
-
-        const adjustedPurchasedDate = this.adjustPurchasedDate(
-          purchaseHistory.purchasedDate,
-          purchaseHistory.purchasedAt,
-        );
-
-        return Math.floor(
-          (adjustedPurchasedDate.getTime() - wishCreated.getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
-      })
-      .filter((d): d is number => d !== null);
-
-    const averageDecisionDays =
-      decisionDaysList.length === 0
-        ? 0
-        : Math.floor(
-            decisionDaysList.reduce((sum, d) => sum + d, 0) /
-              decisionDaysList.length,
-          );
-
-    // 최근 한 달 내 만족 소비/후회 소비 개수
-    const recentMonthCount = await this.goalsRepository.countRecentMonth(
-      userId,
-      oneMonthAgo,
-      isSatisfied,
-    );
-
-    let nextCursor: string | undefined;
-    if (reviews.length > 10) {
-      const last = itemsToUse[itemsToUse.length - 1];
-      nextCursor = last.id.toString();
-    }
-
-    return { averageDecisionDays, recentMonthCount, items, nextCursor };
   }
 }
