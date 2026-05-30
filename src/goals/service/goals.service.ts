@@ -16,7 +16,6 @@ import {
 } from "../../errors/error";
 import { ShoppingBudgetCalculator } from "./shopping-budget-calculator.service";
 import { FilesService } from "../../files/service/files.service";
-import { PurchasedAt } from "@prisma/client";
 
 export class GoalsService {
   constructor(
@@ -70,6 +69,15 @@ export class GoalsService {
     }
   }
 
+  // 갱신일 설정 및 다음 갱신일 계산
+  private prepareIncomeData(incomeDate?: number) {
+    const incomeDay = incomeDate ?? 1;
+    this.validateIncomeDate(incomeDay);
+    const nextIncomeDate = this.makeNextIncomeDate(incomeDay);
+
+    return { incomeDay, nextIncomeDate };
+  }
+
   // 목표 예산 등록
   async createTargetBudget(
     userId: string,
@@ -83,10 +91,10 @@ export class GoalsService {
       );
     }
 
-    const incomeDay = body.incomeDate ?? 1;
-    this.validateIncomeDate(incomeDay);
+    const { incomeDay, nextIncomeDate } = this.prepareIncomeData(
+      body.incomeDate,
+    );
     const { incomeDate: _, ...rest } = body;
-    const nextIncomeDate = this.makeNextIncomeDate(incomeDay);
 
     const saved = await this.goalsRepository.createTargetBudget(userId, {
       ...rest,
@@ -145,10 +153,10 @@ export class GoalsService {
       throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
     }
 
-    const incomeDay = body.incomeDate ?? 1;
-    this.validateIncomeDate(incomeDay);
+    const { incomeDay, nextIncomeDate } = this.prepareIncomeData(
+      body.incomeDate,
+    );
     const { incomeDate: _, ...rest } = body;
-    const nextIncomeDate = this.makeNextIncomeDate(incomeDay);
 
     const updated = await this.goalsRepository.replaceTargetBudget(userId, {
       ...rest,

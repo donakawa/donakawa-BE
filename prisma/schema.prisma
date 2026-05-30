@@ -23,7 +23,7 @@ model User {
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamp(6)
 
-  targetBudget    TargetBudget[]
+  targetBudget    TargetBudget?
   oauth           Oauth[]
   wishItemFolder  WishItemFolder[]
   addedItemAuto   AddedItemAuto[]
