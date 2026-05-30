@@ -160,16 +160,19 @@ export class ChatsService {
       .filter((m) => m.sender === "USER")
       .map((m) => m.content);
 
-    const budget = [...chat.user.targetBudget].sort((a, b) =>
-      a.id < b.id ? 1 : -1,
-    )[0];
-    if (!budget || !budget.incomeDate) {
+    const budget = chat.user.targetBudget;
+    if (!budget) {
       throw new Error("User budget not found");
+    }
+
+    const nextIncomeDate = budget.incomeDate;
+
+    if (!nextIncomeDate) {
+      throw new Error("Income date not found");
     }
 
     // 갱신일까지 남은 일 수
     const now = new Date();
-    const nextIncomeDate = budget.incomeDate;
     const diffMs = nextIncomeDate.getTime() - now.getTime();
     const daysUntilBudgetReset = Math.max(
       Math.ceil(diffMs / (1000 * 60 * 60 * 24)),

@@ -59,6 +59,30 @@ export class GoalsRepository {
     });
   }
 
+  // 목표 예산 재설정
+  async replaceTargetBudget(
+    userId: string,
+    data: CreateTargetBudgetInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<TargetBudget> {
+    const db = tx ?? this.prisma;
+
+    return db.targetBudget.update({
+      where: {
+        userId: BigInt(userId),
+      },
+      data: {
+        monthlyIncome: data.monthlyIncome,
+        incomeDate: data.incomeDate,
+        incomeDay: data.incomeDay,
+        fixedExpense: data.fixedExpense ?? null,
+        monthlySaving: data.monthlySaving ?? null,
+        spendStrategy: data.spendStrategy,
+        shoppingBudget: data.shoppingBudget,
+      },
+    });
+  }
+
   // 총 소비 금액 조회
   async getTotalSpendByUser(userId: string, since: Date): Promise<number> {
     const userIdBigInt = BigInt(userId);
@@ -82,110 +106,5 @@ export class GoalsRepository {
       if (h.addedItemManual) return sum + h.addedItemManual.price;
       return sum;
     }, 0);
-  }
-
-  // 만족 소비, 후회 소비 조회
-  async findSpendItems(
-    userId: string,
-    since: Date,
-    isSatisfied: boolean,
-    cursor?: string,
-    take: number = 10,
-  ) {
-    const satisfactionCondition = isSatisfied ? { gte: 4 } : { lte: 3 };
-    const cursorId = cursor ? BigInt(cursor) : undefined;
-
-    return this.prisma.review.findMany({
-      where: {
-        satisfaction: satisfactionCondition,
-        ...(cursorId && { id: { lt: cursorId } }),
-        OR: [
-          {
-            addedItemAuto: {
-              userId: BigInt(userId),
-              purchasedHistory: {
-                some: {
-                  purchasedDate: { gte: since },
-                },
-              },
-            },
-          },
-          {
-            addedItemManual: {
-              userId: BigInt(userId),
-              purchasedHistory: {
-                some: {
-                  purchasedDate: { gte: since },
-                },
-              },
-            },
-          },
-        ],
-      },
-      orderBy: {
-        id: "desc",
-      },
-      include: {
-        addedItemAuto: {
-          select: {
-            createdAt: true,
-            id: true,
-            product: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                files: { select: { id: true } },
-              },
-            },
-            purchasedHistory: {
-              orderBy: { purchasedDate: "desc" },
-              take: 1,
-              select: { id: true, purchasedDate: true, purchasedAt: true },
-            },
-          },
-        },
-        addedItemManual: {
-          select: {
-            createdAt: true,
-            id: true,
-            name: true,
-            price: true,
-            files: { select: { id: true } },
-            purchasedHistory: {
-              orderBy: { purchasedDate: "desc" },
-              take: 1,
-              select: { id: true, purchasedDate: true, purchasedAt: true },
-            },
-          },
-        },
-      },
-      take: take + 1,
-    });
-  }
-
-  // 만족 소비, 후회 소비 개수
-  async countRecentMonth(userId: string, since: Date, isSatisfied: boolean) {
-    const satisfactionCondition = isSatisfied ? { gte: 4 } : { lte: 3 };
-
-    return this.prisma.review.count({
-      where: {
-        satisfaction: satisfactionCondition,
-        OR: [
-          {
-            addedItemAuto: {
-              userId: BigInt(userId),
-              purchasedHistory: { some: { purchasedDate: { gte: since } } },
-            },
-          },
-          {
-            addedItemManual: {
-              userId: BigInt(userId),
-              purchasedHistory: { some: { purchasedDate: { gte: since } } },
-            },
-          },
-        ],
-      },
-    });
   }
 }
