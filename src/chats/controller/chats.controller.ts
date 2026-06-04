@@ -50,32 +50,40 @@ export class ChatsController {
    * @summary 특정 채팅의 상세 정보 조회
    */
   @Get("/{id}")
-  async getChatDetail(@Path() id: number) {
-    return this.chatsService.getChatDetail(id);
+  async getChatDetail(@Path() id: number, @Request() req: ExpressRequest) {
+    const userId = Number(req.user!.id);
+    return this.chatsService.getChatDetail(id, userId);
   }
 
   /**
    * @summary 현재 채팅 단계에 해당하는 질문 조회
    */
   @Get("/{id}/question")
-  async getQuestion(@Path() id: number) {
-    return this.chatsService.getCurrentQuestion(id);
+  async getQuestion(@Path() id: number, @Request() req: ExpressRequest) {
+    const userId = Number(req.user!.id);
+    return this.chatsService.getCurrentQuestion(id, userId);
   }
 
   /**
    * @summary 질문에 대한 사용자의 선택지 저장
    */
   @Post("/{id}/select")
-  async selectOption(@Path() id: number, @Body() body: SelectOptionRequest) {
-    return this.chatsService.saveSelection(id, body);
+  async selectOption(
+    @Path() id: number,
+    @Body() body: SelectOptionRequest,
+    @Request() req: ExpressRequest,
+  ) {
+    const userId = Number(req.user!.id);
+    return this.chatsService.saveSelection(id, userId, body);
   }
 
   /**
    * @summary 채팅 삭제
    */
   @Delete("/{id}")
-  async deleteChat(@Path() id: number) {
-    return this.chatsService.deleteChat(id);
+  async deleteChat(@Path() id: number, @Request() req: ExpressRequest) {
+    const userId = Number(req.user!.id);
+    return this.chatsService.deleteChat(id, userId);
   }
 
   /**
@@ -83,7 +91,8 @@ export class ChatsController {
    * @description 모든 질문에 대한 답변이 완료된 후, 소비 결정 결과를 반환한다.
    */
   @Get("/{id}/result")
-  async resultChat(@Path() id: number) {
-    return this.chatsService.resultChat(id);
+  async resultChat(@Path() id: number, @Request() req: ExpressRequest) {
+    const userId = Number(req.user!.id);
+    return this.chatsService.resultChat(id, userId);
   }
 }

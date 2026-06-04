@@ -103,9 +103,10 @@ export class ChatsService {
     }));
   }
 
-  async getChatDetail(chatId: number): Promise<ChatDetailResponse> {
+  async getChatDetail(chatId: number, userId: number): Promise<ChatDetailResponse> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
-    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
+    if (!chat || Number(chat.userId) !== userId)
+      throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
     const userMessages = chat.aiChatMessage.filter((m) => m.sender === "USER");
 
@@ -148,9 +149,11 @@ export class ChatsService {
 
   async getCurrentQuestion(
     chatId: number,
+    userId: number,
   ): Promise<QuestionResponse | { message: string }> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
-    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
+    if (!chat || Number(chat.userId) !== userId)
+      throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
     const answeredCount = chat.aiChatMessage.filter(
       (m) => m.sender === "USER",
@@ -166,14 +169,14 @@ export class ChatsService {
 
   async saveSelection(
     chatId: number,
+    userId: number,
     body: SelectOptionRequest,
   ): Promise<FinishResponse> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
-    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
+    if (!chat || Number(chat.userId) !== userId)
+      throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
-    const answeredCount = chat.aiChatMessage.filter(
-      (m) => m.sender === "USER",
-    ).length;
+    const answeredCount = chat.aiChatMessage.filter((m) => m.sender === "USER").length;
     if (body.step !== answeredCount + 1) {
       throw new BadRequestException("C003", "올바르지 않은 질문 순서입니다.");
     }
@@ -184,21 +187,20 @@ export class ChatsService {
     const option = question.options.find((o) => o.id === body.selectedOptionId);
     if (!option) throw new BadRequestException("C004", "유효하지 않은 선택지입니다.");
 
-    await Promise.all([
-      this.chatsRepository.createMessage(Number(chat.id), "USER", option.label),
-      this.chatsRepository.createSelection({
-        headerId: Number(chat.id),
-        step: body.step,
-        content: String(body.selectedOptionId),
-      }),
-    ]);
+    await this.chatsRepository.saveSelectionTx({
+      headerId: Number(chat.id),
+      step: body.step,
+      content: String(body.selectedOptionId),
+      optionLabel: option.label,
+    });
 
     return { isFinished: body.step >= QUESTIONS.length };
   }
 
-  async resultChat(chatId: number): Promise<ResultResponse> {
+  async resultChat(chatId: number, userId: number): Promise<ResultResponse> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
-    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
+    if (!chat || Number(chat.userId) !== userId)
+      throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
     const selections = chat.aiChatSelection.sort((a, b) => a.step - b.step);
     if (selections.length < QUESTIONS.length) {
@@ -231,17 +233,20 @@ export class ChatsService {
     const decision = computeDecision(selections);
     const { resultType, message } = computeResult(decision, remainingBudget, daysUntilReset, itemPrice);
 
-    await this.chatsRepository.createChatResult({
-      headerId: Number(chat.id),
-      decision,
-    });
+    if (!chat.aiChatResult) {
+      await this.chatsRepository.createChatResult({
+        headerId: Number(chat.id),
+        decision,
+      });
+    }
 
     return { resultType, decision, message };
   }
 
-  async deleteChat(chatId: number): Promise<{ message: string }> {
+  async deleteChat(chatId: number, userId: number): Promise<{ message: string }> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
-    if (!chat) throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
+    if (!chat || Number(chat.userId) !== userId)
+      throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
     await this.chatsRepository.deleteChat(chatId);
     return { message: "채팅방이 삭제되었습니다." };

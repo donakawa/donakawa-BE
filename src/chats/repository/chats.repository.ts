@@ -103,24 +103,15 @@ export class ChatsRepository {
     });
   }
 
-  createMessage(headerId: number, sender: "AI" | "USER", content: string) {
-    return this.prisma.aiChatMessage.create({
-      data: {
-        headerId: BigInt(headerId),
-        sender,
-        content,
-      },
-    });
-  }
-
-  createSelection(input: { headerId: number; step: number; content: string }) {
-    return this.prisma.aiChatSelection.create({
-      data: {
-        headerId: BigInt(input.headerId),
-        step: input.step,
-        content: input.content,
-      },
-    });
+  saveSelectionTx(input: { headerId: number; step: number; content: string; optionLabel: string }) {
+    return this.prisma.$transaction([
+      this.prisma.aiChatMessage.create({
+        data: { headerId: BigInt(input.headerId), sender: "USER", content: input.optionLabel },
+      }),
+      this.prisma.aiChatSelection.create({
+        data: { headerId: BigInt(input.headerId), step: input.step, content: input.content },
+      }),
+    ]);
   }
 
   deleteChat(chatId: number) {
