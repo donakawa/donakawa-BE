@@ -79,8 +79,8 @@ export class ChatsController {
   }
 
   /**
-   * @summary 채팅의 최종 결과 반환 (GPT)
-   * @description 모든 질문에 대한 답변이 완료된 후, GPT를 통해 생성된 소비 결정 결과를 한 번에 반환한다.
+   * @summary 채팅의 최종 결과 반환
+   * @description 모든 질문에 대한 답변이 완료된 후, 소비 결정 결과를 반환한다.
    */
   @Get("/{id}/result")
   async resultChat(@Path() id: number) {

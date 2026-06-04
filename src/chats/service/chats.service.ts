@@ -205,9 +205,7 @@ export class ChatsService {
       throw new BadRequestException("C005", "아직 모든 질문에 답하지 않았습니다.");
     }
 
-    const budget = [...chat.user.targetBudget].sort((a, b) =>
-      a.id < b.id ? 1 : -1,
-    )[0];
+    const budget = chat.user.targetBudget;
     if (!budget || !budget.incomeDate) {
       throw new NotFoundException("C006", "등록된 목표 예산이 없습니다.");
     }
