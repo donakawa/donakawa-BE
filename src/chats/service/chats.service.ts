@@ -10,6 +10,7 @@ import {
   ResultType,
 } from "../dto/response/chats.response.dto";
 import { QUESTIONS } from "../constants/questions";
+import { Prisma } from "@prisma/client";
 import { BadRequestException, NotFoundException } from "../../errors/error";
 import { GoalsRepository } from "../../goals/repository/goals.repository";
 import { FilesService } from "../../files/service/files.service";
@@ -187,12 +188,19 @@ export class ChatsService {
     const option = question.options.find((o) => o.id === body.selectedOptionId);
     if (!option) throw new BadRequestException("C004", "유효하지 않은 선택지입니다.");
 
-    await this.chatsRepository.saveSelectionTx({
-      headerId: Number(chat.id),
-      step: body.step,
-      content: String(body.selectedOptionId),
-      optionLabel: option.label,
-    });
+    try {
+      await this.chatsRepository.saveSelectionTx({
+        headerId: Number(chat.id),
+        step: body.step,
+        content: String(body.selectedOptionId),
+        optionLabel: option.label,
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        throw new BadRequestException("C003", "이미 처리된 요청입니다.");
+      }
+      throw e;
+    }
 
     return { isFinished: body.step >= QUESTIONS.length };
   }
