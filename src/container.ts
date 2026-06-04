@@ -5,8 +5,6 @@ import { AuthService } from "./auth/service/auth.service";
 import { AuthRepository } from "./auth/repository/auth.repository";
 import { GoalsRepository } from "./goals/repository/goals.repository";
 import { GoalsService } from "./goals/service/goals.service";
-import { HistoriesRepository } from "./histories/repository/histories.repository";
-import { HistoriesService } from "./histories/service/histories.service";
 import { WishlistRepository } from "./wishlist/repository/wishlist.repository";
 import { WishlistService } from "./wishlist/service/wishlist.service";
 import { ChatsRepository } from "./chats/repository/chats.repository";
@@ -22,7 +20,6 @@ import { FilesService } from "./files/service/files.service";
 import { S3StorageAdapter } from "./files/storage/s3.storage";
 import { DbRepository } from "./infra/db.repository";
 import { KakaoOAuthService } from "./auth/service/kakao-oauth.service";
-import { AiCommentService } from "./histories/service/aicomment.sevice";
 
 const connectionString = `${process.env.DATABASE_URL}`;
 const googleOAuthService = new GoogleOAuthService();
@@ -84,19 +81,6 @@ const goals = {
   repository: goalsRepository,
 };
 
-// Histories 도메인
-const historiesRepository = new HistoriesRepository(prisma);
-const aiCommentService = new AiCommentService(goalsRepository);
-const historiesService = new HistoriesService(
-  historiesRepository,
-  filesService,
-  aiCommentService,
-);
-const histories = {
-  service: historiesService,
-  repository: historiesRepository,
-};
-
 // Wishlist 도메인
 const crawlQueueClient = new CrawlQueueClient(sqsClient);
 const wishlistRepository = new WishlistRepository(prisma);
@@ -107,7 +91,6 @@ const wishlistService = new WishlistService(
   valkeyClient,
   eventEmitterClient,
   filesService,
-  historiesService,
 );
 const wishlist = {
   service: wishlistService,
@@ -135,7 +118,6 @@ export const container = {
   prisma,
   auth,
   goals,
-  histories,
   wishlist,
   chats,
   files,

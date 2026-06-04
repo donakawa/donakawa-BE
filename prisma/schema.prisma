@@ -98,7 +98,6 @@ model AddedItemAuto {
   updatedAt      DateTime?       @updatedAt @db.Timestamp(6)
 
   purchasedHistory PurchasedHistory[]
-  review           Review[]
 
   aiChatHeaders AiChatHeader[] @relation("AutoItemChats")
 
@@ -183,25 +182,10 @@ model AddedItemManual {
   updatedAt      DateTime?       @updatedAt @map("updated_at") @db.Timestamp(6)
 
   purchasedHistory PurchasedHistory[]
-  review           Review[]
 
   aiChatHeaders AiChatHeader[] @relation("ManualItemChats")
 
   @@map("added_item_manual")
-}
-
-model Review {
-  id              BigInt           @id @default(autoincrement())
-  autoItemId      BigInt?          @map("auto_item_id")
-  addedItemAuto   AddedItemAuto?   @relation(fields: [autoItemId], references: [id], onDelete: Cascade)
-  manualItemId    BigInt?          @map("manual_item_id")
-  addedItemManual AddedItemManual? @relation(fields: [manualItemId], references: [id], onDelete: Cascade)
-  satisfaction    Float?
-  frequency       Int?
-  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt       DateTime?        @updatedAt @map("updated_at") @db.Timestamp(6)
-
-  @@map("review")
 }
 
 enum Sender {
