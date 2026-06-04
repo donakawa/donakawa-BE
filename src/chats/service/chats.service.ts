@@ -108,7 +108,7 @@ export class ChatsService {
     if (!chat || Number(chat.userId) !== userId)
       throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
-    const userMessages = chat.aiChatMessage.filter((m) => m.sender === "USER");
+    const userMessages = chat.messages.filter((m) => m.sender === "USER");
 
     let wishItem;
     if (chat.itemType === "AUTO") {
@@ -142,7 +142,7 @@ export class ChatsService {
         step: i + 1,
         selectedOption: m.content,
       })),
-      result: chat.aiChatResult?.decision ?? null,
+      result: chat.result?.decision ?? null,
       currentStep: userMessages.length + 1,
     };
   }
@@ -155,7 +155,7 @@ export class ChatsService {
     if (!chat || Number(chat.userId) !== userId)
       throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
-    const answeredCount = chat.aiChatMessage.filter(
+    const answeredCount = chat.messages.filter(
       (m) => m.sender === "USER",
     ).length;
 
@@ -176,7 +176,7 @@ export class ChatsService {
     if (!chat || Number(chat.userId) !== userId)
       throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
-    const answeredCount = chat.aiChatMessage.filter((m) => m.sender === "USER").length;
+    const answeredCount = chat.messages.filter((m) => m.sender === "USER").length;
     if (body.step !== answeredCount + 1) {
       throw new BadRequestException("C003", "올바르지 않은 질문 순서입니다.");
     }
@@ -202,7 +202,7 @@ export class ChatsService {
     if (!chat || Number(chat.userId) !== userId)
       throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
-    const selections = chat.aiChatSelection.sort((a, b) => a.step - b.step);
+    const selections = chat.selections.sort((a, b) => a.step - b.step);
     if (selections.length < QUESTIONS.length) {
       throw new BadRequestException("C005", "아직 모든 질문에 답하지 않았습니다.");
     }
@@ -233,7 +233,7 @@ export class ChatsService {
     const decision = computeDecision(selections);
     const { resultType, message } = computeResult(decision, remainingBudget, daysUntilReset, itemPrice);
 
-    if (!chat.aiChatResult) {
+    if (!chat.result) {
       await this.chatsRepository.createChatResult({
         headerId: Number(chat.id),
         decision,

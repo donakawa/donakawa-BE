@@ -28,7 +28,7 @@ model User {
   wishItemFolder  WishItemFolder[]
   addedItemAuto   AddedItemAuto[]
   addedItemManual AddedItemManual[]
-  aiChatHeader    AiChatHeader[]
+  chatHeaders     ChatHeader[]
 
   @@map("user")
 }
@@ -100,7 +100,7 @@ model AddedItemAuto {
   purchasedHistory PurchasedHistory[]
   review           Review[]
 
-  aiChatHeaders AiChatHeader[] @relation("AutoItemChats")
+  chatHeaders ChatHeader[] @relation("AutoItemChats")
 
   @@map("added_item_auto")
 }
@@ -185,7 +185,7 @@ model AddedItemManual {
   purchasedHistory PurchasedHistory[]
   review           Review[]
 
-  aiChatHeaders AiChatHeader[] @relation("ManualItemChats")
+  chatHeaders ChatHeader[] @relation("ManualItemChats")
 
   @@map("added_item_manual")
 }
@@ -214,66 +214,64 @@ enum WishItemType {
   MANUAL
 }
 
-model AiChatHeader {
+model ChatHeader {
   id        BigInt @id @default(autoincrement())
 
-  userId          BigInt        @map("user_id")
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       BigInt           @map("user_id")
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  autoItemId   BigInt? @map("auto_item_id")
-  autoItem     AddedItemAuto? @relation("AutoItemChats", fields: [autoItemId], references: [id])
+  autoItemId   BigInt?          @map("auto_item_id")
+  autoItem     AddedItemAuto?   @relation("AutoItemChats", fields: [autoItemId], references: [id])
 
-  manualItemId BigInt? @map("manual_item_id")
+  manualItemId BigInt?          @map("manual_item_id")
   manualItem   AddedItemManual? @relation("ManualItemChats", fields: [manualItemId], references: [id])
 
-  itemType   WishItemType @map("item_type")
-
+  itemType  WishItemType @map("item_type")
   title     String
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(6)
 
-  aiChatMessage AiChatMessage[]
-  aiChatResult  AiChatResult?
-  aiChatSelection AiChatSelection[] @relation("HeaderSelections")
+  messages   ChatMessage[]
+  result     ChatResult?
+  selections ChatSelection[] @relation("HeaderSelections")
 
-  @@map("ai_chat_header")
+  @@map("chat_header")
 }
 
-model AiChatMessage {
-  id           BigInt       @id @default(autoincrement())
-  headerId     BigInt       @map("header_id")
-  aiChatHeader AiChatHeader @relation(fields: [headerId], references: [id], onDelete: Cascade)
-  
-  sender       Sender
-  content      String       @db.Text()
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+model ChatMessage {
+  id         BigInt     @id @default(autoincrement())
+  headerId   BigInt     @map("header_id")
+  chatHeader ChatHeader @relation(fields: [headerId], references: [id], onDelete: Cascade)
 
-  @@map("ai_chat_message")
+  sender    Sender
+  content   String   @db.Text()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@map("chat_message")
 }
 
-model AiChatSelection {
-  id        BigInt @id @default(autoincrement())
+model ChatSelection {
+  id         BigInt     @id @default(autoincrement())
+  headerId   BigInt     @map("header_id")
+  chatHeader ChatHeader @relation("HeaderSelections", fields: [headerId], references: [id], onDelete: Cascade)
 
-  headerId  BigInt @map("header_id")
-  header    AiChatHeader @relation("HeaderSelections", fields: [headerId], references: [id], onDelete: Cascade)
-
-  step      Int
-  content   String
+  step    Int
+  content String
 
   @@unique([headerId, step])
-  @@map("ai_chat_selection")
+  @@map("chat_selection")
 }
 
-model AiChatResult {
-  id        BigInt           @id @default(autoincrement())
-  headerId  BigInt           @unique @map("header_id")
-  header    AiChatHeader     @relation(fields: [headerId], references: [id], onDelete: Cascade)
+model ChatResult {
+  id         BigInt     @id @default(autoincrement())
+  headerId   BigInt     @unique @map("header_id")
+  chatHeader ChatHeader @relation(fields: [headerId], references: [id], onDelete: Cascade)
 
   decision  String
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
-  @@map("ai_chat_result")
+  @@map("chat_result")
 }
 
 enum FileType {
