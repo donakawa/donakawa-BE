@@ -28,7 +28,8 @@ model User {
   wishItemFolder  WishItemFolder[]
   addedItemAuto   AddedItemAuto[]
   addedItemManual AddedItemManual[]
-  chatHeaders     ChatHeader[]
+  chatHeaders  ChatHeader[]
+  tournaments  Tournament[]
 
   @@map("user")
 }
@@ -99,7 +100,8 @@ model AddedItemAuto {
 
   purchasedHistory PurchasedHistory[]
 
-  chatHeaders ChatHeader[] @relation("AutoItemChats")
+  chatHeaders     ChatHeader[]     @relation("AutoItemChats")
+  tournamentItems TournamentItem[] @relation("AutoTournamentItems")
 
   @@map("added_item_auto")
 }
@@ -183,7 +185,8 @@ model AddedItemManual {
 
   purchasedHistory PurchasedHistory[]
 
-  chatHeaders ChatHeader[] @relation("ManualItemChats")
+  chatHeaders     ChatHeader[]     @relation("ManualItemChats")
+  tournamentItems TournamentItem[] @relation("ManualTournamentItems")
 
   @@map("added_item_manual")
 }
@@ -278,6 +281,7 @@ model Tournament {
   id          BigInt    @id @default(autoincrement())
   userId      BigInt    @map("user_id")
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String    @db.VarChar(100)
   totalItems  Int       @map("total_items")
   isFinished  Boolean   @default(false) @map("is_finished")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
