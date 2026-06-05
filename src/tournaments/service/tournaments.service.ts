@@ -104,7 +104,7 @@ export class TournamentsService {
     userId: number,
     body: CreateTournamentRequest,
   ): Promise<CreateTournamentResponse> {
-    const { items } = body;
+    const { title, items } = body;
     const count = items.length;
 
     if (count < 2 || (count & (count - 1)) !== 0) {
@@ -113,6 +113,7 @@ export class TournamentsService {
 
     const tournament = await this.tournamentsRepository.createTournament({
       userId,
+      title,
       totalItems: count,
       items: items.map((item, i) => ({
         itemType: item.type,
@@ -132,6 +133,7 @@ export class TournamentsService {
 
     return tournaments.map((t) => ({
       id: Number(t.id),
+      title: t.title,
       totalItems: t.totalItems,
       isFinished: t.isFinished,
       createdAt: t.createdAt.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),

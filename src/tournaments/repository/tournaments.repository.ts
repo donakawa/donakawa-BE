@@ -5,12 +5,14 @@ export class TournamentsRepository {
 
   createTournament(input: {
     userId: number;
+    title: string;
     totalItems: number;
     items: { itemType: "AUTO" | "MANUAL"; itemId: number; slot: number }[];
   }) {
     return this.prisma.tournament.create({
       data: {
         userId: BigInt(input.userId),
+        title: input.title,
         totalItems: input.totalItems,
         items: {
           create: input.items.map((item) => ({

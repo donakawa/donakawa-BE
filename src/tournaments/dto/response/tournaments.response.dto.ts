@@ -14,6 +14,7 @@ export interface CreateTournamentResponse {
 
 export interface TournamentListResponse {
   id: number;
+  title: string;
   totalItems: number;
   isFinished: boolean;
   createdAt: string;
