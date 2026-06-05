@@ -15,7 +15,7 @@ export class ChatsRepository {
     itemId: number;
     title: string;
   }) {
-    return this.prisma.aiChatHeader.create({
+    return this.prisma.chatHeader.create({
       data: {
         title: input.title,
         itemType: input.itemType,
@@ -64,7 +64,7 @@ export class ChatsRepository {
   }
 
   findChatsByUser(userId: number) {
-    return this.prisma.aiChatHeader.findMany({
+    return this.prisma.chatHeader.findMany({
       where: { userId: BigInt(userId) },
       orderBy: { createdAt: "desc" },
     });
@@ -84,7 +84,7 @@ export class ChatsRepository {
   }
 
   findChatDetail(chatId: number) {
-    return this.prisma.aiChatHeader.findUnique({
+    return this.prisma.chatHeader.findUnique({
       where: { id: BigInt(chatId) },
       include: {
         user: { include: { targetBudget: true } },
@@ -92,45 +92,36 @@ export class ChatsRepository {
           include: { product: true },
         },
         manualItem: true,
-        aiChatMessage: {
+        messages: {
           orderBy: { createdAt: "asc" },
         },
-        aiChatSelection: {
+        selections: {
           orderBy: { step: "asc" },
         },
-        aiChatResult: true,
+        result: true,
       },
     });
   }
 
-  createMessage(headerId: number, sender: "AI" | "USER", content: string) {
-    return this.prisma.aiChatMessage.create({
-      data: {
-        headerId: BigInt(headerId),
-        sender,
-        content,
-      },
-    });
-  }
-
-  createSelection(input: { headerId: number; step: number; content: string }) {
-    return this.prisma.aiChatSelection.create({
-      data: {
-        headerId: BigInt(input.headerId),
-        step: input.step,
-        content: input.content,
-      },
-    });
+  saveSelectionTx(input: { headerId: number; step: number; content: string; optionLabel: string }) {
+    return this.prisma.$transaction([
+      this.prisma.chatMessage.create({
+        data: { headerId: BigInt(input.headerId), sender: "USER", content: input.optionLabel },
+      }),
+      this.prisma.chatSelection.create({
+        data: { headerId: BigInt(input.headerId), step: input.step, content: input.content },
+      }),
+    ]);
   }
 
   deleteChat(chatId: number) {
-    return this.prisma.aiChatHeader.delete({
+    return this.prisma.chatHeader.delete({
       where: { id: BigInt(chatId) },
     });
   }
 
   createChatResult(input: { headerId: number; decision: string }) {
-    return this.prisma.aiChatResult.upsert({
+    return this.prisma.chatResult.upsert({
       where: { headerId: BigInt(input.headerId) },
       update: { decision: input.decision },
       create: {
