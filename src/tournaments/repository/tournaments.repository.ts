@@ -27,6 +27,26 @@ export class TournamentsRepository {
     });
   }
 
+  async countOwnedItems(
+    userId: number,
+    autoIds: number[],
+    manualIds: number[],
+  ): Promise<{ autoCount: number; manualCount: number }> {
+    const [autoCount, manualCount] = await Promise.all([
+      autoIds.length > 0
+        ? this.prisma.addedItemAuto.count({
+            where: { id: { in: autoIds.map(BigInt) }, userId: BigInt(userId) },
+          })
+        : Promise.resolve(0),
+      manualIds.length > 0
+        ? this.prisma.addedItemManual.count({
+            where: { id: { in: manualIds.map(BigInt) }, userId: BigInt(userId) },
+          })
+        : Promise.resolve(0),
+    ]);
+    return { autoCount, manualCount };
+  }
+
   findTournamentsByUser(userId: number) {
     return this.prisma.tournament.findMany({
       where: { userId: BigInt(userId) },
@@ -51,27 +71,31 @@ export class TournamentsRepository {
     });
   }
 
-  createSelection(input: {
+  saveSelectionTx(input: {
     tournamentId: number;
     round: number;
     matchIndex: number;
     selectedItemId: bigint;
+    finish: boolean;
   }) {
-    return this.prisma.tournamentSelection.create({
-      data: {
-        tournamentId: BigInt(input.tournamentId),
-        round: input.round,
-        matchIndex: input.matchIndex,
-        selectedItemId: input.selectedItemId,
-      },
-    });
-  }
-
-  finishTournament(id: number) {
-    return this.prisma.tournament.update({
-      where: { id: BigInt(id) },
-      data: { isFinished: true },
-    });
+    return this.prisma.$transaction([
+      this.prisma.tournamentSelection.create({
+        data: {
+          tournamentId: BigInt(input.tournamentId),
+          round: input.round,
+          matchIndex: input.matchIndex,
+          selectedItemId: input.selectedItemId,
+        },
+      }),
+      ...(input.finish
+        ? [
+            this.prisma.tournament.update({
+              where: { id: BigInt(input.tournamentId) },
+              data: { isFinished: true },
+            }),
+          ]
+        : []),
+    ]);
   }
 
   deleteTournament(id: number) {

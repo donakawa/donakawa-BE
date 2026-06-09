@@ -50,16 +50,16 @@ export class TournamentsController {
    * @summary 토너먼트 상세 조회
    */
   @Get("/{id}")
-  async getTournamentDetail(@Path() id: number) {
-    return this.tournamentsService.getTournamentDetail(id);
+  async getTournamentDetail(@Path() id: number, @Request() req: ExpressRequest) {
+    return this.tournamentsService.getTournamentDetail(id, Number(req.user!.id));
   }
 
   /**
    * @summary 토너먼트 기록 삭제
    */
   @Delete("/{id}")
-  async deleteTournament(@Path() id: number) {
-    return this.tournamentsService.deleteTournament(id);
+  async deleteTournament(@Path() id: number, @Request() req: ExpressRequest) {
+    return this.tournamentsService.deleteTournament(id, Number(req.user!.id));
   }
 
   /**
@@ -67,8 +67,8 @@ export class TournamentsController {
    * @description 현재 라운드에서 비교할 두 아이템을 반환합니다.
    */
   @Get("/{id}/round")
-  async getRound(@Path() id: number) {
-    return this.tournamentsService.getCurrentRound(id);
+  async getRound(@Path() id: number, @Request() req: ExpressRequest) {
+    return this.tournamentsService.getCurrentRound(id, Number(req.user!.id));
   }
 
   /**
@@ -76,8 +76,12 @@ export class TournamentsController {
    * @description 현재 매치에서 선택한 아이템을 저장합니다. selectedItemId는 TournamentItem의 id입니다.
    */
   @Post("/{id}/select")
-  async saveSelection(@Path() id: number, @Body() body: SelectTournamentRequest) {
-    return this.tournamentsService.saveSelection(id, body);
+  async saveSelection(
+    @Path() id: number,
+    @Body() body: SelectTournamentRequest,
+    @Request() req: ExpressRequest,
+  ) {
+    return this.tournamentsService.saveSelection(id, Number(req.user!.id), body);
   }
 
   /**
@@ -85,7 +89,7 @@ export class TournamentsController {
    * @description 토너먼트가 완료된 후 최종 우승 아이템을 반환합니다.
    */
   @Get("/{id}/result")
-  async getResult(@Path() id: number) {
-    return this.tournamentsService.getResult(id);
+  async getResult(@Path() id: number, @Request() req: ExpressRequest) {
+    return this.tournamentsService.getResult(id, Number(req.user!.id));
   }
 }

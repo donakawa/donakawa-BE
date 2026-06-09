@@ -111,6 +111,17 @@ export class TournamentsService {
       throw new BadRequestException("T001", "아이템 수는 2의 제곱수(2, 4, 8, 16...)여야 합니다.");
     }
 
+    const autoIds = items.filter((i) => i.type === "AUTO").map((i) => i.id);
+    const manualIds = items.filter((i) => i.type === "MANUAL").map((i) => i.id);
+    const { autoCount, manualCount } = await this.tournamentsRepository.countOwnedItems(
+      userId,
+      autoIds,
+      manualIds,
+    );
+    if (autoCount !== autoIds.length || manualCount !== manualIds.length) {
+      throw new BadRequestException("T006", "소유하지 않은 아이템이 포함되어 있습니다.");
+    }
+
     const tournament = await this.tournamentsRepository.createTournament({
       userId,
       title,
@@ -140,9 +151,10 @@ export class TournamentsService {
     }));
   }
 
-  async getTournamentDetail(id: number): Promise<TournamentDetailResponse> {
+  async getTournamentDetail(id: number, userId: number): Promise<TournamentDetailResponse> {
     const tournament = await this.tournamentsRepository.findTournamentDetail(id);
-    if (!tournament) throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
+    if (!tournament || Number(tournament.userId) !== userId)
+      throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
 
     const totalRounds = totalRoundsFor(tournament.totalItems);
     const { round, matchIndex } = computeCurrentState(
@@ -166,9 +178,10 @@ export class TournamentsService {
     };
   }
 
-  async getCurrentRound(tournamentId: number): Promise<TournamentRoundResponse> {
+  async getCurrentRound(tournamentId: number, userId: number): Promise<TournamentRoundResponse> {
     const tournament = await this.tournamentsRepository.findTournamentDetail(tournamentId);
-    if (!tournament) throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
+    if (!tournament || Number(tournament.userId) !== userId)
+      throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
     if (tournament.isFinished)
       throw new BadRequestException("T003", "이미 완료된 토너먼트입니다.");
 
@@ -202,10 +215,12 @@ export class TournamentsService {
 
   async saveSelection(
     tournamentId: number,
+    userId: number,
     body: SelectTournamentRequest,
   ): Promise<TournamentSelectResponse> {
     const tournament = await this.tournamentsRepository.findTournamentDetail(tournamentId);
-    if (!tournament) throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
+    if (!tournament || Number(tournament.userId) !== userId)
+      throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
     if (tournament.isFinished)
       throw new BadRequestException("T003", "이미 완료된 토너먼트입니다.");
 
@@ -236,24 +251,22 @@ export class TournamentsService {
 
     const selectedItem = tournament.items.find((item) => Number(item.id) === body.selectedItemId)!;
 
-    await this.tournamentsRepository.createSelection({
+    const isFinished = tournament.selections.length + 1 >= tournament.totalItems - 1;
+    await this.tournamentsRepository.saveSelectionTx({
       tournamentId,
       round,
       matchIndex,
       selectedItemId: selectedItem.id,
+      finish: isFinished,
     });
-
-    const isFinished = tournament.selections.length + 1 >= tournament.totalItems - 1;
-    if (isFinished) {
-      await this.tournamentsRepository.finishTournament(tournamentId);
-    }
 
     return { isFinished };
   }
 
-  async getResult(tournamentId: number): Promise<TournamentResultResponse> {
+  async getResult(tournamentId: number, userId: number): Promise<TournamentResultResponse> {
     const tournament = await this.tournamentsRepository.findTournamentDetail(tournamentId);
-    if (!tournament) throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
+    if (!tournament || Number(tournament.userId) !== userId)
+      throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
     if (!tournament.isFinished)
       throw new BadRequestException("T005", "아직 완료되지 않은 토너먼트입니다.");
 
@@ -266,9 +279,10 @@ export class TournamentsService {
     return { winner: await toItemSummary(winner, this.filesService) };
   }
 
-  async deleteTournament(tournamentId: number): Promise<{ message: string }> {
+  async deleteTournament(tournamentId: number, userId: number): Promise<{ message: string }> {
     const tournament = await this.tournamentsRepository.findTournamentDetail(tournamentId);
-    if (!tournament) throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
+    if (!tournament || Number(tournament.userId) !== userId)
+      throw new NotFoundException("T002", "존재하지 않는 토너먼트입니다.");
     await this.tournamentsRepository.deleteTournament(tournamentId);
     return { message: "토너먼트가 삭제되었습니다." };
   }
