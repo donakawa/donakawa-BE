@@ -520,8 +520,9 @@ const models: TsoaRoute.Models = {
     "BudgetSpendResponseDto": {
         "dataType": "refObject",
         "properties": {
-            "totalSpend": {"dataType":"double","required":true},
-            "remainingBudget": {"dataType":"double","required":true},
+            "totalSpend": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "remainingBudget": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "coin": {"dataType":"double","required":true},
         },
         "additionalProperties": false,
     },
@@ -1874,7 +1875,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         const argsGoalsController_getBudgetSpend: Record<string, TsoaRoute.ParameterSchema> = {
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
-        app.get('/goals/spend',
+        app.get('/goals',
             authenticateMiddleware([{"jwt":[]}]),
             ...(fetchMiddlewares<RequestHandler>(GoalsController)),
             ...(fetchMiddlewares<RequestHandler>(GoalsController.prototype.getBudgetSpend)),

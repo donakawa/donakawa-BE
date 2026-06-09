@@ -9,6 +9,17 @@ type CreateTargetBudgetInput = Omit<GoalsRequestDto, "incomeDate"> & {
 export class GoalsRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async findUserCoin(userId: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        id: BigInt(userId),
+      },
+      select: {
+        coin: true,
+      },
+    });
+  }
+
   async findByUserId(
     userId: string,
     tx?: Prisma.TransactionClient,
