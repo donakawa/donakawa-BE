@@ -28,7 +28,8 @@ model User {
   wishItemFolder  WishItemFolder[]
   addedItemAuto   AddedItemAuto[]
   addedItemManual AddedItemManual[]
-  chatHeaders     ChatHeader[]
+  chatHeaders  ChatHeader[]
+  tournaments  Tournament[]
 
   @@map("user")
 }
@@ -99,7 +100,8 @@ model AddedItemAuto {
 
   purchasedHistory PurchasedHistory[]
 
-  chatHeaders ChatHeader[] @relation("AutoItemChats")
+  chatHeaders     ChatHeader[]     @relation("AutoItemChats")
+  tournamentItems TournamentItem[] @relation("AutoTournamentItems")
 
   @@map("added_item_auto")
 }
@@ -183,7 +185,8 @@ model AddedItemManual {
 
   purchasedHistory PurchasedHistory[]
 
-  chatHeaders ChatHeader[] @relation("ManualItemChats")
+  chatHeaders     ChatHeader[]     @relation("ManualItemChats")
+  tournamentItems TournamentItem[] @relation("ManualTournamentItems")
 
   @@map("added_item_manual")
 }
@@ -272,4 +275,45 @@ model Files {
   product Product?
   addedItemManual AddedItemManual?
   @@map("files")
+}
+
+model Tournament {
+  id          BigInt    @id @default(autoincrement())
+  userId      BigInt    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String    @db.VarChar(100)
+  totalItems  Int       @map("total_items")
+  isFinished  Boolean   @default(false) @map("is_finished")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  items      TournamentItem[]
+  selections TournamentSelection[]
+
+  @@map("tournament")
+}
+
+model TournamentItem {
+  id           BigInt           @id @default(autoincrement())
+  tournamentId BigInt           @map("tournament_id")
+  tournament   Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  itemType     WishItemType     @map("item_type")
+  autoItemId   BigInt?          @map("auto_item_id")
+  autoItem     AddedItemAuto?   @relation("AutoTournamentItems", fields: [autoItemId], references: [id])
+  manualItemId BigInt?          @map("manual_item_id")
+  manualItem   AddedItemManual? @relation("ManualTournamentItems", fields: [manualItemId], references: [id])
+  slot         Int
+
+  @@map("tournament_item")
+}
+
+model TournamentSelection {
+  id             BigInt     @id @default(autoincrement())
+  tournamentId   BigInt     @map("tournament_id")
+  tournament     Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round          Int
+  matchIndex     Int        @map("match_index")
+  selectedItemId BigInt     @map("selected_item_id")
+
+  @@unique([tournamentId, round, matchIndex])
+  @@map("tournament_selection")
 }

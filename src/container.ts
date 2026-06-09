@@ -9,6 +9,8 @@ import { WishlistRepository } from "./wishlist/repository/wishlist.repository";
 import { WishlistService } from "./wishlist/service/wishlist.service";
 import { ChatsRepository } from "./chats/repository/chats.repository";
 import { ChatsService } from "./chats/service/chats.service";
+import { TournamentsRepository } from "./tournaments/repository/tournaments.repository";
+import { TournamentsService } from "./tournaments/service/tournaments.service";
 import { SQSClient } from "@aws-sdk/client-sqs";
 import { CrawlQueueClient } from "./wishlist/infra/crawl-queue.client";
 import { ValkeyClient } from "./infra/valkey.client";
@@ -108,11 +110,20 @@ const chats = {
   repository: chatsRepository,
 };
 
+// Tournaments 도메인
+const tournamentsRepository = new TournamentsRepository(prisma);
+const tournamentsService = new TournamentsService(tournamentsRepository, filesService);
+const tournaments = {
+  service: tournamentsService,
+  repository: tournamentsRepository,
+};
+
 export const container = {
   prisma,
   auth,
   goals,
   wishlist,
   chats,
+  tournaments,
   files,
 };
