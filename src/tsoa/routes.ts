@@ -13,6 +13,8 @@ import { GoalsController } from './../goals/controller/goals.controller';
 import { ChatsController } from './../chats/controller/chats.controller';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AuthController } from './../auth/controller/auth.controller';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { AttendanceController } from './../attendance/controller/attendance.controller';
 import { expressAuthentication } from './../auth/middleware/auth.middleware';
 // @ts-ignore - no great way to install types from subpackage
 import type { Request as ExRequest, Response as ExResponse, RequestHandler, Router } from 'express';
@@ -858,6 +860,49 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "newPassword": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "RewardStatusDto": {
+        "dataType": "refObject",
+        "properties": {
+            "streakDays": {"dataType":"double","required":true},
+            "achieved": {"dataType":"boolean","required":true},
+            "claimed": {"dataType":"boolean","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AttendanceResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "year": {"dataType":"double","required":true},
+            "month": {"dataType":"double","required":true},
+            "attendanceDates": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "attendanceCount": {"dataType":"double","required":true},
+            "todayAttended": {"dataType":"boolean","required":true},
+            "canClaimReward": {"dataType":"boolean","required":true},
+            "rewards": {"dataType":"array","array":{"dataType":"refObject","ref":"RewardStatusDto"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_AttendanceResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"AttendanceResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AttendanceQueryDto": {
+        "dataType": "refObject",
+        "properties": {
+            "year": {"dataType":"double"},
+            "month": {"dataType":"double"},
         },
         "additionalProperties": false,
     },
@@ -2802,6 +2847,38 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAttendanceController_getAttendance: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                query: {"in":"queries","name":"query","required":true,"ref":"AttendanceQueryDto"},
+        };
+        app.get('/attendance',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AttendanceController)),
+            ...(fetchMiddlewares<RequestHandler>(AttendanceController.prototype.getAttendance)),
+
+            async function AttendanceController_getAttendance(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAttendanceController_getAttendance, request, response });
+
+                const controller = new AttendanceController();
+
+              await templateService.apiHandler({
+                methodName: 'getAttendance',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
               });
             } catch (err) {
                 return next(err);

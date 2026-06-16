@@ -11,6 +11,8 @@ import { ChatsRepository } from "./chats/repository/chats.repository";
 import { ChatsService } from "./chats/service/chats.service";
 import { TournamentsRepository } from "./tournaments/repository/tournaments.repository";
 import { TournamentsService } from "./tournaments/service/tournaments.service";
+import { AttendanceRepository } from "./attendance/repository/attendance.repository";
+import { AttendanceService } from "./attendance/service/attendance.service";
 import { SQSClient } from "@aws-sdk/client-sqs";
 import { CrawlQueueClient } from "./wishlist/infra/crawl-queue.client";
 import { ValkeyClient } from "./infra/valkey.client";
@@ -76,7 +78,7 @@ const files = {
 
 // Goals 도메인
 const goalsRepository = new GoalsRepository(prisma);
-const goalsService = new GoalsService(goalsRepository, filesService);
+const goalsService = new GoalsService(goalsRepository);
 const goals = {
   service: goalsService,
   repository: goalsRepository,
@@ -104,7 +106,11 @@ const wishlist = {
 
 // Chats 도메인
 const chatsRepository = new ChatsRepository(prisma);
-const chatsService = new ChatsService(chatsRepository, goalsRepository, filesService);
+const chatsService = new ChatsService(
+  chatsRepository,
+  goalsRepository,
+  filesService,
+);
 const chats = {
   service: chatsService,
   repository: chatsRepository,
@@ -112,10 +118,21 @@ const chats = {
 
 // Tournaments 도메인
 const tournamentsRepository = new TournamentsRepository(prisma);
-const tournamentsService = new TournamentsService(tournamentsRepository, filesService);
+const tournamentsService = new TournamentsService(
+  tournamentsRepository,
+  filesService,
+);
 const tournaments = {
   service: tournamentsService,
   repository: tournamentsRepository,
+};
+
+// Attendance 도메인
+const attendanceRepository = new AttendanceRepository(prisma);
+const attendanceService = new AttendanceService(attendanceRepository);
+const attendance = {
+  service: attendanceService,
+  repository: attendanceRepository,
 };
 
 export const container = {
@@ -126,4 +143,5 @@ export const container = {
   chats,
   tournaments,
   files,
+  attendance,
 };
