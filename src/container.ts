@@ -1,3 +1,5 @@
+import { LogService } from './log/service/log.service';
+import { LogRepository } from './log/repository/log.repository';
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -118,6 +120,14 @@ const tournaments = {
   repository: tournamentsRepository,
 };
 
+// Log 도메인
+const logRepository = new LogRepository(prisma);
+const logService = new LogService(logRepository);
+const log = {
+  service: logService,
+  repository: logRepository,
+}
+
 export const container = {
   prisma,
   auth,
@@ -126,4 +136,5 @@ export const container = {
   chats,
   tournaments,
   files,
+  log
 };

@@ -31,6 +31,7 @@ model User {
   addedItemManual AddedItemManual[]
   chatHeaders  ChatHeader[]
   tournaments  Tournament[]
+  goals Goal[]
 
   @@map("user")
 }
@@ -317,4 +318,24 @@ model TournamentSelection {
 
   @@unique([tournamentId, round, matchIndex])
   @@map("tournament_selection")
+}
+
+model Goal {
+  id         Int         @id @default(autoincrement())
+  userId     BigInt
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String      @db.VarChar(100)
+  moneyGoal  BigInt      @map("money_goal")
+  current    BigInt
+  status     GoalStatus
+  createdAt  DateTime    @default(now()) @map("created_at")
+  endedAt    DateTime?   @map("ended_at")
+
+  @@map("goal")
+}
+
+enum GoalStatus {
+  IN_PROGRESS
+  COMPLETED
+  STOPPED
 }
