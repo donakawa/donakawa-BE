@@ -59,4 +59,55 @@ export class AttendanceRepository {
       },
     });
   }
+
+  // 포인트 수령, 연속 출석 일수 보상 저장
+  async claimReward(
+    userId: string,
+    coin: number,
+    attendanceIds: bigint[],
+    streakRewards: {
+      streakDays: number;
+      coin: number;
+    }[],
+    year: number,
+    month: number,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: {
+          id: BigInt(userId),
+        },
+        data: {
+          coin: {
+            increment: coin,
+          },
+        },
+      });
+
+      if (attendanceIds.length > 0) {
+        await tx.attendance.updateMany({
+          where: {
+            id: {
+              in: attendanceIds,
+            },
+          },
+          data: {
+            claimed: true,
+          },
+        });
+      }
+
+      if (streakRewards.length > 0) {
+        await tx.attendanceReward.createMany({
+          data: streakRewards.map((reward) => ({
+            userId: BigInt(userId),
+            year,
+            month,
+            streakDays: reward.streakDays,
+            rewardCoin: reward.coin,
+          })),
+        });
+      }
+    });
+  }
 }

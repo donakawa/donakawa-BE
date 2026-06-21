@@ -1,12 +1,12 @@
 import { AttendanceRepository } from "../repository/attendance.repository";
-import { AttendanceResponseDto } from "../dto/response/attendance.response.dto";
+import {
+  AttendanceResponseDto,
+  ClaimRewardResponseDto,
+} from "../dto/response/attendance.response.dto";
 import { StreakUtil } from "../util/streak.util";
 import { RewardPolicy } from "../policy/reward.policy";
-import {
-  ConflictException,
-  NotFoundException,
-  BadRequestException,
-} from "../../errors/error";
+import { ATTENDANCE_REWARDS } from "../constants/attendance.constant";
+import { ConflictException, BadRequestException } from "../../errors/error";
 
 export class AttendanceService {
   constructor(private readonly attendanceRepository: AttendanceRepository) {}
@@ -118,5 +118,68 @@ export class AttendanceService {
     }
 
     await this.attendanceRepository.createAttendance(userId, attendedDate);
+  }
+
+  // 출석 포인트 수령
+  async claimReward(userId: string): Promise<ClaimRewardResponseDto> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 1);
+
+    const attendances = await this.attendanceRepository.findAttendancesByMonth(
+      userId,
+      startDate,
+      endDate,
+    );
+    const attendanceDates = attendances.map(
+      (a) => a.attendedDate.toISOString().split("T")[0],
+    );
+
+    const claimedRewards = await this.attendanceRepository.findClaimedRewards(
+      userId,
+      year,
+      month,
+    );
+    const unclaimedAttendances =
+      await this.attendanceRepository.findUnclaimedAttendances(userId);
+
+    const maxStreak = StreakUtil.calculateMaxStreak(attendanceDates);
+
+    // 수령 가능한 연속 보상
+    const availableRewards = ATTENDANCE_REWARDS.filter(
+      (reward) =>
+        maxStreak >= reward.streakDays &&
+        !claimedRewards.some(
+          (claimed) => claimed.streakDays === reward.streakDays,
+        ),
+    );
+
+    // 기본 출석 보상
+    const attendanceCoin = unclaimedAttendances.length * 5;
+    // 연속 출석 보상
+    const streakCoin = availableRewards.reduce(
+      (sum, reward) => sum + reward.coin,
+      0,
+    );
+    const totalRewardCoin = attendanceCoin + streakCoin;
+
+    if (totalRewardCoin === 0) {
+      throw new ConflictException("A004", "수령 가능한 포인트가 없습니다.");
+    }
+
+    await this.attendanceRepository.claimReward(
+      userId,
+      totalRewardCoin,
+      unclaimedAttendances.map((a) => a.id),
+      availableRewards,
+      year,
+      month,
+    );
+
+    return new ClaimRewardResponseDto({
+      totalRewardCoin,
+    });
   }
 }

@@ -41,3 +41,15 @@ export class AttendanceResponseDto {
     this.rewards = entity.rewards;
   }
 }
+
+export interface ClaimRewardInfo {
+  totalRewardCoin: number;
+}
+
+export class ClaimRewardResponseDto {
+  readonly totalRewardCoin: number;
+
+  constructor(entity: ClaimRewardInfo) {
+    this.totalRewardCoin = entity.totalRewardCoin;
+  }
+}

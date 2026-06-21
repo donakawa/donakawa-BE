@@ -19,7 +19,10 @@ import { AppError } from "../../errors/app.error";
 import { ApiResponse, success } from "../../common/response";
 import { Request as ExpressRequest } from "express";
 import { AttendanceQueryDto } from "../dto/request/attendance.request.dto";
-import { AttendanceResponseDto } from "../dto/response/attendance.response.dto";
+import {
+  AttendanceResponseDto,
+  ClaimRewardResponseDto,
+} from "../dto/response/attendance.response.dto";
 import { AttendanceService } from "../service/attendance.service";
 import { container } from "../../container";
 
@@ -59,6 +62,20 @@ export class AttendanceController {
   ): Promise<ApiResponse<void>> {
     const userId = req.user!.id;
     const data = await this.attendanceService.attend(userId);
+
+    return success(data);
+  }
+
+  /**
+   * @summary 출석 포인트 수령 API
+   */
+  @Post("/rewards")
+  @SuccessResponse("200", "보상 수령 성공")
+  public async claimReward(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<ClaimRewardResponseDto>> {
+    const userId = req.user!.id;
+    const data = await this.attendanceService.claimReward(userId);
 
     return success(data);
   }
