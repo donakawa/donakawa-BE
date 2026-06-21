@@ -31,6 +31,8 @@ model User {
   addedItemManual AddedItemManual[]
   chatHeaders  ChatHeader[]
   tournaments  Tournament[]
+  attendance  Attendance[]
+  attendanceReward AttendanceReward[]
 
   @@map("user")
 }
@@ -317,4 +319,32 @@ model TournamentSelection {
 
   @@unique([tournamentId, round, matchIndex])
   @@map("tournament_selection")
+}
+
+model Attendance {
+  id           BigInt   @id @default(autoincrement())
+  userId       BigInt
+  attendedDate DateTime @db.Date
+  createdAt    DateTime @default(now())
+  claimed      Boolean @default(false)
+  
+  user User @relation(fields: [userId], references: [id])
+  @@unique([userId, attendedDate])
+
+  @@map("attendance")
+}
+
+model AttendanceReward {
+  id           BigInt   @id @default(autoincrement())
+  userId       BigInt
+  streakDays   Int
+  rewardCoin   Int
+  year         Int
+  month        Int
+  claimedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  @@unique([userId, streakDays, year, month])
+
+  @@map("attendance_reward")
 }

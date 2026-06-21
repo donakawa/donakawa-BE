@@ -15,13 +15,9 @@ import {
   BadRequestException,
 } from "../../errors/error";
 import { ShoppingBudgetCalculator } from "./shopping-budget-calculator.service";
-import { FilesService } from "../../files/service/files.service";
 
 export class GoalsService {
-  constructor(
-    private readonly goalsRepository: GoalsRepository,
-    private readonly filesService: FilesService,
-  ) {}
+  constructor(private readonly goalsRepository: GoalsRepository) {}
 
   // 갱신일 등록 계산
   private makeNextIncomeDate(day: number): Date {
