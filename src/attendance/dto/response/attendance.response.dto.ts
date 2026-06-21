@@ -17,8 +17,8 @@ export interface AttendanceInfo {
   month: number;
   attendanceDates: string[];
   attendanceCount: number;
-  todayAttended: boolean;
-  canClaimReward: boolean;
+  todayAttended?: boolean;
+  canClaimReward?: boolean;
   rewards: RewardStatusDto[];
 }
 
@@ -27,8 +27,8 @@ export class AttendanceResponseDto {
   readonly month: number;
   readonly attendanceDates: string[];
   readonly attendanceCount: number;
-  readonly todayAttended: boolean;
-  readonly canClaimReward: boolean;
+  readonly todayAttended?: boolean;
+  readonly canClaimReward?: boolean;
   readonly rewards: RewardStatusDto[];
 
   constructor(entity: AttendanceInfo) {

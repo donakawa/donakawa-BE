@@ -48,4 +48,18 @@ export class AttendanceController {
 
     return success(data);
   }
+
+  /**
+   * @summary 출석 생성 API
+   */
+  @Post()
+  @SuccessResponse("201", "출석 성공")
+  public async attend(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<void>> {
+    const userId = req.user!.id;
+    const data = await this.attendanceService.attend(userId);
+
+    return success(data);
+  }
 }

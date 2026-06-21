@@ -39,4 +39,24 @@ export class AttendanceRepository {
       },
     });
   }
+
+  // 오늘 출석 여부 조회
+  async findAttendanceByDate(userId: string, attendedDate: Date) {
+    return this.prisma.attendance.findFirst({
+      where: {
+        userId: BigInt(userId),
+        attendedDate,
+      },
+    });
+  }
+
+  // 출석
+  async createAttendance(userId: string, attendedDate: Date) {
+    return this.prisma.attendance.create({
+      data: {
+        userId: BigInt(userId),
+        attendedDate,
+      },
+    });
+  }
 }

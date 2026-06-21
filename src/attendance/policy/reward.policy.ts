@@ -1,18 +1,19 @@
 import { RewardStatusDto } from "../dto/response/attendance.response.dto";
+import { ATTENDANCE_REWARDS } from "../constants/attendance.constant";
 
 export class RewardPolicy {
-  private static readonly milestones = [5, 10, 20, 30];
-
   // 보상 상태 계산(달성 여부, 수령 여부 확인)
   static buildRewards(
     maxStreak: number,
     claimedRewards: { streakDays: number }[],
   ): RewardStatusDto[] {
-    return this.milestones.map((streakDays) => {
-      const achieved = maxStreak >= streakDays;
-      const claimed = claimedRewards.some((r) => r.streakDays === streakDays);
+    return ATTENDANCE_REWARDS.map((reward) => {
+      const achieved = maxStreak >= reward.streakDays;
+      const claimed = claimedRewards.some(
+        (r) => r.streakDays === reward.streakDays,
+      );
 
-      return new RewardStatusDto(streakDays, achieved, claimed);
+      return new RewardStatusDto(reward.streakDays, achieved, claimed);
     });
   }
 

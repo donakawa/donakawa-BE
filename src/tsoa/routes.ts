@@ -881,8 +881,8 @@ const models: TsoaRoute.Models = {
             "month": {"dataType":"double","required":true},
             "attendanceDates": {"dataType":"array","array":{"dataType":"string"},"required":true},
             "attendanceCount": {"dataType":"double","required":true},
-            "todayAttended": {"dataType":"boolean","required":true},
-            "canClaimReward": {"dataType":"boolean","required":true},
+            "todayAttended": {"dataType":"boolean"},
+            "canClaimReward": {"dataType":"boolean"},
             "rewards": {"dataType":"array","array":{"dataType":"refObject","ref":"RewardStatusDto"},"required":true},
         },
         "additionalProperties": false,
@@ -903,6 +903,16 @@ const models: TsoaRoute.Models = {
         "properties": {
             "year": {"dataType":"double"},
             "month": {"dataType":"double"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_void_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"dataType":"void","required":true},
         },
         "additionalProperties": false,
     },
@@ -2879,6 +2889,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAttendanceController_attend: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.post('/attendance',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AttendanceController)),
+            ...(fetchMiddlewares<RequestHandler>(AttendanceController.prototype.attend)),
+
+            async function AttendanceController_attend(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAttendanceController_attend, request, response });
+
+                const controller = new AttendanceController();
+
+              await templateService.apiHandler({
+                methodName: 'attend',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 201,
               });
             } catch (err) {
                 return next(err);
