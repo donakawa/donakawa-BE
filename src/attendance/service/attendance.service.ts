@@ -41,8 +41,8 @@ export class AttendanceService {
       throw new BadRequestException("A002", "출석 정보를 조회할 수 없습니다.");
     }
 
-    const startDate = new Date(targetYear, targetMonth - 1, 1);
-    const endDate = new Date(targetYear, targetMonth, 1);
+    const startDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
+    const endDate = new Date(Date.UTC(targetYear, targetMonth, 1));
     const isCurrentMonth =
       targetYear === now.getFullYear() && targetMonth === now.getMonth() + 1;
 
@@ -125,8 +125,8 @@ export class AttendanceService {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1));
 
     const attendances = await this.attendanceRepository.findAttendancesByMonth(
       userId,
