@@ -1,5 +1,5 @@
-import { LogService } from './log/service/log.service';
-import { LogRepository } from './log/repository/log.repository';
+import { LogService } from "./log/service/log.service";
+import { LogRepository } from "./log/repository/log.repository";
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -15,6 +15,8 @@ import { TournamentsRepository } from "./tournaments/repository/tournaments.repo
 import { TournamentsService } from "./tournaments/service/tournaments.service";
 import { AttendanceRepository } from "./attendance/repository/attendance.repository";
 import { AttendanceService } from "./attendance/service/attendance.service";
+import { CharacterRepository } from "./character/repository/character.repository";
+import { CharacterService } from "./character/service/character.service";
 import { SQSClient } from "@aws-sdk/client-sqs";
 import { CrawlQueueClient } from "./wishlist/infra/crawl-queue.client";
 import { ValkeyClient } from "./infra/valkey.client";
@@ -135,7 +137,7 @@ const logService = new LogService(logRepository);
 const log = {
   service: logService,
   repository: logRepository,
-}
+};
 
 // Attendance 도메인
 const attendanceRepository = new AttendanceRepository(prisma);
@@ -143,6 +145,17 @@ const attendanceService = new AttendanceService(attendanceRepository);
 const attendance = {
   service: attendanceService,
   repository: attendanceRepository,
+};
+
+// Character 도메인
+const characterRepository = new CharacterRepository(prisma);
+const characterService = new CharacterService(
+  characterRepository,
+  goalsRepository,
+);
+const character = {
+  service: characterService,
+  repository: characterRepository,
 };
 
 export const container = {
@@ -155,4 +168,5 @@ export const container = {
   files,
   log,
   attendance,
+  character,
 };

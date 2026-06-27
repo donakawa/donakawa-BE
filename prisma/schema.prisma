@@ -23,6 +23,10 @@ model User {
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamp(6)
+  lastLoginAt DateTime? @map("last_login_at")
+  goalWelcomeShown Boolean @default(false) @map("goal_welcome_shown")
+  lastGoalMonthlyWelcomeYear Int? @map("last_goal_monthly_welcome_year")
+  lastGoalMonthlyWelcomeMonth Int? @map("last_goal_monthly_welcome_month")
 
   targetBudget    TargetBudget?
   oauth           Oauth[]
@@ -340,14 +344,16 @@ enum GoalStatus {
   IN_PROGRESS
   COMPLETED
   STOPPED
+}
+
 model Attendance {
   id           BigInt   @id @default(autoincrement())
   userId       BigInt
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   attendedDate DateTime @db.Date
   createdAt    DateTime @default(now())
   claimed      Boolean @default(false)
   
-  user User @relation(fields: [userId], references: [id])
   @@unique([userId, attendedDate])
 
   @@map("attendance")
@@ -356,13 +362,13 @@ model Attendance {
 model AttendanceReward {
   id           BigInt   @id @default(autoincrement())
   userId       BigInt
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   streakDays   Int
   rewardCoin   Int
   year         Int
   month        Int
   claimedAt    DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
   @@unique([userId, streakDays, year, month])
 
   @@map("attendance_reward")
