@@ -1,4 +1,6 @@
 export enum MessageId {
+  DEFAULT = "DEFAULT",
+
   TALK_01 = "TALK-01",
   TALK_02 = "TALK-02",
 

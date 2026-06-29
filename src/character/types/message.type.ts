@@ -11,6 +11,7 @@ export interface MessageData {
   goal: any;
   budget: any;
   currentSpend: number;
+  remainingBudget: number;
   skippedPurchase: {
     price: number;
     updatedAt: Date;
@@ -18,4 +19,5 @@ export interface MessageData {
   showGoalWelcome: boolean;
   showGoalMonthlyWelcome: boolean;
   lastLoginAt: Date | null;
+  showLoginGreeting: boolean;
 }

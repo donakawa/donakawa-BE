@@ -24,6 +24,7 @@ model User {
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamp(6)
   lastLoginAt DateTime? @map("last_login_at")
+  loginGreetingShown Boolean @default(false) @map("login_greeting_shown")
   goalWelcomeShown Boolean @default(false) @map("goal_welcome_shown")
   lastGoalMonthlyWelcomeYear Int? @map("last_goal_monthly_welcome_year")
   lastGoalMonthlyWelcomeMonth Int? @map("last_goal_monthly_welcome_month")

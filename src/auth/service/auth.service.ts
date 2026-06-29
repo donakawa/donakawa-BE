@@ -103,6 +103,8 @@ export class AuthService {
 
   // 로그인 결과 생성
   private async generateLoginResult(user: User): Promise<LoginResult> {
+    await this.authRepository.resetLoginGreetingShown(user.id);
+
     const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
     await this.saveSession(user.id, sid, refreshToken);
 

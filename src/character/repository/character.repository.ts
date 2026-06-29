@@ -3,6 +3,7 @@ import { Prisma, PrismaClient, AddedItemStatus } from "@prisma/client";
 export class CharacterRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  // 일상
   async findUser(userId: string) {
     return this.prisma.user.findUnique({
       where: {
@@ -11,22 +12,16 @@ export class CharacterRepository {
       select: {
         id: true,
         nickname: true,
+        lastLoginAt: true,
+        loginGreetingShown: true,
         goalWelcomeShown: true,
         lastGoalMonthlyWelcomeYear: true,
         lastGoalMonthlyWelcomeMonth: true,
-        lastLoginAt: true,
       },
     });
   }
 
-  async findGoal(userId: string) {
-    return this.prisma.goal.findFirst({
-      where: {
-        userId: BigInt(userId),
-      },
-    });
-  }
-
+  // 예산
   async findBudget(userId: string) {
     return this.prisma.targetBudget.findFirst({
       where: {
@@ -35,6 +30,16 @@ export class CharacterRepository {
     });
   }
 
+  // 모으기 목표
+  async findGoal(userId: string) {
+    return this.prisma.goal.findFirst({
+      where: {
+        userId: BigInt(userId),
+      },
+    });
+  }
+
+  // 구매 포기
   async findLatestSkipPurchase(userId: string) {
     const userIdBigInt = BigInt(userId);
 
@@ -104,6 +109,7 @@ export class CharacterRepository {
         };
   }
 
+  // 모으기 목표 - 목표 설정
   async updateGoalWelcomeShown(userId: string) {
     return this.prisma.user.update({
       where: {
@@ -115,6 +121,7 @@ export class CharacterRepository {
     });
   }
 
+  // 모으기 목표 - 갱신일
   async updateGoalMonthlyWelcome(userId: string, year: number, month: number) {
     return this.prisma.user.update({
       where: {
@@ -127,7 +134,7 @@ export class CharacterRepository {
     });
   }
 
-  // 마지막 로그인 갱신
+  // 일상 - 로그인 갱신
   async updateLastLoginAt(userId: string) {
     await this.prisma.user.update({
       where: {
@@ -135,6 +142,17 @@ export class CharacterRepository {
       },
       data: {
         lastLoginAt: new Date(),
+      },
+    });
+  }
+
+  async updateLoginGreetingShown(userId: string) {
+    return this.prisma.user.update({
+      where: {
+        id: BigInt(userId),
+      },
+      data: {
+        loginGreetingShown: true,
       },
     });
   }

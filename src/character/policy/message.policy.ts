@@ -13,11 +13,30 @@ export class MessagePolicy {
     this.addSave(candidates, data);
 
     console.log(candidates);
+
+    if (candidates.length === 0) {
+      return this.create(MessageId.DEFAULT);
+    }
+
+    const greeting = candidates.find(
+      (candidate) =>
+        candidate.id === MessageId.TALK_01 ||
+        candidate.id === MessageId.TALK_02,
+    );
+
+    if (greeting) {
+      return greeting;
+    }
+
     return candidates.sort((a, b) => b.priority - a.priority)[0];
   }
 
   // 일상
   private static addGreeting(candidates: TalkCandidate[], data: MessageData) {
+    if (!data.showLoginGreeting) {
+      return;
+    }
+
     if (this.isReconnect(data)) {
       candidates.push(this.create(MessageId.TALK_01));
       return;
@@ -30,19 +49,13 @@ export class MessagePolicy {
     );
   }
 
-  // 미접속 판단
   private static isReconnect(data: MessageData): boolean {
     if (!data.lastLoginAt) {
-      // 첫 로그인
       return false;
     }
 
     const now = new Date();
-    now.setUTCHours(0, 0, 0, 0);
-
-    const lastLogin = new Date(data.lastLoginAt);
-    lastLogin.setUTCHours(0, 0, 0, 0);
-
+    const lastLogin = new Date(data.lastLoginAt!);
     const diffDays =
       (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
 
@@ -77,10 +90,14 @@ export class MessagePolicy {
       return;
     }
 
-    console.log(data.goal);
-
-    const achievementRate = Math.floor(
+    const previousAchievementRate = Math.floor(
       (Number(data.goal.current) / Number(data.goal.moneyGoal)) * 100,
+    );
+
+    const currentAchievementRate = Math.floor(
+      ((Number(data.goal.current) + data.remainingBudget) /
+        Number(data.goal.moneyGoal)) *
+        100,
     );
 
     if (data.showGoalWelcome) {
@@ -89,23 +106,26 @@ export class MessagePolicy {
           GOAL_NAME: data.goal.title,
         }),
       );
-    }
-
-    if (achievementRate >= 80) {
-      candidates.push(
-        this.create(MessageId.GOAL_03, {
-          GOAL_NAME: data.goal.title,
-        }),
-      );
+      return;
     }
 
     if (data.showGoalMonthlyWelcome) {
       candidates.push(
         this.create(MessageId.GOAL_02, {
           GOAL_NAME: data.goal.title,
-          DIFF: achievementRate, // 수정 필요
+          DIFF: currentAchievementRate - previousAchievementRate,
         }),
       );
+      return;
+    }
+
+    if (previousAchievementRate >= 80) {
+      candidates.push(
+        this.create(MessageId.GOAL_03, {
+          GOAL_NAME: data.goal.title,
+        }),
+      );
+      return;
     }
   }
 
@@ -123,14 +143,17 @@ export class MessagePolicy {
           PRICE: Math.floor(price / 20000),
         }),
       );
+      return;
     }
 
     if (price >= 10000) {
       candidates.push(this.create(MessageId.SAVE_03));
+      return;
     }
 
     if (price >= 5000) {
       candidates.push(this.create(MessageId.SAVE_01));
+      return;
     }
   }
 

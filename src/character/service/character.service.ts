@@ -37,6 +37,7 @@ export class CharacterService {
     const budget = await this.goalRepository.findBudgetByUserId(userId);
 
     let totalSpend = 0;
+    let remainingBudget = 0;
 
     if (budget) {
       let nextIncomeDate = new Date(budget.incomeDate!);
@@ -60,6 +61,10 @@ export class CharacterService {
         userId,
         cycleStart,
       );
+
+      remainingBudget = budget
+        ? Math.max((budget.shoppingBudget ?? 0) - totalSpend, 0)
+        : 0;
     }
 
     const [user, goal, skippedPurchase] = await Promise.all([
@@ -67,7 +72,6 @@ export class CharacterService {
       this.characterRepository.findGoal(userId),
       this.characterRepository.findLatestSkipPurchase(userId),
     ]);
-
     const showGoalWelcome = Boolean(goal && !user?.goalWelcomeShown);
     const showGoalMonthlyWelcome = Boolean(
       goal &&
@@ -77,19 +81,26 @@ export class CharacterService {
         user?.lastGoalMonthlyWelcomeMonth !== currentMonth),
     );
     const lastLoginAt = user!.lastLoginAt;
+    const showLoginGreeting = !user!.loginGreetingShown;
 
     const talkData: MessageData = {
       user,
       goal,
       budget,
       currentSpend: totalSpend,
+      remainingBudget,
       skippedPurchase,
       showGoalWelcome,
       showGoalMonthlyWelcome,
       lastLoginAt,
+      showLoginGreeting,
     };
 
     const talk = MessagePolicy.select(talkData);
+
+    if (talk.id === MessageId.TALK_01 || talk.id === MessageId.TALK_02) {
+      await this.characterRepository.updateLoginGreetingShown(userId);
+    }
 
     if (talk.id === MessageId.GOAL_01) {
       await this.characterRepository.updateGoalWelcomeShown(userId);
