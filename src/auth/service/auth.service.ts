@@ -106,6 +106,8 @@ export class AuthService {
     const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
     await this.saveSession(user.id, sid, refreshToken);
 
+    await this.authRepository.resetLoginGreetingShown(user.id);
+
     return {
       data: new LoginResponseDto(user),
       tokens: { accessToken, refreshToken },
@@ -197,6 +199,8 @@ export class AuthService {
 
     const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
     await this.saveSession(user.id, sid, refreshToken);
+
+    await this.authRepository.resetLoginGreetingShown(user.id);
 
     return { tokens: { accessToken, refreshToken }, isNewUser };
   }
