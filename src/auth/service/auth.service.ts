@@ -103,10 +103,10 @@ export class AuthService {
 
   // 로그인 결과 생성
   private async generateLoginResult(user: User): Promise<LoginResult> {
-    await this.authRepository.resetLoginGreetingShown(user.id);
-
     const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
     await this.saveSession(user.id, sid, refreshToken);
+
+    await this.authRepository.resetLoginGreetingShown(user.id);
 
     return {
       data: new LoginResponseDto(user),
@@ -196,10 +196,11 @@ export class AuthService {
         });
       }
     }
-    await this.authRepository.resetLoginGreetingShown(user.id);
 
     const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
     await this.saveSession(user.id, sid, refreshToken);
+
+    await this.authRepository.resetLoginGreetingShown(user.id);
 
     return { tokens: { accessToken, refreshToken }, isNewUser };
   }
