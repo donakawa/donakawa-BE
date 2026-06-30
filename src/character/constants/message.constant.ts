@@ -4,7 +4,7 @@ import { MessagePriority } from "../enums/message-priority.enum";
 export const TALK_MESSAGES = {
   [MessageId.DEFAULT]: {
     priority: MessagePriority.HIGH,
-    message: " ",
+    message: "",
   },
 
   [MessageId.TALK_01]: {

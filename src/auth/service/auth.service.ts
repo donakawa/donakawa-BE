@@ -196,6 +196,7 @@ export class AuthService {
         });
       }
     }
+    await this.authRepository.resetLoginGreetingShown(user.id);
 
     const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
     await this.saveSession(user.id, sid, refreshToken);
