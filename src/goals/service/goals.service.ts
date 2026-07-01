@@ -8,7 +8,6 @@ import {
   GoalsResponseDto,
   BudgetSpendResponseDto,
   CalcShoppingBudgetResponseDto,
-  SpendSummaryResponseDto,
 } from "../dto/response/goals.response.dto";
 import {
   ConflictException,
@@ -16,14 +15,9 @@ import {
   BadRequestException,
 } from "../../errors/error";
 import { ShoppingBudgetCalculator } from "./shopping-budget-calculator.service";
-import { FilesService } from "../../files/service/files.service";
-import { PurchasedAt } from "@prisma/client";
 
 export class GoalsService {
-  constructor(
-    private readonly goalsRepository: GoalsRepository,
-    private readonly filesService: FilesService,
-  ) {}
+  constructor(private readonly goalsRepository: GoalsRepository) {}
 
   // 갱신일 등록 계산
   private makeNextIncomeDate(day: number): Date {
@@ -71,20 +65,13 @@ export class GoalsService {
     }
   }
 
-  // 구매 시간대 + enum 값에 따른 시간 보정
-  private adjustPurchasedDate(
-    purchasedDate: Date,
-    purchasedAt: PurchasedAt,
-  ): Date {
-    const hourOffsetMap: Record<PurchasedAt, number> = {
-      MORNING: 18,
-      EVENING: 23,
-      NIGHT: 6,
-    };
+  // 갱신일 설정 및 다음 갱신일 계산
+  private prepareIncomeData(incomeDate?: number) {
+    const incomeDay = incomeDate ?? 1;
+    this.validateIncomeDate(incomeDay);
+    const nextIncomeDate = this.makeNextIncomeDate(incomeDay);
 
-    const offsetMs = hourOffsetMap[purchasedAt] * 60 * 60 * 1000;
-
-    return new Date(purchasedDate.getTime() + offsetMs);
+    return { incomeDay, nextIncomeDate };
   }
 
   // 목표 예산 등록
@@ -100,10 +87,10 @@ export class GoalsService {
       );
     }
 
-    const incomeDay = body.incomeDate ?? 1;
-    this.validateIncomeDate(incomeDay);
+    const { incomeDay, nextIncomeDate } = this.prepareIncomeData(
+      body.incomeDate,
+    );
     const { incomeDate: _, ...rest } = body;
-    const nextIncomeDate = this.makeNextIncomeDate(incomeDay);
 
     const saved = await this.goalsRepository.createTargetBudget(userId, {
       ...rest,
@@ -152,11 +139,41 @@ export class GoalsService {
     return new GoalsResponseDto(updated);
   }
 
-  // 소비, 남은 예산 값 조회 (갱신일 자동 적용)
-  async getBudgetSpend(userId: string) {
-    const budget = await this.goalsRepository.findBudgetByUserId(userId);
-    if (!budget) {
+  // 목표 예산 재설정
+  async replaceTargetBudget(
+    userId: string,
+    body: GoalsRequestDto,
+  ): Promise<GoalsResponseDto> {
+    const isExist = await this.goalsRepository.findByUserId(userId);
+    if (!isExist) {
       throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
+    }
+
+    const { incomeDay, nextIncomeDate } = this.prepareIncomeData(
+      body.incomeDate,
+    );
+    const { incomeDate: _, ...rest } = body;
+
+    const updated = await this.goalsRepository.replaceTargetBudget(userId, {
+      ...rest,
+      incomeDate: nextIncomeDate,
+      incomeDay,
+    });
+
+    return new GoalsResponseDto(updated);
+  }
+
+  // 홈 메인 조회 (갱신일 자동 적용)
+  async getBudgetSpend(userId: string) {
+    const user = await this.goalsRepository.findUserCoin(userId);
+    const budget = await this.goalsRepository.findBudgetByUserId(userId);
+
+    if (!budget) {
+      return new BudgetSpendResponseDto({
+        totalSpend: null,
+        remainingBudget: null,
+        coin: user!.coin,
+      });
     }
 
     const now = new Date();
@@ -194,6 +211,7 @@ export class GoalsService {
     return new BudgetSpendResponseDto({
       totalSpend,
       remainingBudget,
+      coin: user!.coin,
     });
   }
 
@@ -209,133 +227,5 @@ export class GoalsService {
     });
 
     return new CalcShoppingBudgetResponseDto(shoppingBudget);
-  }
-
-  // 만족 소비 조회
-  async getSatisfiedSpend(
-    userId: string,
-    cursor?: string,
-  ): Promise<SpendSummaryResponseDto> {
-    return this.getSpendSummary(userId, true, cursor);
-  }
-
-  // 후회 소비 조회
-  async getRegretSpend(
-    userId: string,
-    cursor?: string,
-  ): Promise<SpendSummaryResponseDto> {
-    return this.getSpendSummary(userId, false, cursor);
-  }
-
-  // 만족 소비, 후회 소비 공통 로직
-  async getSpendSummary(
-    userId: string,
-    isSatisfied: boolean,
-    cursor?: string,
-  ): Promise<SpendSummaryResponseDto> {
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-    const reviews = await this.goalsRepository.findSpendItems(
-      userId,
-      oneMonthAgo,
-      isSatisfied,
-      cursor,
-      10,
-    );
-
-    const itemsToUse = reviews.slice(0, 10);
-    const items = await Promise.all(
-      itemsToUse.map(async (r) => {
-        // 수동 추가
-        if (r.addedItemManual) {
-          const fileId = r.addedItemManual.files?.id;
-          const imageUrl = fileId
-            ? await this.filesService.generateUrl(fileId.toString(), 60 * 60)
-            : null;
-
-          return {
-            id: r.id.toString(),
-            itemId: r.addedItemManual.id.toString(),
-            type: "MANUAL" as const,
-            name: r.addedItemManual.name,
-            price: r.addedItemManual.price,
-            imageUrl,
-          };
-        }
-
-        // 자동 추가
-        const fileId = r.addedItemAuto?.product.files?.id;
-        const imageUrl = fileId
-          ? await this.filesService.generateUrl(fileId.toString(), 60 * 60)
-          : null;
-
-        return {
-          id: r.id.toString(),
-          itemId: r.addedItemAuto!.id.toString(),
-          type: "AUTO" as const,
-          name: r.addedItemAuto!.product.name,
-          price: r.addedItemAuto!.product.price,
-          imageUrl,
-        };
-      }),
-    );
-
-    // 평균 구매 결정 시간
-    const allRecentReviews = cursor
-      ? await this.goalsRepository.findSpendItems(
-          userId,
-          oneMonthAgo,
-          isSatisfied,
-          undefined,
-          1000,
-        )
-      : reviews;
-
-    const decisionDaysList = allRecentReviews
-      .map((r) => {
-        const wishCreated =
-          r.addedItemAuto?.createdAt ?? r.addedItemManual?.createdAt;
-
-        const purchaseHistory =
-          r.addedItemAuto?.purchasedHistory[0] ??
-          r.addedItemManual?.purchasedHistory[0];
-
-        if (!wishCreated || !purchaseHistory) return null;
-
-        const adjustedPurchasedDate = this.adjustPurchasedDate(
-          purchaseHistory.purchasedDate,
-          purchaseHistory.purchasedAt,
-        );
-
-        return Math.floor(
-          (adjustedPurchasedDate.getTime() - wishCreated.getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
-      })
-      .filter((d): d is number => d !== null);
-
-    const averageDecisionDays =
-      decisionDaysList.length === 0
-        ? 0
-        : Math.floor(
-            decisionDaysList.reduce((sum, d) => sum + d, 0) /
-              decisionDaysList.length,
-          );
-
-    // 최근 한 달 내 만족 소비/후회 소비 개수
-    const recentMonthCount = await this.goalsRepository.countRecentMonth(
-      userId,
-      oneMonthAgo,
-      isSatisfied,
-    );
-
-    let nextCursor: string | undefined;
-    if (reviews.length > 10) {
-      const last = itemsToUse[itemsToUse.length - 1];
-      nextCursor = last.id.toString();
-    }
-
-    return { averageDecisionDays, recentMonthCount, items, nextCursor };
   }
 }

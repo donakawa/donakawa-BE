@@ -21,12 +21,18 @@ export class GoalsResponseDto {
 }
 
 export class BudgetSpendResponseDto {
-  totalSpend!: number;
-  remainingBudget!: number;
+  totalSpend!: number | null;
+  remainingBudget!: number | null;
+  coin!: number;
 
-  constructor(data: { totalSpend: number; remainingBudget: number }) {
+  constructor(data: {
+    totalSpend: number | null;
+    remainingBudget: number | null;
+    coin: number;
+  }) {
     this.totalSpend = data.totalSpend;
     this.remainingBudget = data.remainingBudget;
+    this.coin = data.coin;
   }
 }
 
@@ -36,22 +42,4 @@ export class CalcShoppingBudgetResponseDto {
   constructor(shoppingBudget: number) {
     this.shoppingBudget = shoppingBudget;
   }
-}
-
-type SpendItemType = "AUTO" | "MANUAL";
-
-export class SpendItemDto {
-  id!: string;
-  itemId!: string;
-  type!: SpendItemType;
-  name!: string;
-  price!: number;
-  imageUrl!: string | null;
-}
-
-export class SpendSummaryResponseDto {
-  averageDecisionDays!: number;
-  recentMonthCount!: number;
-  items!: SpendItemDto[];
-  nextCursor?: string;
 }

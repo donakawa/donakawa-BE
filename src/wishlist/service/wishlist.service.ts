@@ -55,7 +55,6 @@ import {
 import { WishItemPayload } from "../payload/wishlist.payload";
 import { WishlistRecordInterface } from "../interface/wishlist.interface";
 import { DbRepository } from "../../infra/db.repository";
-import { HistoriesService } from "../../histories/service/histories.service";
 export class WishlistService {
   constructor(
     private readonly dbRepository: DbRepository,
@@ -64,7 +63,6 @@ export class WishlistService {
     private readonly valkeyClientPromise: Promise<ValkeyClient>,
     private readonly eventEmitterClient: EventEmitterClient,
     private readonly filesService: FilesService,
-    private readonly historiesService: HistoriesService,
   ) {}
   async enqueueItemCrawl(
     data: AddCrawlTaskRequestDto,
@@ -804,11 +802,6 @@ export class WishlistService {
             },
             tx,
           );
-        await this.historiesService.deleteReviewsByItem(
-          data.itemId,
-          data.type as WishitemType,
-          tx,
-        );
         await this.wishlistRepository.deleteAddedItemManual(
           {
             where: {

@@ -16,6 +16,7 @@ export interface ChatDetailResponse {
     id: number;
     name: string;
     price: number;
+    imageUrl: string | null;
   };
   answers: {
     step: number;
@@ -25,7 +26,18 @@ export interface ChatDetailResponse {
   currentStep: number;
 }
 
-export interface GptResultResponse {
+// 구매 추천 + 예산 충분
+// 구매 추천 + 예산 부족 (아이템 가격 > 남은 예산)
+// 구매 보류 + 예산 충분
+// 구매 보류 + 예산 부족
+export type ResultType =
+  | "RECOMMEND_AFFORDABLE"
+  | "RECOMMEND_OVER_BUDGET"
+  | "HOLD_AFFORDABLE"
+  | "HOLD_OVER_BUDGET";
+
+export interface ResultResponse {
+  resultType: ResultType;
   decision: "구매 추천" | "구매 보류";
   message: string;
 }
