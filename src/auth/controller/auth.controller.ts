@@ -21,6 +21,7 @@ import {
   UpdateGoalResponseDto,
   UserProfileResponseDto,
   UpdatePasswordResponseDto,
+  RefreshResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthService } from "../service/auth.service";
 import { container } from "../../container";
@@ -34,8 +35,8 @@ import {
   VerifyPasswordRequestDto,
   UpdatePasswordRequestDto,
   VerifyEmailCodeRequestDto,
+  RefreshRequestDto,
 } from "../dto/request/auth.request.dto";
-import { JwtCookieUtil } from "../util/jwt-cookie.util";
 import { Request as ExpressRequest } from "express";
 import {
   BadRequestException,
@@ -99,11 +100,9 @@ export class AuthController {
   @Middlewares(validateBody(LoginRequestDto))
   public async login(
     @Body() body: LoginRequestDto,
-    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<LoginResponseDto>> {
     const { data, tokens } = await this.authService.authUser(body);
-    JwtCookieUtil.setJwtCookies(req.res!, tokens);
-    return success(data);
+    return success({ ...data, ...tokens });
   }
 
   /**
@@ -111,23 +110,13 @@ export class AuthController {
    */
   @Post("/refresh")
   @SuccessResponse("200", "토큰 리프레시 성공")
+  @Middlewares(validateBody(RefreshRequestDto))
   public async refresh(
-    @Request() req: ExpressRequest,
-  ): Promise<ApiResponse<null>> {
-    // 쿠키에서 refresh token 읽기
-    const refreshToken = req.cookies?.refreshToken;
-
-    if (!refreshToken) {
-      throw new UnauthorizedException("A004", "리프레시 토큰이 없습니다.");
-    }
-
+    @Body() body: RefreshRequestDto,
+  ): Promise<ApiResponse<RefreshResponseDto>> {
     const { accessToken } =
-      await this.authService.refreshAccessToken(refreshToken);
-
-    // 새 access token을 쿠키에 저장
-    JwtCookieUtil.setAccessTokenCookie(req.res!, accessToken);
-
-    return success(null);
+      await this.authService.refreshAccessToken(body.refreshToken);
+    return success(new RefreshResponseDto(accessToken));
   }
   /**
    * @summary 비밀번호 재설정 API
@@ -222,15 +211,11 @@ export class AuthController {
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<null>> {
     const user = req.user;
-    try {
-      if (!user?.id || !user?.sid) {
-        throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
-      }
-      await this.authService.logout(BigInt(user.id), user.sid);
-      return success(null);
-    } finally {
-      JwtCookieUtil.clearJwtCookies(req.res!);
+    if (!user?.id || !user?.sid) {
+      throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
     }
+    await this.authService.logout(BigInt(user.id), user.sid);
+    return success(null);
   }
   /**
    * @summary 계정 삭제 API
@@ -246,9 +231,6 @@ export class AuthController {
       throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
     }
     await this.authService.deleteAccount(BigInt(user.id), user.sid);
-    // 쿠키 삭제
-    JwtCookieUtil.clearJwtCookies(req.res!);
-
     return success(null);
   }
   /**
@@ -504,8 +486,6 @@ export class AuthController {
 
       // 일반 로그인 플로우
       const { tokens, isNewUser } = await loginHandler(code, state);
-
-      JwtCookieUtil.setJwtCookies(req.res!, tokens);
 
       if (isNewUser) {
         req.res!.redirect(`${frontendUrl}/social/goal`);

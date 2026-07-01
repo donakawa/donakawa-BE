@@ -111,3 +111,10 @@ export class VerifyEmailCodeRequestDto extends SendEmailCodeRequestDto {
   @IsNotEmpty()
   code!: string;
 }
+
+export class RefreshRequestDto {
+  @Example("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+  @IsString()
+  @IsNotEmpty()
+  refreshToken!: string;
+}

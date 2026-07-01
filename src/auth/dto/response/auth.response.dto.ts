@@ -20,6 +20,13 @@ export class LoginResponseDto {
   }
 }
 
+export class RefreshResponseDto {
+  readonly accessToken: string;
+  constructor(accessToken: string) {
+    this.accessToken = accessToken;
+  }
+}
+
 export class UpdateNicknameResponseDto {
   readonly id: string;
   readonly nickname: string;
