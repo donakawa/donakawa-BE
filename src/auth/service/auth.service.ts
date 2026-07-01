@@ -109,7 +109,7 @@ export class AuthService {
     await this.authRepository.resetLoginGreetingShown(user.id);
 
     return {
-      data: new LoginResponseDto(user),
+      data: new LoginResponseDto(user, { accessToken, refreshToken }),
       tokens: { accessToken, refreshToken },
     };
   }
