@@ -13,10 +13,14 @@ export class LoginResponseDto {
   readonly id: string;
   readonly email: string;
   readonly nickname: string;
-  constructor(entity: User) {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  constructor(entity: User, tokens: { accessToken: string; refreshToken: string }) {
     this.id = entity.id.toString();
     this.email = entity.email;
     this.nickname = entity.nickname;
+    this.accessToken = tokens.accessToken;
+    this.refreshToken = tokens.refreshToken;
   }
 }
 

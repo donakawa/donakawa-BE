@@ -101,8 +101,8 @@ export class AuthController {
   public async login(
     @Body() body: LoginRequestDto,
   ): Promise<ApiResponse<LoginResponseDto>> {
-    const { data, tokens } = await this.authService.authUser(body);
-    return success({ ...data, ...tokens });
+    const { data } = await this.authService.authUser(body);
+    return success(data);
   }
 
   /**
