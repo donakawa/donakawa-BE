@@ -31,6 +31,15 @@ export class RefreshResponseDto {
   }
 }
 
+export class OAuthTokenResponseDto {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  constructor(tokens: { accessToken: string; refreshToken: string }) {
+    this.accessToken = tokens.accessToken;
+    this.refreshToken = tokens.refreshToken;
+  }
+}
+
 export class UpdateNicknameResponseDto {
   readonly id: string;
   readonly nickname: string;

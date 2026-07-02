@@ -28,6 +28,7 @@ export const RedisKeys = {
   oauthState: (state: string) => `oauth:state:${state}`,
   oauthReauthState: (state: string) => `oauth:reauth:${state}`,
   oauthConnectState: (state: string) => `oauth:connect:${state}`,
+  oauthTokenCode: (code: string) => `oauth:token-code:${code}`,
 } as const;
 
 export const RedisTTL = {
@@ -39,4 +40,5 @@ export const RedisTTL = {
   PASSWORD_RATE_LIMIT: 60 * 30, // 비밀번호 검증 시도 제한 30분
   EMAIL_SEND_ATTEMPT: 60 * 30, // 이메일 전송 시도 기록 30분
   DELETE_ACCOUNT_VERIFIED: 60 * 5, // 계정 탈퇴 본인 확인 상태 5분
+  OAUTH_TOKEN_CODE: 30, // OAuth 토큰 교환 code 30초
 } as const;

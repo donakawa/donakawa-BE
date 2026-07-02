@@ -344,6 +344,26 @@ export class AuthService {
   }
 
   // 토큰 갱신
+  async issueOAuthTokenCode(tokens: { accessToken: string; refreshToken: string }): Promise<string> {
+    const code = randomBytes(32).toString("hex");
+    await redis.set(
+      RedisKeys.oauthTokenCode(code),
+      JSON.stringify(tokens),
+      { EX: RedisTTL.OAUTH_TOKEN_CODE },
+    );
+    return code;
+  }
+
+  async exchangeOAuthTokenCode(code: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const key = RedisKeys.oauthTokenCode(code);
+    const value = await redis.get(key);
+    if (!value) {
+      throw new UnauthorizedException("A008", "유효하지 않거나 만료된 코드입니다.");
+    }
+    await redis.del(key);
+    return JSON.parse(value);
+  }
+
   async refreshAccessToken(
     refreshToken: string,
   ): Promise<{ accessToken: string }> {
