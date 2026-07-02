@@ -10,24 +10,24 @@ import {
 import { Example } from "tsoa";
 
 export class GoalsRequestDto {
-  @Example(100000)
+  @Example(1000000)
   @IsInt()
   @IsNotEmpty()
   monthlyIncome!: number;
 
-  @Example(7)
+  @Example(10)
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(31)
   incomeDate?: number;
 
-  @Example(10000)
+  @Example(100000)
   @IsOptional()
   @IsInt()
   fixedExpense?: number;
 
-  @Example(10000)
+  @Example(100000)
   @IsOptional()
   @IsInt()
   monthlySaving?: number;
@@ -37,7 +37,7 @@ export class GoalsRequestDto {
   @IsIn([1, 2, 3], { message: "유효하지 않은 spendStrategy 값입니다." })
   spendStrategy!: number;
 
-  @Example(30000)
+  @Example(300000)
   @IsInt()
   @IsNotEmpty()
   shoppingBudget!: number;

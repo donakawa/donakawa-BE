@@ -1,0 +1,5 @@
+export const LOG_CONVERSION = {
+  COFFEE_PRICE: 5000,
+  MINIMUM_WAGE: 10000,
+  CHICKEN_PRICE: 20000,
+} as const;

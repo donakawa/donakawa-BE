@@ -5,6 +5,7 @@ import {
   Get,
   Post,
   Patch,
+  Put,
   Route,
   SuccessResponse,
   Tags,
@@ -25,7 +26,6 @@ import {
   GoalsResponseDto,
   BudgetSpendResponseDto,
   CalcShoppingBudgetResponseDto,
-  SpendSummaryResponseDto,
 } from "../dto/response/goals.response.dto";
 import { GoalsService } from "../service/goals.service";
 import { container } from "../../container";
@@ -97,45 +97,31 @@ export class GoalsController {
   }
 
   /**
-   * @summary 소비, 남은 예산 값 조회 API
+   * @summary 목표 예산 재설정 API
    */
-  @Get("/spend")
-  @SuccessResponse("200", "소비, 남은 예산 값 조회 성공")
+  @Put("/budget")
+  @Middlewares(validateBody(GoalsRequestDto))
+  @SuccessResponse("200", "목표 예산 재설정 성공")
+  public async replaceTargetBudget(
+    @Body() body: GoalsRequestDto,
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<GoalsResponseDto>> {
+    const userId = req.user!.id;
+    const data = await this.goalsService.replaceTargetBudget(userId, body);
+
+    return success(data);
+  }
+
+  /**
+   * @summary 홈 메인 조회 API
+   */
+  @Get()
+  @SuccessResponse("200", "홈 메인 조회 성공")
   public async getBudgetSpend(
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<BudgetSpendResponseDto>> {
     const userId = req.user!.id;
     const data = await this.goalsService.getBudgetSpend(userId);
-
-    return success(data);
-  }
-
-  /**
-   * @summary 만족 소비 조회 API
-   */
-  @Get("/spend/satisfied")
-  @SuccessResponse("200", "만족 소비 조회 성공")
-  public async getSatisfiedSpend(
-    @Request() req: ExpressRequest,
-    @Query() cursor?: string,
-  ): Promise<ApiResponse<SpendSummaryResponseDto>> {
-    const userId = req.user!.id;
-    const data = await this.goalsService.getSatisfiedSpend(userId, cursor);
-
-    return success(data);
-  }
-
-  /**
-   * @summary 후회 소비 조회 API
-   */
-  @Get("/spend/regret")
-  @SuccessResponse("200", "후회 소비 조회 성공")
-  public async getRegretSpend(
-    @Request() req: ExpressRequest,
-    @Query() cursor?: string,
-  ): Promise<ApiResponse<SpendSummaryResponseDto>> {
-    const userId = req.user!.id;
-    const data = await this.goalsService.getRegretSpend(userId, cursor);
 
     return success(data);
   }

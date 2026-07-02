@@ -55,7 +55,6 @@ import {
 import { WishItemPayload } from "../payload/wishlist.payload";
 import { WishlistRecordInterface } from "../interface/wishlist.interface";
 import { DbRepository } from "../../infra/db.repository";
-import { HistoriesService } from "../../histories/service/histories.service";
 export class WishlistService {
   constructor(
     private readonly dbRepository: DbRepository,
@@ -64,7 +63,6 @@ export class WishlistService {
     private readonly valkeyClientPromise: Promise<ValkeyClient>,
     private readonly eventEmitterClient: EventEmitterClient,
     private readonly filesService: FilesService,
-    private readonly historiesService: HistoriesService,
   ) {}
   async enqueueItemCrawl(
     data: AddCrawlTaskRequestDto,
@@ -198,18 +196,7 @@ export class WishlistService {
         "크롤링 결과를 찾을 수 없습니다.",
       );
     }
-    let imageUrl;
-    if (result.photoFileId)
-      imageUrl = await this.filesService.generateUrl(
-        result.photoFileId.toString(),
-        60 * 60,
-      );
-    if (!imageUrl) imageUrl = undefined;
-    return new GetCrawlResultResponseDto(
-      result,
-      result.storePlatform.name,
-      imageUrl,
-    );
+    return new GetCrawlResultResponseDto(result, result.storePlatform.name);
   }
   async addWishListFromCache(data: AddWishListFromCacheRequestDto) {
     const command = new AddWishListFromCacheCommand(
@@ -328,7 +315,7 @@ export class WishlistService {
                   productUrlTemplate: true,
                 },
               },
-              photoFileId: true,
+              imageUrl: true,
               productId: true,
               updatedAt: true,
             },
@@ -349,10 +336,7 @@ export class WishlistService {
       const urlTemplate = wishitem.product.storePlatform.productUrlTemplate;
       const productId = wishitem.product.productId;
       const productUrl = urlTemplate.replace("${productId}", productId);
-      const photoFileId = wishitem.product.photoFileId;
-      const photoUrl = photoFileId
-        ? await this.filesService.generateUrl(photoFileId.toString(), 60 * 60)
-        : null;
+      const photoUrl = wishitem.product.imageUrl;
       return new WishItemPayload({
         id: wishitem.id.toString(),
         folder: wishitem.wishItemFolder?.name ?? null,
@@ -804,11 +788,6 @@ export class WishlistService {
             },
             tx,
           );
-        await this.historiesService.deleteReviewsByItem(
-          data.itemId,
-          data.type as WishitemType,
-          tx,
-        );
         await this.wishlistRepository.deleteAddedItemManual(
           {
             where: {

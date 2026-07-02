@@ -106,8 +106,10 @@ export class AuthService {
     const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
     await this.saveSession(user.id, sid, refreshToken);
 
+    await this.authRepository.resetLoginGreetingShown(user.id);
+
     return {
-      data: new LoginResponseDto(user),
+      data: new LoginResponseDto(user, { accessToken, refreshToken }),
       tokens: { accessToken, refreshToken },
     };
   }
@@ -197,6 +199,8 @@ export class AuthService {
 
     const { accessToken, refreshToken, sid } = this.createJwtTokens(user);
     await this.saveSession(user.id, sid, refreshToken);
+
+    await this.authRepository.resetLoginGreetingShown(user.id);
 
     return { tokens: { accessToken, refreshToken }, isNewUser };
   }
@@ -340,6 +344,25 @@ export class AuthService {
   }
 
   // 토큰 갱신
+  async issueOAuthTokenCode(tokens: { accessToken: string; refreshToken: string }): Promise<string> {
+    const code = randomBytes(32).toString("hex");
+    await redis.set(
+      RedisKeys.oauthTokenCode(code),
+      JSON.stringify(tokens),
+      { EX: RedisTTL.OAUTH_TOKEN_CODE },
+    );
+    return code;
+  }
+
+  async exchangeOAuthTokenCode(code: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const key = RedisKeys.oauthTokenCode(code);
+    const value = await redis.getDel(key);
+    if (!value) {
+      throw new UnauthorizedException("A008", "유효하지 않거나 만료된 코드입니다.");
+    }
+    return JSON.parse(value);
+  }
+
   async refreshAccessToken(
     refreshToken: string,
   ): Promise<{ accessToken: string }> {
