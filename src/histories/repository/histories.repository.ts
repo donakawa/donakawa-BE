@@ -43,7 +43,7 @@ type HistoryItemWithRelations = Prisma.PurchasedHistoryGetPayload<{
 }>;
 
 export class HistoriesRepository {
-  constructor(private readonly prisma: PrismaClient) { }
+  constructor(private readonly prisma: PrismaClient) {}
 
   async findAutoItem(itemId: bigint, userId: bigint) {
     return this.prisma.addedItemAuto.findFirst({
@@ -285,11 +285,7 @@ export class HistoriesRepository {
     });
   }
 
-  async findDroppedItems(
-    userId: bigint,
-    start: Date,
-    end: Date,
-  ) {
+  async findDroppedItems(userId: bigint, start: Date, end: Date) {
     const [autoItems, manualItems] = await Promise.all([
       this.prisma.addedItemAuto.findMany({
         where: {
@@ -331,25 +327,7 @@ export class HistoriesRepository {
     });
   }
 
-  async findItemPhotoFileId(
-    itemId: bigint,
-    itemType: "AUTO" | "MANUAL",
-  ): Promise<bigint | null> {
-    if (itemType === "AUTO") {
-      const item = await this.prisma.addedItemAuto.findUnique({
-        where: { id: itemId },
-        select: {
-          product: {
-            select: {
-              photoFileId: true,
-            },
-          },
-        },
-      });
-
-      return item?.product?.photoFileId ?? null;
-    }
-
+  async findItemPhotoFileId(itemId: bigint): Promise<bigint | null> {
     const item = await this.prisma.addedItemManual.findUnique({
       where: { id: itemId },
       select: {
@@ -360,21 +338,13 @@ export class HistoriesRepository {
     return item?.photoFileId ?? null;
   }
 
-  async findAutoItemWithReview(
-    userId: bigint,
-    itemId: bigint
-  ) {
+  async findAutoItemWithReview(userId: bigint, itemId: bigint) {
     return this.prisma.addedItemAuto.findFirst({
       where: {
         id: itemId,
         userId,
       },
       include: {
-        product: {
-          include: {
-            files: true,
-          },
-        },
         purchasedHistory: {
           include: {
             purchasedReason: true,
@@ -383,6 +353,13 @@ export class HistoriesRepository {
             purchasedDate: "desc",
           },
           take: 1,
+        },
+        product: {
+          select: {
+            name: true,
+            price: true,
+            imageUrl: true,
+          },
         },
         review: {
           orderBy: {
@@ -394,10 +371,7 @@ export class HistoriesRepository {
     });
   }
 
-  async findManualItemWithReview(
-    userId: bigint,
-    itemId: bigint
-  ) {
+  async findManualItemWithReview(userId: bigint, itemId: bigint) {
     return this.prisma.addedItemManual.findFirst({
       where: {
         id: itemId,

@@ -29,11 +29,11 @@ export class GetCrawlResultResponseDto {
   productId!: string;
   price!: number;
   updatedAt!: string;
-  imageUrl!: string | undefined;
+  imageUrl!: string | null;
   constructor(
     entity: Product,
     storePlatformName: string,
-    imageUrl: string | undefined,
+    imageUrl: string | null,
   ) {
     this.id = entity.id.toString();
     this.productName = entity.name;

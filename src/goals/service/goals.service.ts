@@ -265,10 +265,7 @@ export class GoalsService {
         }
 
         // 자동 추가
-        const fileId = r.addedItemAuto?.product.files?.id;
-        const imageUrl = fileId
-          ? await this.filesService.generateUrl(fileId.toString(), 60 * 60)
-          : null;
+        const imageUrl = r.addedItemAuto!.product.imageUrl;
 
         return {
           id: r.id.toString(),

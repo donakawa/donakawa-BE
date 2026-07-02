@@ -135,7 +135,7 @@ export class GoalsRepository {
                 id: true,
                 name: true,
                 price: true,
-                files: { select: { id: true } },
+                imageUrl: true,
               },
             },
             purchasedHistory: {

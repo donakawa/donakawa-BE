@@ -23,7 +23,7 @@ export class HistoriesService {
     private readonly historiesRepository: HistoriesRepository,
     private readonly filesService: FilesService,
     private readonly aiCommentService: AiCommentService,
-  ) { }
+  ) {}
 
   async createReview(
     userId: bigint,
@@ -100,16 +100,16 @@ export class HistoriesService {
             satisfactionScore: review.satisfaction ?? 0,
             purchasedAt: purchased
               ? (() => {
-                const kstDate = new Date(
-                  purchased.purchasedDate.getTime() + KST_OFFSET_MS,
-                );
-                return `${kstDate.getUTCFullYear()}-${String(
-                  kstDate.getUTCMonth() + 1,
-                ).padStart(
-                  2,
-                  "0",
-                )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
-              })()
+                  const kstDate = new Date(
+                    purchased.purchasedDate.getTime() + KST_OFFSET_MS,
+                  );
+                  return `${kstDate.getUTCFullYear()}-${String(
+                    kstDate.getUTCMonth() + 1,
+                  ).padStart(
+                    2,
+                    "0",
+                  )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
+                })()
               : "",
           };
         }
@@ -132,16 +132,16 @@ export class HistoriesService {
           satisfactionScore: review.satisfaction ?? 0,
           purchasedAt: purchased
             ? (() => {
-              const kstDate = new Date(
-                purchased.purchasedDate.getTime() + KST_OFFSET_MS,
-              );
-              return `${kstDate.getUTCFullYear()}-${String(
-                kstDate.getUTCMonth() + 1,
-              ).padStart(
-                2,
-                "0",
-              )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
-            })()
+                const kstDate = new Date(
+                  purchased.purchasedDate.getTime() + KST_OFFSET_MS,
+                );
+                return `${kstDate.getUTCFullYear()}-${String(
+                  kstDate.getUTCMonth() + 1,
+                ).padStart(
+                  2,
+                  "0",
+                )}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
+              })()
             : "",
         };
       }),
@@ -375,7 +375,7 @@ export class HistoriesService {
           kstDate.getUTCMonth() + 1,
         ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
 
-        const purchaseReasons = h.reason
+        const purchaseReasons = h.reason;
 
         if (h.addedItemAuto) {
           const item = h.addedItemAuto;
@@ -495,8 +495,8 @@ export class HistoriesService {
           data.satisfactionCount === 0
             ? 0
             : Number(
-              (data.satisfactionSum / data.satisfactionCount).toFixed(1),
-            ),
+                (data.satisfactionSum / data.satisfactionCount).toFixed(1),
+              ),
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
@@ -615,9 +615,7 @@ export class HistoriesService {
     };
 
     histories.forEach((h) => {
-      const kstDate = new Date(
-        h.purchasedDate.getTime() + 9 * 60 * 60 * 1000
-      );
+      const kstDate = new Date(h.purchasedDate.getTime() + 9 * 60 * 60 * 1000);
 
       const dayIndex = kstDate.getUTCDay();
       const label = labels[dayIndex].key;
@@ -640,10 +638,8 @@ export class HistoriesService {
     itemId: bigint,
     itemType: "AUTO" | "MANUAL",
   ): Promise<string | null> {
-    const photoFileId = await this.historiesRepository.findItemPhotoFileId(
-      itemId,
-      itemType,
-    );
+    const photoFileId =
+      await this.historiesRepository.findItemPhotoFileId(itemId);
 
     if (!photoFileId) return null;
 
@@ -659,13 +655,12 @@ export class HistoriesService {
   async getItemReview(
     userId: bigint,
     itemId: bigint,
-    itemType: WishItemType
+    itemType: WishItemType,
   ): Promise<GetReviewResponseDto> {
-
     if (itemType === "AUTO") {
       const item = await this.historiesRepository.findAutoItemWithReview(
         userId,
-        itemId
+        itemId,
       );
 
       if (!item) {
@@ -689,7 +684,9 @@ export class HistoriesService {
       const review = item.review[0];
       const imageUrl = await this.getItemImageUrl(item.id, "AUTO");
       const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
-      const kstDate = new Date(purchase.purchasedDate.getTime() + KST_OFFSET_MS);
+      const kstDate = new Date(
+        purchase.purchasedDate.getTime() + KST_OFFSET_MS,
+      );
       const date = `${kstDate.getUTCFullYear()}-${String(
         kstDate.getUTCMonth() + 1,
       ).padStart(2, "0")}-${String(kstDate.getUTCDate()).padStart(2, "0")}`;
@@ -704,15 +701,14 @@ export class HistoriesService {
           price: item.product.price,
           imageUrl,
         },
-        purchaseReason:
-          purchase.reason ?? null,
+        purchaseReason: purchase.reason ?? null,
         review: review
           ? {
-            reviewId: Number(review.id),
-            satisfaction: review.satisfaction,
-            usageFrequency: review.frequency,
-            createdAt: review.createdAt.toISOString(),
-          }
+              reviewId: Number(review.id),
+              satisfaction: review.satisfaction,
+              usageFrequency: review.frequency,
+              createdAt: review.createdAt.toISOString(),
+            }
           : null,
       };
     }
@@ -720,7 +716,7 @@ export class HistoriesService {
     // MANUAL
     const item = await this.historiesRepository.findManualItemWithReview(
       userId,
-      itemId
+      itemId,
     );
 
     if (!item) {
@@ -740,7 +736,7 @@ export class HistoriesService {
         statusCode: 404,
       });
     }
-    
+
     const review = item.review[0];
     const imageUrl = await this.getItemImageUrl(item.id, "MANUAL");
     const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -759,15 +755,14 @@ export class HistoriesService {
         price: item.price,
         imageUrl: imageUrl,
       },
-      purchaseReason:
-        purchase.reason ?? null,
+      purchaseReason: purchase.reason ?? null,
       review: review
         ? {
-          reviewId: Number(review.id),
-          satisfaction: review.satisfaction,
-          usageFrequency: review.frequency,
-          createdAt: review.createdAt.toISOString(),
-        }
+            reviewId: Number(review.id),
+            satisfaction: review.satisfaction,
+            usageFrequency: review.frequency,
+            createdAt: review.createdAt.toISOString(),
+          }
         : null,
     };
   }
