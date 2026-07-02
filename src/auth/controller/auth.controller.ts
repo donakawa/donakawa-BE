@@ -22,6 +22,7 @@ import {
   UserProfileResponseDto,
   UpdatePasswordResponseDto,
   RefreshResponseDto,
+  OAuthTokenResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthService } from "../service/auth.service";
 import { container } from "../../container";
@@ -424,7 +425,8 @@ export class AuthController {
       provider,
     } = params;
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const appScheme = process.env.APP_SCHEME || "donakawa";
+    const frontendUrl = `${appScheme}://`;
 
     try {
       // 계정 연동 처리 추가
@@ -486,11 +488,12 @@ export class AuthController {
 
       // 일반 로그인 플로우
       const { tokens, isNewUser } = await loginHandler(code, state);
+      const tokenCode = await this.authService.issueOAuthTokenCode(tokens);
 
       if (isNewUser) {
-        req.res!.redirect(`${frontendUrl}/social/goal`);
+        req.res!.redirect(`${frontendUrl}/social/goal?code=${tokenCode}`);
       } else {
-        req.res!.redirect(`${frontendUrl}/auth/callback?success=true`);
+        req.res!.redirect(`${frontendUrl}/auth/callback?code=${tokenCode}`);
       }
     } catch (error) {
       console.error(`${provider} Login Error:`, error);
@@ -499,6 +502,20 @@ export class AuthController {
       );
     }
   }
+  /**
+   * @summary OAuth 토큰 교환 API
+   */
+  @Get("/oauth/token")
+  @SuccessResponse("200", "토큰 교환 성공")
+  public async exchangeOAuthToken(
+    @Query() code: string,
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<OAuthTokenResponseDto>> {
+    req.res!.setHeader("Cache-Control", "no-store");
+    const tokens = await this.authService.exchangeOAuthTokenCode(code);
+    return success(new OAuthTokenResponseDto(tokens));
+  }
+
   /**
    * @summary 구글 계정 연동 API
    */
