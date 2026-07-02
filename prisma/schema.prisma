@@ -132,7 +132,7 @@ model Product {
   name            String        @db.VarChar(300)
   brandName       String?       @map("brand_name") @db.VarChar(50)
   price           Int
-  imageUrl        String        @map("image_url") @db.Text()
+  imageUrl        String?       @map("image_url") @db.Text
   productId       String        @map("product_id") @db.VarChar(500)
   updatedAt       DateTime?     @default(now()) @updatedAt @db.Timestamp(6)
 
