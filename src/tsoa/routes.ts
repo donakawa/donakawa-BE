@@ -68,7 +68,7 @@ const models: TsoaRoute.Models = {
             "productId": {"dataType":"string","required":true},
             "price": {"dataType":"double","required":true},
             "updatedAt": {"dataType":"string","required":true},
-            "imageUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"undefined"}],"required":true},
+            "imageUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
         },
         "additionalProperties": false,
     },
@@ -849,6 +849,8 @@ const models: TsoaRoute.Models = {
             "id": {"dataType":"string","required":true},
             "email": {"dataType":"string","required":true},
             "nickname": {"dataType":"string","required":true},
+            "accessToken": {"dataType":"string","required":true},
+            "refreshToken": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -868,6 +870,32 @@ const models: TsoaRoute.Models = {
         "properties": {
             "email": {"dataType":"string","required":true},
             "password": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "RefreshResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "accessToken": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_RefreshResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"RefreshResponseDto","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "RefreshRequestDto": {
+        "dataType": "refObject",
+        "properties": {
+            "refreshToken": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -1017,6 +1045,25 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "newPassword": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "OAuthTokenResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "accessToken": {"dataType":"string","required":true},
+            "refreshToken": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_OAuthTokenResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"OAuthTokenResponseDto","required":true},
         },
         "additionalProperties": false,
     },
@@ -2638,7 +2685,6 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsAuthController_login: Record<string, TsoaRoute.ParameterSchema> = {
                 body: {"in":"body","name":"body","required":true,"ref":"LoginRequestDto"},
-                req: {"in":"request","name":"req","required":true,"dataType":"object"},
         };
         app.post('/auth/login',
             ...(fetchMiddlewares<RequestHandler>(AuthController)),
@@ -2668,7 +2714,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsAuthController_refresh: Record<string, TsoaRoute.ParameterSchema> = {
-                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"RefreshRequestDto"},
         };
         app.post('/auth/refresh',
             ...(fetchMiddlewares<RequestHandler>(AuthController)),
@@ -3159,6 +3205,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 302,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAuthController_exchangeOAuthToken: Record<string, TsoaRoute.ParameterSchema> = {
+                code: {"in":"query","name":"code","required":true,"dataType":"string"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/auth/oauth/token',
+            ...(fetchMiddlewares<RequestHandler>(AuthController)),
+            ...(fetchMiddlewares<RequestHandler>(AuthController.prototype.exchangeOAuthToken)),
+
+            async function AuthController_exchangeOAuthToken(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAuthController_exchangeOAuthToken, request, response });
+
+                const controller = new AuthController();
+
+              await templateService.apiHandler({
+                methodName: 'exchangeOAuthToken',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
               });
             } catch (err) {
                 return next(err);
