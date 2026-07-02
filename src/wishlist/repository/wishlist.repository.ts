@@ -21,7 +21,7 @@ export class WishlistRepository {
         brandName: true,
         updatedAt: true,
         productId: true,
-        photoFileId: true,
+        imageUrl: true,
         storePlatformId: true,
         storePlatform: {
           select: {
@@ -265,7 +265,7 @@ left join store_platform s on p.store_platform_id = s.id where user_id = ${userI
       conditions.length > 0
         ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`
         : Prisma.empty;
-    const query = Prisma.sql`select sum(price) from (select price from added_item_manual ${whereClause} union all (select price from added_item_auto join product 
+    const query = Prisma.sql`select sum(price) from (select price from added_item_manual ${whereClause} union all (select price from added_item_auto join product
     on added_item_auto.product_id = product.id ${whereClause})) as items_price;`;
     const result = await this.prisma.$queryRaw<{ sum: string | null }[]>(query);
     const sum = result[0]?.sum ? parseInt(result[0].sum) : 0;

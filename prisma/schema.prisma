@@ -6,7 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output = "../node_modules/.prisma/client"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -14,30 +14,30 @@ datasource db {
 }
 
 model User {
-  id        BigInt    @id @default(autoincrement())
-  email     String    @unique @db.VarChar(100)
-  password  String?   @db.VarChar(100)
-  nickname  String    @db.VarChar(10)
-  goal      String?    @db.VarChar(10)
-  coin Int @default(0)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(6)
-  deletedAt DateTime? @map("deleted_at") @db.Timestamp(6)
-  lastLoginAt DateTime? @map("last_login_at")
-  loginGreetingShown Boolean @default(false) @map("login_greeting_shown")
-  goalWelcomeShown Boolean @default(false) @map("goal_welcome_shown")
-  lastGoalMonthlyWelcomeYear Int? @map("last_goal_monthly_welcome_year")
-  lastGoalMonthlyWelcomeMonth Int? @map("last_goal_monthly_welcome_month")
+  id                          BigInt    @id @default(autoincrement())
+  email                       String    @unique @db.VarChar(100)
+  password                    String?   @db.VarChar(100)
+  nickname                    String    @db.VarChar(10)
+  goal                        String?   @db.VarChar(10)
+  coin                        Int       @default(0)
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt                   DateTime? @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt                   DateTime? @map("deleted_at") @db.Timestamp(6)
+  lastLoginAt                 DateTime? @map("last_login_at")
+  loginGreetingShown          Boolean   @default(false) @map("login_greeting_shown")
+  goalWelcomeShown            Boolean   @default(false) @map("goal_welcome_shown")
+  lastGoalMonthlyWelcomeYear  Int?      @map("last_goal_monthly_welcome_year")
+  lastGoalMonthlyWelcomeMonth Int?      @map("last_goal_monthly_welcome_month")
 
-  targetBudget    TargetBudget?
-  oauth           Oauth[]
-  wishItemFolder  WishItemFolder[]
-  addedItemAuto   AddedItemAuto[]
-  addedItemManual AddedItemManual[]
-  chatHeaders  ChatHeader[]
-  tournaments  Tournament[]
-  goals Goal[]
-  attendance  Attendance[]
+  targetBudget     TargetBudget?
+  oauth            Oauth[]
+  wishItemFolder   WishItemFolder[]
+  addedItemAuto    AddedItemAuto[]
+  addedItemManual  AddedItemManual[]
+  chatHeaders      ChatHeader[]
+  tournaments      Tournament[]
+  goals            Goal[]
+  attendance       Attendance[]
   attendanceReward AttendanceReward[]
 
   @@map("user")
@@ -55,23 +55,22 @@ model Oauth {
   uid      String        @db.VarChar(200)
   provider OauthProvider
 
-  @@unique([provider, uid])   
-  @@unique([userId, provider]) 
-
+  @@unique([provider, uid])
+  @@unique([userId, provider])
   @@map("oauth")
 }
 
 model TargetBudget {
-  id              BigInt    @id @default(autoincrement())
-  userId          BigInt    @unique @map("user_id")
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  monthlyIncome   Int?      @map("monthly_income")
-  incomeDate      DateTime? @map("income_date")
-  incomeDay       Int?       @map("income_day")
-  fixedExpense    Int?      @map("fixed_expense")
-  monthlySaving   Int?      @map("monthly_saving")
-  spendStrategy   Int?      @map("spend_strategy")
-  shoppingBudget  Int?      @map("shopping_budget")
+  id             BigInt    @id @default(autoincrement())
+  userId         BigInt    @unique @map("user_id")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monthlyIncome  Int?      @map("monthly_income")
+  incomeDate     DateTime? @map("income_date")
+  incomeDay      Int?      @map("income_day")
+  fixedExpense   Int?      @map("fixed_expense")
+  monthlySaving  Int?      @map("monthly_saving")
+  spendStrategy  Int?      @map("spend_strategy")
+  shoppingBudget Int?      @map("shopping_budget")
 
   @@map("target_budget")
 }
@@ -116,10 +115,10 @@ model AddedItemAuto {
 }
 
 model StorePlatform {
-  id        BigInt @id @default(autoincrement())
-  name      String @unique @db.VarChar(50)
-  urlDomain String @unique @map("url_domain") @db.VarChar(100)
-  productUrlTemplate String @db.VarChar(100) @map("product_url_template")
+  id                 BigInt @id @default(autoincrement())
+  name               String @unique @db.VarChar(50)
+  urlDomain          String @unique @map("url_domain") @db.VarChar(100)
+  productUrlTemplate String @map("product_url_template") @db.VarChar(100)
 
   product Product[]
 
@@ -131,14 +130,14 @@ model Product {
   storePlatformId BigInt        @map("store_platform_id")
   storePlatform   StorePlatform @relation(fields: [storePlatformId], references: [id])
   name            String        @db.VarChar(300)
-  brandName       String?       @db.VarChar(50) @map("brand_name")
+  brandName       String?       @map("brand_name") @db.VarChar(50)
   price           Int
-  files           Files?        @relation(fields: [photoFileId], references: [id])
-  photoFileId     BigInt?       @map("photo_file_id") @unique
-  productId       String        @db.VarChar(500) @map("product_id")
+  imageUrl        String?       @map("image_url") @db.Text
+  productId       String        @map("product_id") @db.VarChar(500)
   updatedAt       DateTime?     @default(now()) @updatedAt @db.Timestamp(6)
 
   addedItemAuto AddedItemAuto[]
+
   @@unique([productId, storePlatformId])
   @@map("product")
 }
@@ -150,10 +149,11 @@ enum PurchasedAt {
 }
 
 model PurchasedReason {
-  id              Int           @id @default(autoincrement())
-  reason          String        @db.VarChar(20)
+  id     Int    @id @default(autoincrement())
+  reason String @db.VarChar(20)
 
   purchasedHistory PurchasedHistory[]
+
   @@map("purchased_reason")
 }
 
@@ -172,8 +172,6 @@ model PurchasedHistory {
   @@map("purchased_history")
 }
 
-
-
 model AddedItemManual {
   id             BigInt          @id @default(autoincrement())
   folderId       BigInt?         @map("folder_id")
@@ -183,7 +181,7 @@ model AddedItemManual {
   name           String          @db.VarChar(50)
   price          Int
   files          Files?          @relation(fields: [photoFileId], references: [id])
-  photoFileId    BigInt?         @map("photo_file_id") @unique
+  photoFileId    BigInt?         @unique @map("photo_file_id")
   storePlatform  String          @db.VarChar(50)
   url            String          @db.VarChar(300)
   brand          String          @db.VarChar(50)
@@ -211,19 +209,19 @@ enum WishItemType {
 }
 
 model ChatHeader {
-  id        BigInt @id @default(autoincrement())
+  id BigInt @id @default(autoincrement())
 
-  userId       BigInt           @map("user_id")
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId BigInt @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  autoItemId   BigInt?          @map("auto_item_id")
-  autoItem     AddedItemAuto?   @relation("AutoItemChats", fields: [autoItemId], references: [id])
+  autoItemId BigInt?        @map("auto_item_id")
+  autoItem   AddedItemAuto? @relation("AutoItemChats", fields: [autoItemId], references: [id])
 
   manualItemId BigInt?          @map("manual_item_id")
   manualItem   AddedItemManual? @relation("ManualItemChats", fields: [manualItemId], references: [id])
 
-  itemType  WishItemType @map("item_type")
-  title     String
+  itemType WishItemType @map("item_type")
+  title    String
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(6)
@@ -276,24 +274,24 @@ enum FileType {
 }
 
 model Files {
-  id            BigInt        @id @default(autoincrement())
-  type          FileType
-  name          String        @db.VarChar(300) @unique
-  createdAt     DateTime      @db.Timestamp(6) @default(now()) @map("created_at")
+  id        BigInt   @id @default(autoincrement())
+  type      FileType
+  name      String   @unique @db.VarChar(300)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
-  product Product?
   addedItemManual AddedItemManual?
+
   @@map("files")
 }
 
 model Tournament {
-  id          BigInt    @id @default(autoincrement())
-  userId      BigInt    @map("user_id")
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String    @db.VarChar(100)
-  totalItems  Int       @map("total_items")
-  isFinished  Boolean   @default(false) @map("is_finished")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String   @db.VarChar(100)
+  totalItems Int      @map("total_items")
+  isFinished Boolean  @default(false) @map("is_finished")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
   items      TournamentItem[]
   selections TournamentSelection[]
@@ -328,15 +326,15 @@ model TournamentSelection {
 }
 
 model Goal {
-  id         Int         @id @default(autoincrement())
-  userId     BigInt
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title      String      @db.VarChar(100)
-  moneyGoal  BigInt      @map("money_goal")
-  current    BigInt
-  status     GoalStatus
-  createdAt  DateTime    @default(now()) @map("created_at")
-  endedAt    DateTime?   @map("ended_at")
+  id        Int        @id @default(autoincrement())
+  userId    BigInt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String     @db.VarChar(100)
+  moneyGoal BigInt     @map("money_goal")
+  current   BigInt
+  status    GoalStatus
+  createdAt DateTime   @default(now()) @map("created_at")
+  endedAt   DateTime?  @map("ended_at")
 
   @@map("goal")
 }
@@ -350,27 +348,25 @@ enum GoalStatus {
 model Attendance {
   id           BigInt   @id @default(autoincrement())
   userId       BigInt
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   attendedDate DateTime @db.Date
   createdAt    DateTime @default(now())
-  claimed      Boolean @default(false)
-  
-  @@unique([userId, attendedDate])
+  claimed      Boolean  @default(false)
 
+  @@unique([userId, attendedDate])
   @@map("attendance")
 }
 
 model AttendanceReward {
-  id           BigInt   @id @default(autoincrement())
-  userId       BigInt
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  streakDays   Int
-  rewardCoin   Int
-  year         Int
-  month        Int
-  claimedAt    DateTime @default(now())
+  id         BigInt   @id @default(autoincrement())
+  userId     BigInt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streakDays Int
+  rewardCoin Int
+  year       Int
+  month      Int
+  claimedAt  DateTime @default(now())
 
   @@unique([userId, streakDays, year, month])
-
   @@map("attendance_reward")
 }

@@ -196,18 +196,7 @@ export class WishlistService {
         "크롤링 결과를 찾을 수 없습니다.",
       );
     }
-    let imageUrl;
-    if (result.photoFileId)
-      imageUrl = await this.filesService.generateUrl(
-        result.photoFileId.toString(),
-        60 * 60,
-      );
-    if (!imageUrl) imageUrl = undefined;
-    return new GetCrawlResultResponseDto(
-      result,
-      result.storePlatform.name,
-      imageUrl,
-    );
+    return new GetCrawlResultResponseDto(result, result.storePlatform.name);
   }
   async addWishListFromCache(data: AddWishListFromCacheRequestDto) {
     const command = new AddWishListFromCacheCommand(
@@ -326,7 +315,7 @@ export class WishlistService {
                   productUrlTemplate: true,
                 },
               },
-              photoFileId: true,
+              imageUrl: true,
               productId: true,
               updatedAt: true,
             },
@@ -347,10 +336,7 @@ export class WishlistService {
       const urlTemplate = wishitem.product.storePlatform.productUrlTemplate;
       const productId = wishitem.product.productId;
       const productUrl = urlTemplate.replace("${productId}", productId);
-      const photoFileId = wishitem.product.photoFileId;
-      const photoUrl = photoFileId
-        ? await this.filesService.generateUrl(photoFileId.toString(), 60 * 60)
-        : null;
+      const photoUrl = wishitem.product.imageUrl;
       return new WishItemPayload({
         id: wishitem.id.toString(),
         folder: wishitem.wishItemFolder?.name ?? null,

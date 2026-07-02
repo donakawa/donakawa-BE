@@ -1,5 +1,8 @@
 import { ChatsRepository } from "../repository/chats.repository";
-import { CreateChatRequest, SelectOptionRequest } from "../dto/request/chats.request.dto";
+import {
+  CreateChatRequest,
+  SelectOptionRequest,
+} from "../dto/request/chats.request.dto";
 import {
   CreateChatResponse,
   ChatDetailResponse,
@@ -74,7 +77,8 @@ export class ChatsService {
     const { type, wishItemId } = body;
 
     const item = await this.chatsRepository.findChatItem(type, wishItemId);
-    if (!item) throw new NotFoundException("C001", "존재하지 않는 위시 아이템입니다.");
+    if (!item)
+      throw new NotFoundException("C001", "존재하지 않는 위시 아이템입니다.");
 
     const chat = await this.chatsRepository.createChat({
       userId,
@@ -104,7 +108,10 @@ export class ChatsService {
     }));
   }
 
-  async getChatDetail(chatId: number, userId: number): Promise<ChatDetailResponse> {
+  async getChatDetail(
+    chatId: number,
+    userId: number,
+  ): Promise<ChatDetailResponse> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
     if (!chat || Number(chat.userId) !== userId)
       throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
@@ -114,8 +121,8 @@ export class ChatsService {
     let wishItem;
     if (chat.itemType === "AUTO") {
       const autoItem = chat.autoItem!;
-      const imageUrl = autoItem.product.photoFileId
-        ? await this.filesService.generateUrl(autoItem.product.photoFileId.toString(), 60 * 60)
+      const imageUrl = autoItem.product.imageUrl
+        ? autoItem.product.imageUrl
         : null;
       wishItem = {
         id: Number(autoItem.id),
@@ -126,7 +133,10 @@ export class ChatsService {
     } else {
       const item = chat.manualItem!;
       const imageUrl = item.photoFileId
-        ? await this.filesService.generateUrl(item.photoFileId.toString(), 60 * 60)
+        ? await this.filesService.generateUrl(
+            item.photoFileId.toString(),
+            60 * 60,
+          )
         : null;
       wishItem = {
         id: Number(item.id),
@@ -177,16 +187,20 @@ export class ChatsService {
     if (!chat || Number(chat.userId) !== userId)
       throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
 
-    const answeredCount = chat.messages.filter((m) => m.sender === "USER").length;
+    const answeredCount = chat.messages.filter(
+      (m) => m.sender === "USER",
+    ).length;
     if (body.step !== answeredCount + 1) {
       throw new BadRequestException("C003", "올바르지 않은 질문 순서입니다.");
     }
 
     const question = QUESTIONS.find((q) => q.step === body.step);
-    if (!question) throw new BadRequestException("C003", "올바르지 않은 질문 순서입니다.");
+    if (!question)
+      throw new BadRequestException("C003", "올바르지 않은 질문 순서입니다.");
 
     const option = question.options.find((o) => o.id === body.selectedOptionId);
-    if (!option) throw new BadRequestException("C004", "유효하지 않은 선택지입니다.");
+    if (!option)
+      throw new BadRequestException("C004", "유효하지 않은 선택지입니다.");
 
     try {
       await this.chatsRepository.saveSelectionTx({
@@ -196,7 +210,10 @@ export class ChatsService {
         optionLabel: option.label,
       });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === "P2002"
+      ) {
         throw new BadRequestException("C003", "이미 처리된 요청입니다.");
       }
       throw e;
@@ -212,7 +229,10 @@ export class ChatsService {
 
     const selections = chat.selections.sort((a, b) => a.step - b.step);
     if (selections.length < QUESTIONS.length) {
-      throw new BadRequestException("C005", "아직 모든 질문에 답하지 않았습니다.");
+      throw new BadRequestException(
+        "C005",
+        "아직 모든 질문에 답하지 않았습니다.",
+      );
     }
 
     const budget = chat.user.targetBudget;
@@ -223,7 +243,9 @@ export class ChatsService {
     const now = new Date();
     const nextIncomeDate = budget.incomeDate;
     const daysUntilReset = Math.max(
-      Math.ceil((nextIncomeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+      Math.ceil(
+        (nextIncomeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+      ),
       0,
     );
 
@@ -236,10 +258,16 @@ export class ChatsService {
     );
     const remainingBudget = (budget.shoppingBudget ?? 0) - totalSpend;
 
-    const itemPrice = chat.autoItem?.product.price ?? chat.manualItem?.price ?? 0;
+    const itemPrice =
+      chat.autoItem?.product.price ?? chat.manualItem?.price ?? 0;
 
     const decision = computeDecision(selections);
-    const { resultType, message } = computeResult(decision, remainingBudget, daysUntilReset, itemPrice);
+    const { resultType, message } = computeResult(
+      decision,
+      remainingBudget,
+      daysUntilReset,
+      itemPrice,
+    );
 
     if (!chat.result) {
       await this.chatsRepository.createChatResult({
@@ -251,7 +279,10 @@ export class ChatsService {
     return { resultType, decision, message };
   }
 
-  async deleteChat(chatId: number, userId: number): Promise<{ message: string }> {
+  async deleteChat(
+    chatId: number,
+    userId: number,
+  ): Promise<{ message: string }> {
     const chat = await this.chatsRepository.findChatDetail(chatId);
     if (!chat || Number(chat.userId) !== userId)
       throw new NotFoundException("C002", "존재하지 않는 채팅방입니다.");
