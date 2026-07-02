@@ -509,7 +509,9 @@ export class AuthController {
   @SuccessResponse("200", "토큰 교환 성공")
   public async exchangeOAuthToken(
     @Query() code: string,
+    @Request() req: ExpressRequest,
   ): Promise<ApiResponse<OAuthTokenResponseDto>> {
+    req.res!.setHeader("Cache-Control", "no-store");
     const tokens = await this.authService.exchangeOAuthTokenCode(code);
     return success(new OAuthTokenResponseDto(tokens));
   }

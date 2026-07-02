@@ -356,11 +356,10 @@ export class AuthService {
 
   async exchangeOAuthTokenCode(code: string): Promise<{ accessToken: string; refreshToken: string }> {
     const key = RedisKeys.oauthTokenCode(code);
-    const value = await redis.get(key);
+    const value = await redis.getDel(key);
     if (!value) {
       throw new UnauthorizedException("A008", "유효하지 않거나 만료된 코드입니다.");
     }
-    await redis.del(key);
     return JSON.parse(value);
   }
 
