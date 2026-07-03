@@ -49,7 +49,6 @@ export class WishItemPreviewPayload {
   name!: string;
   brandName!: string | null;
   price!: number;
-  photoUrl!: string | null;
   type!: WishitemType;
   status!: WishitemStatus;
   constructor(param: {
@@ -57,14 +56,12 @@ export class WishItemPreviewPayload {
     name: string;
     price: number;
     brandName: string | null;
-    photoUrl: string | null;
     type: WishitemType;
     status: WishitemStatus;
   }) {
     this.id = param.id;
     this.name = param.name;
     this.price = param.price;
-    this.photoUrl = param.photoUrl;
     this.type = param.type;
     this.brandName = param.brandName;
     this.status = param.status;
