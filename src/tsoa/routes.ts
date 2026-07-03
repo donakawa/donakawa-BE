@@ -187,7 +187,6 @@ const models: TsoaRoute.Models = {
             "name": {"dataType":"string","required":true},
             "brandName": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "price": {"dataType":"double","required":true},
-            "photoUrl": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "type": {"ref":"WishitemType","required":true},
             "status": {"ref":"WishitemStatus","required":true},
         },

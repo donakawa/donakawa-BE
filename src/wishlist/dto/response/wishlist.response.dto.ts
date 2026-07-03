@@ -107,11 +107,7 @@ export class ShowWishitemDetailResponseDto {
 export class ShowWishitemListResponseDto {
   nextCursor!: string | null;
   wishitems!: WishItemPreviewPayload[];
-  constructor(
-    wishitems: WishlistRecordInterface[],
-    nextCursor: string | null,
-    photoUrls: Record<string, string | null>,
-  ) {
+  constructor(wishitems: WishlistRecordInterface[], nextCursor: string | null) {
     this.nextCursor = nextCursor;
     this.wishitems = wishitems.reduce<WishItemPreviewPayload[]>(
       (acc, wishitem) => {
@@ -120,7 +116,6 @@ export class ShowWishitemListResponseDto {
           brandName: wishitem.brandName,
           name: wishitem.name,
           price: wishitem.price,
-          photoUrl: photoUrls[wishitem.cursor],
           type: wishitem.type,
           status: wishitem.status,
         });
@@ -154,11 +149,7 @@ export class CreateWishitemFolderResponseDto {
 export class ShowWishitemsInFolderResponseDto {
   nextCursor!: string | null;
   wishitems!: WishItemPreviewPayload[];
-  constructor(
-    wishitems: WishlistRecordInterface[],
-    nextCursor: string | null,
-    photoUrls: Record<string, string | null>,
-  ) {
+  constructor(wishitems: WishlistRecordInterface[], nextCursor: string | null) {
     this.nextCursor = nextCursor;
     this.wishitems = wishitems.reduce<WishItemPreviewPayload[]>(
       (acc, wishitem) => {
@@ -167,7 +158,6 @@ export class ShowWishitemsInFolderResponseDto {
           brandName: wishitem.brandName,
           name: wishitem.name,
           price: wishitem.price,
-          photoUrl: photoUrls[wishitem.cursor],
           type: wishitem.type,
           status: wishitem.status,
         });

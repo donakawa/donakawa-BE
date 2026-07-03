@@ -5,7 +5,6 @@ export interface WishlistRecordInterface {
   name: string;
   brandName: string | null;
   price: number;
-  photoFileId: bigint | null;
   url: string;
   createdAt: Date;
   status: WishitemStatus;
