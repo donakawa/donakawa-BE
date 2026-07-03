@@ -448,20 +448,7 @@ export class WishlistService {
     const nextCursor =
       rows.length > data.take ? rows[rows.length - 2].cursor : null;
     if (rows.length > data.take) rows.pop();
-    const entries = await Promise.all(
-      rows.map(async (row) => {
-        const url = row.photoFileId
-          ? await this.filesService.generateUrl(
-              row.photoFileId.toString(),
-              60 * 60,
-            )
-          : null;
-        return [row.cursor, url] as const;
-      }),
-    );
-    const photoUrls: Record<string, string | null> =
-      Object.fromEntries(entries);
-    return new ShowWishitemListResponseDto(rows, nextCursor, photoUrls);
+    return new ShowWishitemListResponseDto(rows, nextCursor);
   }
   async getWishitemFolders(data: ShowWishitemFoldersRequestDto) {
     const folders = await this.wishlistRepository.findWishitemFolders({
@@ -821,20 +808,7 @@ export class WishlistService {
     const nextCursor =
       rows.length > data.take ? rows[rows.length - 2].cursor : null;
     if (rows.length > data.take) rows.pop();
-    const entries = await Promise.all(
-      rows.map(async (row) => {
-        const url = row.photoFileId
-          ? await this.filesService.generateUrl(
-              row.photoFileId.toString(),
-              60 * 60,
-            )
-          : null;
-        return [row.cursor, url] as const;
-      }),
-    );
-    const photoUrls: Record<string, string | null> =
-      Object.fromEntries(entries);
-    return new ShowWishitemsInFolderResponseDto(rows, nextCursor, photoUrls);
+    return new ShowWishitemsInFolderResponseDto(rows, nextCursor);
   }
   async setWishitemReason(data: ModifyWishitemReasonRequestDto) {
     if (!isWishitemType(data.type))
