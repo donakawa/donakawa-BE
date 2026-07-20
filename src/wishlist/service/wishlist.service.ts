@@ -974,6 +974,17 @@ export class WishlistService {
     });
   }
   async getImageUrl(dto: PassThroughWishitemImageStreamRequestDto) {
+    if (
+      !dto.userId?.match(/^(0|[1-9]\d*)$/) ||
+      !dto.itemId?.match(/^(0|[1-9]\d*)$/) ||
+      !isWishitemType(dto.type)
+    ) {
+      throw new BadRequestException(
+        "INVALID_INPUT_FORM",
+        "유효하지 않은 입력 값 입니다.",
+      );
+    }
+    const userId = BigInt(dto.userId);
     if (dto.type === "AUTO") {
       const item = await this.wishlistRepository.findAddedItemAutoById(dto.itemId!, {
         select: {
@@ -985,7 +996,7 @@ export class WishlistService {
           }
         }
       })
-      const hasPermission = item?.userId === BigInt(dto.userId!);
+      const hasPermission = item?.userId === userId;
       if (!item || !hasPermission) {
         throw new NotFoundException(
           "WISHITEM_NOT_FOUND",
@@ -1000,7 +1011,7 @@ export class WishlistService {
     }
     if(dto.type === "MANUAL") {
       const item = await this.wishlistRepository.findAddedItemManualById(dto.itemId!);
-      const hasPermission = item?.userId === BigInt(dto.userId!);
+      const hasPermission = item?.userId === userId;
       if (!item || !hasPermission) {
         throw new NotFoundException(
           "WISHITEM_NOT_FOUND",

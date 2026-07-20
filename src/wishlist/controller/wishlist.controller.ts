@@ -220,8 +220,12 @@ export class WishlistController extends Controller {
     @Query("type") type: WishitemType,
     @Request() req: ExpressRequest,
   ) {
+    if (!itemId.match(/^(0|[1-9]\d*)$/))
+      throw new BadRequestException(
+        "INVALID_INPUT_FORM",
+        "유효하지 않은 입력 값 입니다.",
+      );
     const res = req.res!;
-    const next = req.next;
     const userId = req.user!.id;
     const reqDto = new PassThroughWishitemImageStreamRequestDto({
       userId,
@@ -235,10 +239,16 @@ export class WishlistController extends Controller {
     })
     res.status(upstream.status);
     res.setHeader("Content-Type", upstream.headers["content-type"] ?? "image/jpeg");
-    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader("Cache-Control", "private, max-age=3600");
     await new Promise<void>((resolve, reject) => {
       upstream.data.pipe(res);
-      upstream.data.on("error", reject);
+      upstream.data.on("error", (err:Error) => {
+        if (res.headersSent) {
+          res.destroy(err);
+          return resolve();
+        }
+        reject(err);
+      });
       res.on("finish", resolve);
       res.on("error", reject);
     })
