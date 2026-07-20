@@ -1392,6 +1392,39 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsWishlistController_passThroughWishitemImageStream: Record<string, TsoaRoute.ParameterSchema> = {
+                itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
+                type: {"in":"query","name":"type","required":true,"ref":"WishitemType"},
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/wishlist/items/:itemId/image',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(WishlistController)),
+            ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.passThroughWishitemImageStream)),
+
+            async function WishlistController_passThroughWishitemImageStream(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsWishlistController_passThroughWishitemImageStream, request, response });
+
+                const controller = new WishlistController();
+
+              await templateService.apiHandler({
+                methodName: 'passThroughWishitemImageStream',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsWishlistController_showWishitemList: Record<string, TsoaRoute.ParameterSchema> = {
                 req: {"in":"request","name":"req","required":true,"dataType":"object"},
                 status: {"in":"query","name":"status","required":true,"dataType":"string"},
