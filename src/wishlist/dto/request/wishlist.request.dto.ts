@@ -314,14 +314,8 @@ export class ModifyWishitemRequestDto {
   }
 }
 export class PassThroughWishitemImageStreamRequestDto {
-  @Matches(/^\d+$/, { message: "userId must be a valid integer string" })
-  @IsNotEmpty()
   userId?: string;
-  @Matches(/^\d+$/, { message: "itemId must be a valid integer string" })
-  @IsNotEmpty()
   itemId?: string;
-  @IsIn(["AUTO", "MANUAL"])
-  @IsNotEmpty()
   type?: WishitemType;
   constructor(args: Partial<PassThroughWishitemImageStreamRequestDto>) {
     Object.assign(this, args);
