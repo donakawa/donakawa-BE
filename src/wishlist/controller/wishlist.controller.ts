@@ -57,6 +57,29 @@ import { BadRequestException } from "../../errors/error";
 import { WishitemType } from "../types/wishitem.types";
 import axios from "axios";
 
+const imageContentTypesByExt: Record<string, string> = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+};
+
+function resolveImageContentType(contentType: unknown, imageUrl: string) {
+  const normalizedContentType =
+    typeof contentType === "string"
+      ? contentType.split(";")[0].trim().toLowerCase()
+      : "";
+  if (normalizedContentType.startsWith("image/")) {
+    return normalizedContentType;
+  }
+
+  const pathname = new URL(imageUrl).pathname.toLowerCase();
+  const ext = Object.keys(imageContentTypesByExt).find((key) =>
+    pathname.endsWith(key),
+  );
+  return ext ? imageContentTypesByExt[ext] : "image/jpeg";
+}
+
 @Route("/wishlist")
 @Tags("Wishlist")
 export class WishlistController extends Controller {
@@ -238,7 +261,11 @@ export class WishlistController extends Controller {
       timeout:5000,
     })
     res.status(upstream.status);
-    res.setHeader("Content-Type", upstream.headers["content-type"] ?? "image/jpeg");
+    res.setHeader(
+      "Content-Type",
+      resolveImageContentType(upstream.headers["content-type"], imageUrl!.url),
+    );
+    res.setHeader("Content-Disposition", "inline");
     res.setHeader("Cache-Control", "private, max-age=3600");
     await new Promise<void>((resolve, reject) => {
       upstream.data.pipe(res);
