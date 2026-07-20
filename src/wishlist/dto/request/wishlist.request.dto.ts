@@ -17,7 +17,7 @@ import {
 
 import { WishitemStatus, WishitemType } from "../../types/wishitem.types";
 import { Type } from "class-transformer";
-import { PurchasedAt } from "@prisma/client";
+import { PurchasedAt, WishItemType } from "@prisma/client";
 export class AddCrawlTaskRequestDto {
   @IsUrl()
   @IsNotEmpty()
@@ -311,5 +311,13 @@ export class ModifyWishitemRequestDto {
     this.price = param.price;
     this.url = param.url;
     this.storeName = param.storeName;
+  }
+}
+export class PassThroughWishitemImageStreamRequestDto {
+  userId?: string;
+  itemId?: string;
+  type?: WishitemType;
+  constructor(args: Partial<PassThroughWishitemImageStreamRequestDto>) {
+    Object.assign(this, args);
   }
 }

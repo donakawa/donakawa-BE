@@ -34,6 +34,7 @@ import {
   MarkItemAsPurchasedRequestDto,
   ModifyWishitemReasonRequestDto,
   ModifyWishitemRequestDto,
+  PassThroughWishitemImageStreamRequestDto,
   ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
   ShowWishitemsInFolderRequestDto,
@@ -54,6 +55,7 @@ import {
 import { validateImageFile } from "../policy/upload.policy";
 import { BadRequestException } from "../../errors/error";
 import { WishitemType } from "../types/wishitem.types";
+import axios from "axios";
 
 @Route("/wishlist")
 @Tags("Wishlist")
@@ -208,8 +210,54 @@ export class WishlistController extends Controller {
     );
   }
   /**
+   * @summary 위시 아이템 이미지 가져오기(위시/구매/포기 아이템 모두 포함)
+   * @description 위시/구매/포기 아이템에 대한 이미지를 가져옵니다. (프록시)
+   */
+  @Get('/items/:itemId/image')
+  @Security("jwt")
+  public async passThroughWishitemImageStream(
+    @Path("itemId") itemId: string,
+    @Query("type") type: WishitemType,
+    @Request() req: ExpressRequest,
+  ) {
+    if (!itemId.match(/^(0|[1-9]\d*)$/))
+      throw new BadRequestException(
+        "INVALID_INPUT_FORM",
+        "유효하지 않은 입력 값 입니다.",
+      );
+    const res = req.res!;
+    const userId = req.user!.id;
+    const reqDto = new PassThroughWishitemImageStreamRequestDto({
+      userId,
+      itemId,
+      type
+    });
+    const imageUrl = await this.wishlistService.getImageUrl(reqDto);
+    const upstream = await axios.get(imageUrl!.url, {
+      responseType: "stream",
+      timeout:5000,
+    })
+    res.status(upstream.status);
+    res.setHeader("Content-Type", upstream.headers["content-type"] ?? "image/jpeg");
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    await new Promise<void>((resolve, reject) => {
+      upstream.data.pipe(res);
+      upstream.data.on("error", (err:Error) => {
+        if (res.headersSent) {
+          res.destroy(err);
+          return resolve();
+        }
+        reject(err);
+      });
+      res.on("finish", resolve);
+      res.on("error", reject);
+    })
+
+  }
+
+  /**
    * @summary 위시리스트 가져오기(위시/구매/포기 아이템 모두 포함)
-   * @description 위시/구매/포기 아에팀중 한 분류를 선택하여 아이템 리스트를 가져옵니다.
+   * @description 위시/구매/포기 아이템 중 한 분류를 선택하여 아이템 리스트를 가져옵니다.
    */
   @Get("/items")
   @Security("jwt")
