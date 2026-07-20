@@ -17,6 +17,7 @@ export class S3StorageAdapter implements StoragePort {
       Bucket: this.BUCKET_NAME,
       Key: `${filePath}/${fileName}`,
       Body: file.buffer,
+      ContentType: file.mimetype,
     };
     await this.s3
       .putObject(params, (err: Error) => {
