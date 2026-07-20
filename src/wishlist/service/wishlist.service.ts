@@ -17,6 +17,7 @@ import {
   MarkItemAsPurchasedRequestDto,
   ModifyWishitemReasonRequestDto,
   ModifyWishitemRequestDto,
+  PassThroughWishitemImageStreamRequestDto,
   ShowWishitemFoldersRequestDto,
   ShowWishitemListRequestDto,
   ShowWishitemsInFolderRequestDto,
@@ -29,6 +30,7 @@ import {
   GetCrawlResultResponseDto,
   GetWishListAnalyticsResponseDto,
   ModifyWishitemResponseDto,
+  PassThroughWishitemImageStreamResponseDto,
   ShowWishitemDetailResponseDto,
   ShowWishitemFoldersResponseDto,
   ShowWishitemListResponseDto,
@@ -970,5 +972,46 @@ export class WishlistService {
         totalPrice: boughtItemsTotalPrice,
       },
     });
+  }
+  async getImageUrl(dto: PassThroughWishitemImageStreamRequestDto) {
+    if (dto.type === "AUTO") {
+      const item = await this.wishlistRepository.findAddedItemAutoById(dto.itemId!, {
+        select: {
+          userId: true,
+          product: {
+            select: {
+              imageUrl: true
+            }
+          }
+        }
+      })
+      const hasPermission = item?.userId === BigInt(dto.userId!);
+      if (!item || !hasPermission) {
+        throw new NotFoundException(
+          "WISHITEM_NOT_FOUND",
+          "대상 위시 아이템을 찾을 수 없습니다.",
+        );
+      }
+      const url = item.product.imageUrl;
+      if(!url) throw new NotFoundException("ITEM_PHOTO_NOT_FOUND", "위시 아이템의 이미지를 찾을 수 없습니다.");
+      return new PassThroughWishitemImageStreamResponseDto({
+        url
+      })
+    }
+    if(dto.type === "MANUAL") {
+      const item = await this.wishlistRepository.findAddedItemManualById(dto.itemId!);
+      const hasPermission = item?.userId === BigInt(dto.userId!);
+      if (!item || !hasPermission) {
+        throw new NotFoundException(
+          "WISHITEM_NOT_FOUND",
+          "대상 위시 아이템을 찾을 수 없습니다.",
+        );
+      }
+      const generatedUrl = item.photoFileId ? await this.filesService.generateUrl(String(item.photoFileId), 60 * 60) : null;
+      if (!generatedUrl) throw new NotFoundException("ITEM_PHOTO_NOT_FOUND", "위시 아이템의 이미지를 찾을 수 없습니다.");
+      return new PassThroughWishitemImageStreamResponseDto({
+        url: generatedUrl
+      })
+    }
   }
 }
