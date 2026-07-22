@@ -1,9 +1,15 @@
 import { CharacterRepository } from "../repository/character.repository";
 import { GoalsRepository } from "../../goals/repository/goals.repository";
 import { MessageData } from "../types/message.type";
-import { HamsterTalkResponseDto } from "../dto/response/character.response.dto";
+import {
+  HamsterTalkResponseDto,
+  ShopResponseDto,
+  ShopItemsResponseDto,
+} from "../dto/response/character.response.dto";
 import { MessagePolicy } from "../policy/message.policy";
 import { MessageId } from "../enums/message-id.enum";
+import { ItemCategory } from "@prisma/client";
+import { NotFoundException } from "../../errors/error";
 
 export class CharacterService {
   constructor(
@@ -119,6 +125,77 @@ export class CharacterService {
     return new HamsterTalkResponseDto({
       conditionId: talk.id,
       message: talk.message,
+    });
+  }
+
+  // 햄꾸 화면 조회
+  async getHamster(userId: string): Promise<ShopResponseDto> {
+    const [user, hamster] = await Promise.all([
+      this.characterRepository.findUserCoin(userId),
+      this.characterRepository.findHamster(userId),
+    ]);
+
+    if (!hamster) {
+      throw new NotFoundException("H001", "햄스터 정보를 찾을 수 없습니다.");
+    }
+
+    return new ShopResponseDto({
+      coin: user!.coin,
+      equipped: {
+        skinId: Number(hamster.skinId),
+        accessoryId: hamster.accessoryId ? Number(hamster.accessoryId) : null,
+        wallpaperId: Number(hamster.wallpaperId),
+        floorId: Number(hamster.floorId),
+      },
+    });
+  }
+
+  // 햄꾸 카테고리별 아이템 조회
+  async getShopItems(
+    userId: string,
+    category: ItemCategory,
+  ): Promise<ShopItemsResponseDto> {
+    const [hamster, items, ownedItems] = await Promise.all([
+      this.characterRepository.findHamster(userId),
+      this.characterRepository.findShopItems(category),
+      this.characterRepository.findOwnedItems(userId),
+    ]);
+
+    if (!hamster) {
+      throw new NotFoundException("H001", "햄스터 정보를 찾을 수 없습니다.");
+    }
+
+    const ownedSet = new Set(ownedItems.map((item) => Number(item.itemId)));
+
+    let equippedId: bigint | null = null;
+
+    switch (category) {
+      case ItemCategory.SKIN:
+        equippedId = hamster.skinId;
+        break;
+
+      case ItemCategory.ACCESSORY:
+        equippedId = hamster.accessoryId;
+        break;
+
+      case ItemCategory.WALLPAPER:
+        equippedId = hamster.wallpaperId;
+        break;
+
+      case ItemCategory.FLOOR:
+        equippedId = hamster.floorId;
+        break;
+    }
+
+    return new ShopItemsResponseDto({
+      items: items.map((item) => ({
+        itemId: Number(item.id),
+        name: item.name,
+        price: item.price,
+        imageUrl: item.imagePath,
+        owned: ownedSet.has(Number(item.id)) || item.isDefault,
+        equipped: equippedId !== null && equippedId === item.id,
+      })),
     });
   }
 }

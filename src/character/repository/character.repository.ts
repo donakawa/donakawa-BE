@@ -1,8 +1,14 @@
-import { Prisma, PrismaClient, AddedItemStatus } from "@prisma/client";
+import {
+  Prisma,
+  PrismaClient,
+  AddedItemStatus,
+  ItemCategory,
+} from "@prisma/client";
 
 export class CharacterRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  // 햄스터 한마디
   // 일상
   async findUser(userId: string) {
     return this.prisma.user.findUnique({
@@ -153,6 +159,54 @@ export class CharacterRepository {
       },
       data: {
         loginGreetingShown: true,
+      },
+    });
+  }
+
+  // 햄꾸
+  async findUserCoin(userId: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        id: BigInt(userId),
+      },
+      select: {
+        coin: true,
+      },
+    });
+  }
+
+  async findHamster(userId: string) {
+    return this.prisma.hamster.findUnique({
+      where: {
+        userId: BigInt(userId),
+      },
+      select: {
+        skinId: true,
+        accessoryId: true,
+        wallpaperId: true,
+        floorId: true,
+      },
+    });
+  }
+
+  async findShopItems(category: ItemCategory) {
+    return this.prisma.shopItem.findMany({
+      where: {
+        category,
+      },
+      orderBy: {
+        id: "asc",
+      },
+    });
+  }
+
+  async findOwnedItems(userId: string) {
+    return this.prisma.userItem.findMany({
+      where: {
+        userId: BigInt(userId),
+      },
+      select: {
+        itemId: true,
       },
     });
   }

@@ -37,7 +37,7 @@ export class AuthRepository implements AuthRepositoryInterface {
     tx?: Prisma.TransactionClient,
   ): Promise<User> {
     const db = tx ?? this.prisma;
-    return await db.user.create({
+    const user = await db.user.create({
       data: {
         email: command.email,
         password: command.password,
@@ -45,6 +45,19 @@ export class AuthRepository implements AuthRepositoryInterface {
         goal: command.goal,
       },
     });
+
+    // 디폴트 처리 필요
+    await db.hamster.create({
+      data: {
+        userId: user.id,
+        skinId: null,
+        accessoryId: null,
+        wallpaperId: null,
+        floorId: null,
+      },
+    });
+
+    return user;
   }
 
   async updatePassword(
