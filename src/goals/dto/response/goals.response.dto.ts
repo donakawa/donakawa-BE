@@ -21,18 +21,12 @@ export class GoalsResponseDto {
 }
 
 export class BudgetSpendResponseDto {
-  totalSpend!: number | null;
-  remainingBudget!: number | null;
-  coin!: number;
+  totalSpend!: number;
+  remainingBudget!: number;
 
-  constructor(data: {
-    totalSpend: number | null;
-    remainingBudget: number | null;
-    coin: number;
-  }) {
+  constructor(data: { totalSpend: number; remainingBudget: number }) {
     this.totalSpend = data.totalSpend;
     this.remainingBudget = data.remainingBudget;
-    this.coin = data.coin;
   }
 }
 

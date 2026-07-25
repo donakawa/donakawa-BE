@@ -113,10 +113,10 @@ export class GoalsController {
   }
 
   /**
-   * @summary 홈 메인 조회 API
+   * @summary 소비, 남은 예산 조회 API
    */
-  @Get()
-  @SuccessResponse("200", "홈 메인 조회 성공")
+  @Get("/spend")
+  @SuccessResponse("200", "소비, 남은 예산 조회 성공")
   public async getBudgetSpend(
     @Request() req: ExpressRequest,
   ): Promise<ApiResponse<BudgetSpendResponseDto>> {
