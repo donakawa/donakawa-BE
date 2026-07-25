@@ -22,11 +22,9 @@ export async function expressAuthentication(
         throw new UnauthorizedException("A011", "지원하지 않는 인증 방식입니다.");
     }
 
-    const token =
-        request.cookies?.accessToken ||
-        (request.headers.authorization?.startsWith("Bearer ")
-            ? request.headers.authorization.substring(7)
-            : undefined);
+    const token = request.headers.authorization?.startsWith("Bearer ")
+        ? request.headers.authorization.substring(7)
+        : undefined;
     if (!token) {
         throw new UnauthorizedException("A004", "인증 토큰이 없습니다.");
     }

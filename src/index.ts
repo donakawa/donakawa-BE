@@ -8,8 +8,6 @@ import { AppError } from "./errors/app.error.js";
 import swaggerUi from "swagger-ui-express";
 import fs from "node:fs";
 import path from "node:path";
-import cors from "cors";
-import cookieParser from "cookie-parser";
 
 import { RegisterRoutes } from "./tsoa/routes.js";
 import { ValidateError } from "tsoa";
@@ -33,16 +31,6 @@ async function bootstrap() {
   });
 
   app.use(express.json());
-  app.use(
-    cors({
-      origin: ["http://localhost:5173", process.env.FRONTEND_URL].filter(
-        (origin): origin is string => Boolean(origin),
-      ),
-      credentials: true,
-    }),
-  );
-
-  app.use(cookieParser());
   app.use(express.urlencoded({ extended: false }));
 
   const swaggerPath = path.join(__dirname, "../dist/swagger.json");
