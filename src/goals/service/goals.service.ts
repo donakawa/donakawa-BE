@@ -163,17 +163,12 @@ export class GoalsService {
     return new GoalsResponseDto(updated);
   }
 
-  // 홈 메인 조회 (갱신일 자동 적용)
+  // 소비, 남은 예산 값 조회 (갱신일 자동 적용)
   async getBudgetSpend(userId: string) {
-    const user = await this.goalsRepository.findUserCoin(userId);
     const budget = await this.goalsRepository.findBudgetByUserId(userId);
 
     if (!budget) {
-      return new BudgetSpendResponseDto({
-        totalSpend: null,
-        remainingBudget: null,
-        coin: user!.coin,
-      });
+      throw new NotFoundException("B003", "등록된 목표 예산이 없습니다.");
     }
 
     const now = new Date();
@@ -211,7 +206,6 @@ export class GoalsService {
     return new BudgetSpendResponseDto({
       totalSpend,
       remainingBudget,
-      coin: user!.coin,
     });
   }
 
