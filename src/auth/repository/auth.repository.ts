@@ -37,7 +37,7 @@ export class AuthRepository implements AuthRepositoryInterface {
     tx?: Prisma.TransactionClient,
   ): Promise<User> {
     const db = tx ?? this.prisma;
-    return await db.user.create({
+    const user = await db.user.create({
       data: {
         email: command.email,
         password: command.password,
@@ -45,6 +45,38 @@ export class AuthRepository implements AuthRepositoryInterface {
         goal: command.goal,
       },
     });
+
+    const [defaultSkin, defaultAccessory, defaultWallpaper, defaultFloor] =
+      await Promise.all([
+        db.shopItem.findUnique({
+          where: { itemKey: "SKIN_BASIC" },
+          select: { id: true },
+        }),
+        db.shopItem.findUnique({
+          where: { itemKey: "ACC_BASIC" },
+          select: { id: true },
+        }),
+        db.shopItem.findUnique({
+          where: { itemKey: "WALL_BASIC" },
+          select: { id: true },
+        }),
+        db.shopItem.findUnique({
+          where: { itemKey: "FLOOR_BASIC" },
+          select: { id: true },
+        }),
+      ]);
+
+    await db.hamster.create({
+      data: {
+        userId: user.id,
+        skinId: defaultSkin!.id,
+        accessoryId: defaultAccessory!.id,
+        wallpaperId: defaultWallpaper!.id,
+        floorId: defaultFloor!.id,
+      },
+    });
+
+    return user;
   }
 
   async updatePassword(

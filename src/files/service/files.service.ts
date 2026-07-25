@@ -52,4 +52,7 @@ export class FilesService {
     const filePath = `${fileType}/${fileName}`;
     return await this.s3Client.getPresignedUrl(filePath, expiry);
   }
+  async generateS3Url(filePath: string, expiry: number) {
+    return await this.s3Client.getPresignedUrl(filePath, expiry);
+  }
 }

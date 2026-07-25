@@ -152,6 +152,7 @@ const characterRepository = new CharacterRepository(prisma);
 const characterService = new CharacterService(
   characterRepository,
   goalsRepository,
+  filesService,
 );
 const character = {
   service: characterService,

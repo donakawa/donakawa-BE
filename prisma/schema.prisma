@@ -39,6 +39,8 @@ model User {
   goals            Goal[]
   attendance       Attendance[]
   attendanceReward AttendanceReward[]
+  hamster Hamster?
+  userItems UserItem[]
 
   @@map("user")
 }
@@ -369,4 +371,76 @@ model AttendanceReward {
 
   @@unique([userId, streakDays, year, month])
   @@map("attendance_reward")
+}
+
+enum ItemCategory {
+  SKIN
+  ACCESSORY
+  WALLPAPER
+  FLOOR
+}
+
+model ShopItem {
+  id         BigInt       @id @default(autoincrement())
+  itemKey    String       @unique @map("item_key") @db.VarChar(30)
+  category   ItemCategory
+  name       String       @db.VarChar(20)
+  price      Int
+  imagePath  String       @map("image_path") @db.VarChar(255)
+  isDefault  Boolean @default(false)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime?    @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  ownedBy    UserItem[]
+  skinImages SkinImage[]
+
+  equippedAsSkin      Hamster[] @relation("EquippedSkin")
+  equippedAsAccessory Hamster[] @relation("EquippedAccessory")
+  equippedAsWallpaper Hamster[] @relation("EquippedWallpaper")
+  equippedAsFloor     Hamster[] @relation("EquippedFloor")
+
+  @@map("shop_item")
+}
+
+model UserItem {
+  id          BigInt   @id @default(autoincrement())
+  userId      BigInt   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId      BigInt   @map("item_id")
+  item        ShopItem @relation(fields: [itemId], references: [id])
+  purchasedAt DateTime @default(now()) @map("purchased_at")
+
+  @@unique([userId, itemId])
+  @@map("user_item")
+}
+
+model SkinImage {
+  id            BigInt   @id @default(autoincrement())
+  skinId        BigInt   @map("skin_id")
+  skin          ShopItem @relation(fields: [skinId], references: [id])
+  expressionKey String   @map("expression_key") @db.VarChar(20)
+  imagePath     String   @map("image_path") @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@unique([skinId, expressionKey])
+  @@map("skin_image")
+}
+
+model Hamster {
+  id            BigInt   @id @default(autoincrement())
+  userId        BigInt   @unique @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skinId        BigInt?  @map("skin_id")
+  accessoryId   BigInt?  @map("accessory_id")
+  wallpaperId   BigInt?  @map("wallpaper_id")
+  floorId       BigInt?  @map("floor_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  skin          ShopItem? @relation("EquippedSkin", fields: [skinId], references: [id])
+  accessory     ShopItem? @relation("EquippedAccessory", fields: [accessoryId], references: [id])
+  wallpaper     ShopItem? @relation("EquippedWallpaper", fields: [wallpaperId], references: [id])
+  floor         ShopItem? @relation("EquippedFloor", fields: [floorId], references: [id])
+
+  @@map("hamster")
 }

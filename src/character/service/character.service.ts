@@ -1,14 +1,27 @@
 import { CharacterRepository } from "../repository/character.repository";
 import { GoalsRepository } from "../../goals/repository/goals.repository";
 import { MessageData } from "../types/message.type";
-import { HamsterTalkResponseDto } from "../dto/response/character.response.dto";
+import { EquipItemRequestDto } from "../dto/request/character.request.dto";
+import {
+  HamsterTalkResponseDto,
+  ShopResponseDto,
+  ShopItemsResponseDto,
+} from "../dto/response/character.response.dto";
 import { MessagePolicy } from "../policy/message.policy";
 import { MessageId } from "../enums/message-id.enum";
+import { ItemCategory } from "@prisma/client";
+import {
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from "../../errors/error";
+import { FilesService } from "../../files/service/files.service";
 
 export class CharacterService {
   constructor(
     private readonly characterRepository: CharacterRepository,
     private readonly goalRepository: GoalsRepository,
+    private readonly filesService: FilesService,
   ) {}
 
   private makeNextCycleDate(incomeDate: Date, originalIncomeDay: number): Date {
@@ -120,5 +133,212 @@ export class CharacterService {
       conditionId: talk.id,
       message: talk.message,
     });
+  }
+
+  // 햄꾸 화면 조회
+  async getHamster(userId: string): Promise<ShopResponseDto> {
+    const [user, hamster] = await Promise.all([
+      this.characterRepository.findUserCoin(userId),
+      this.characterRepository.findHamster(userId),
+    ]);
+
+    if (!hamster) {
+      throw new NotFoundException("H001", "햄스터 정보를 찾을 수 없습니다.");
+    }
+
+    const [skinUrl, accessoryUrl, wallpaperUrl, floorUrl] = await Promise.all([
+      this.filesService.generateS3Url(hamster.skin!.imagePath, 60 * 60),
+      this.filesService.generateS3Url(hamster.accessory!.imagePath, 60 * 60),
+      this.filesService.generateS3Url(hamster.wallpaper!.imagePath, 60 * 60),
+      this.filesService.generateS3Url(hamster.floor!.imagePath, 60 * 60),
+    ]);
+
+    return new ShopResponseDto({
+      coin: user!.coin,
+      equipped: {
+        skin: {
+          itemId: Number(hamster.skin!.id),
+          itemKey: hamster.skin!.itemKey,
+          imageUrl: skinUrl!,
+        },
+        accessory: {
+          itemId: Number(hamster.accessory!.id),
+          itemKey: hamster.accessory!.itemKey,
+          imageUrl: accessoryUrl!,
+        },
+        wallpaper: {
+          itemId: Number(hamster.wallpaper!.id),
+          itemKey: hamster.wallpaper!.itemKey,
+          imageUrl: wallpaperUrl!,
+        },
+        floor: {
+          itemId: Number(hamster.floor!.id),
+          itemKey: hamster.floor!.itemKey,
+          imageUrl: floorUrl!,
+        },
+      },
+    });
+  }
+
+  // 햄꾸 카테고리별 아이템 조회
+  async getShopItems(
+    userId: string,
+    category: ItemCategory,
+  ): Promise<ShopItemsResponseDto> {
+    const [hamster, items, ownedItems] = await Promise.all([
+      this.characterRepository.findHamster(userId),
+      this.characterRepository.findShopItems(category),
+      this.characterRepository.findOwnedItems(userId),
+    ]);
+
+    if (!hamster) {
+      throw new NotFoundException("H001", "햄스터 정보를 찾을 수 없습니다.");
+    }
+
+    const ownedSet = new Set(ownedItems.map((item) => Number(item.itemId)));
+
+    let equippedId: bigint | null = null;
+
+    switch (category) {
+      case ItemCategory.SKIN:
+        equippedId = hamster.skinId;
+        break;
+
+      case ItemCategory.ACCESSORY:
+        equippedId = hamster.accessoryId;
+        break;
+
+      case ItemCategory.WALLPAPER:
+        equippedId = hamster.wallpaperId;
+        break;
+
+      case ItemCategory.FLOOR:
+        equippedId = hamster.floorId;
+        break;
+    }
+
+    const responseItems = await Promise.all(
+      items.map(async (item) => {
+        const imageUrl = await this.filesService.generateS3Url(
+          item.imagePath,
+          60 * 60,
+        );
+
+        return {
+          itemId: Number(item.id),
+          name: item.name,
+          price: item.price,
+          imageUrl,
+          owned: ownedSet.has(Number(item.id)) || item.isDefault,
+          equipped: equippedId === item.id,
+        };
+      }),
+    );
+
+    return new ShopItemsResponseDto({
+      items: responseItems,
+    });
+  }
+
+  // 햄꾸 아이템 구매
+  async purchaseShopItems(userId: string, itemId: number): Promise<void> {
+    const [user, item] = await Promise.all([
+      this.characterRepository.findUserForPurchase(userId),
+      this.characterRepository.findUserItem(BigInt(itemId)),
+    ]);
+
+    if (!item) {
+      throw new NotFoundException("S001", "아이템을 찾을 수 없습니다.");
+    }
+
+    if (item.isDefault) {
+      throw new BadRequestException(
+        "S002",
+        "기본 아이템은 구매할 수 없습니다.",
+      );
+    }
+
+    const owned = await this.characterRepository.findOwnedUserItem(
+      user!.id,
+      item.id,
+    );
+
+    if (owned || item.isDefault) {
+      throw new ConflictException("S003", "이미 보유한 아이템입니다.");
+    }
+
+    if (user!.coin < item.price) {
+      throw new BadRequestException("S004", "코인이 부족합니다.");
+    }
+
+    await this.characterRepository.purchaseItem(user!.id, item.id, item.price);
+  }
+
+  // 햄꾸 아이템 적용
+  async equipShopItems(
+    userId: string,
+    body: EquipItemRequestDto,
+  ): Promise<void> {
+    const updates: {
+      skinId?: bigint;
+      accessoryId?: bigint;
+      wallpaperId?: bigint;
+      floorId?: bigint;
+    } = {};
+
+    const validateItem = async (
+      itemId: number,
+      category: ItemCategory,
+    ): Promise<bigint> => {
+      const item = await this.characterRepository.findUserItem(BigInt(itemId));
+
+      if (!item) {
+        throw new NotFoundException("C001", "존재하지 않는 아이템입니다.");
+      }
+
+      if (item.category !== category) {
+        throw new BadRequestException(
+          "C002",
+          "카테고리가 일치하지 않는 아이템입니다.",
+        );
+      }
+
+      if (!item.isDefault) {
+        const owned = await this.characterRepository.findOwnedUserItem(
+          BigInt(userId),
+          item.id,
+        );
+
+        if (!owned) {
+          throw new BadRequestException("C003", "보유하지 않은 아이템입니다.");
+        }
+      }
+
+      return item.id;
+    };
+
+    if (body.skinId !== undefined) {
+      updates.skinId = await validateItem(body.skinId, ItemCategory.SKIN);
+    }
+
+    if (body.accessoryId !== undefined) {
+      updates.accessoryId = await validateItem(
+        body.accessoryId,
+        ItemCategory.ACCESSORY,
+      );
+    }
+
+    if (body.wallpaperId !== undefined) {
+      updates.wallpaperId = await validateItem(
+        body.wallpaperId,
+        ItemCategory.WALLPAPER,
+      );
+    }
+
+    if (body.floorId !== undefined) {
+      updates.floorId = await validateItem(body.floorId, ItemCategory.FLOOR);
+    }
+
+    await this.characterRepository.equipItems(userId, updates);
   }
 }
