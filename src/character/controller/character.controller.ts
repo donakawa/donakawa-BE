@@ -84,7 +84,7 @@ export class CharacterController {
    * @summary 햄꾸 아이템 구매 API
    */
   @Post("/purchase")
-  @SuccessResponse("200", "햄꾸 아이템 구매 성공")
+  @SuccessResponse("201", "햄꾸 아이템 구매 성공")
   public async purchaseShopItems(
     @Request() req: ExpressRequest,
     @Body() body: PurchaseItemRequestDto,
