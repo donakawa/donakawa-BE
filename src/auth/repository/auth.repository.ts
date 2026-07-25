@@ -46,14 +46,33 @@ export class AuthRepository implements AuthRepositoryInterface {
       },
     });
 
-    // 디폴트 처리 필요
+    const [defaultSkin, defaultAccessory, defaultWallpaper, defaultFloor] =
+      await Promise.all([
+        db.shopItem.findUnique({
+          where: { itemKey: "SKIN_BASIC" },
+          select: { id: true },
+        }),
+        db.shopItem.findUnique({
+          where: { itemKey: "ACC_BASIC" },
+          select: { id: true },
+        }),
+        db.shopItem.findUnique({
+          where: { itemKey: "WALL_BASIC" },
+          select: { id: true },
+        }),
+        db.shopItem.findUnique({
+          where: { itemKey: "FLOOR_BASIC" },
+          select: { id: true },
+        }),
+      ]);
+
     await db.hamster.create({
       data: {
         userId: user.id,
-        skinId: null,
-        accessoryId: null,
-        wallpaperId: null,
-        floorId: null,
+        skinId: defaultSkin!.id,
+        accessoryId: defaultAccessory!.id,
+        wallpaperId: defaultWallpaper!.id,
+        floorId: defaultFloor!.id,
       },
     });
 

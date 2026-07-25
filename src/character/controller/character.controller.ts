@@ -18,6 +18,10 @@ import { AppError } from "../../errors/app.error";
 import { ApiResponse, success } from "../../common/response";
 import { Request as ExpressRequest } from "express";
 import {
+  PurchaseItemRequestDto,
+  EquipItemRequestDto,
+} from "../dto/request/character.request.dto";
+import {
   HamsterTalkResponseDto,
   ShopResponseDto,
   ShopItemsResponseDto,
@@ -65,12 +69,46 @@ export class CharacterController {
    * @summary 햄꾸 카테고리별 아이템 조회 API
    */
   @Get("/items")
+  @SuccessResponse("200", "햄꾸 카테고리별 아이템 조회 성공")
   public async getShopItems(
     @Request() req: ExpressRequest,
     @Query() category: ItemCategory,
   ): Promise<ApiResponse<ShopItemsResponseDto>> {
     const userId = req.user!.id;
     const data = await this.characterService.getShopItems(userId, category);
+
+    return success(data);
+  }
+
+  /**
+   * @summary 햄꾸 아이템 구매 API
+   */
+  @Post("/purchase")
+  @SuccessResponse("200", "햄꾸 아이템 구매 성공")
+  public async purchaseShopItems(
+    @Request() req: ExpressRequest,
+    @Body() body: PurchaseItemRequestDto,
+  ): Promise<ApiResponse<void>> {
+    const userId = req.user!.id;
+    const data = await this.characterService.purchaseShopItems(
+      userId,
+      body.itemId,
+    );
+
+    return success(data);
+  }
+
+  /**
+   * @summary 햄꾸 아이템 적용 API
+   */
+  @Patch("/equip")
+  @SuccessResponse("200", "햄꾸 아이템 적용 성공")
+  public async equipShopItems(
+    @Request() req: ExpressRequest,
+    @Body() body: EquipItemRequestDto,
+  ): Promise<ApiResponse<void>> {
+    const userId = req.user!.id;
+    const data = await this.characterService.equipShopItems(userId, body);
 
     return success(data);
   }

@@ -14,18 +14,27 @@ export class HamsterTalkResponseDto {
 }
 
 export class EquippedItemDto {
-  skinId!: number;
-  accessoryId!: number | null;
-  wallpaperId!: number;
-  floorId!: number;
+  itemId!: number;
+  itemKey!: string;
+  imageUrl!: string;
+
+  constructor(partial: Partial<EquippedItemDto>) {
+    Object.assign(this, partial);
+  }
 }
 
 export class ShopResponseDto {
   coin!: number;
-  equipped!: EquippedItemDto;
 
-  constructor(data: ShopResponseDto) {
-    Object.assign(this, data);
+  equipped!: {
+    skin: EquippedItemDto;
+    accessory: EquippedItemDto;
+    wallpaper: EquippedItemDto;
+    floor: EquippedItemDto;
+  };
+
+  constructor(partial: Partial<ShopResponseDto>) {
+    Object.assign(this, partial);
   }
 }
 

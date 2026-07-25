@@ -180,11 +180,11 @@ export class CharacterRepository {
       where: {
         userId: BigInt(userId),
       },
-      select: {
-        skinId: true,
-        accessoryId: true,
-        wallpaperId: true,
-        floorId: true,
+      include: {
+        skin: true,
+        accessory: true,
+        wallpaper: true,
+        floor: true,
       },
     });
   }
@@ -208,6 +208,76 @@ export class CharacterRepository {
       select: {
         itemId: true,
       },
+    });
+  }
+
+  async findUserItem(itemId: bigint) {
+    return this.prisma.shopItem.findUnique({
+      where: {
+        id: itemId,
+      },
+    });
+  }
+
+  async findOwnedUserItem(userId: bigint, itemId: bigint) {
+    return this.prisma.userItem.findUnique({
+      where: {
+        userId_itemId: {
+          userId,
+          itemId,
+        },
+      },
+    });
+  }
+
+  async purchaseItem(userId: bigint, itemId: bigint, price: number) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          coin: {
+            decrement: price,
+          },
+        },
+      });
+
+      await tx.userItem.create({
+        data: {
+          userId,
+          itemId,
+        },
+      });
+    });
+  }
+
+  async findUserForPurchase(userId: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        id: BigInt(userId),
+      },
+      select: {
+        id: true,
+        coin: true,
+      },
+    });
+  }
+
+  async equipItems(
+    userId: string,
+    updates: {
+      skinId?: bigint;
+      accessoryId?: bigint;
+      wallpaperId?: bigint;
+      floorId?: bigint;
+    },
+  ): Promise<void> {
+    await this.prisma.hamster.update({
+      where: {
+        userId: BigInt(userId),
+      },
+      data: updates,
     });
   }
 }

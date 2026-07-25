@@ -781,10 +781,9 @@ const models: TsoaRoute.Models = {
     "EquippedItemDto": {
         "dataType": "refObject",
         "properties": {
-            "skinId": {"dataType":"double","required":true},
-            "accessoryId": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
-            "wallpaperId": {"dataType":"double","required":true},
-            "floorId": {"dataType":"double","required":true},
+            "itemId": {"dataType":"double","required":true},
+            "itemKey": {"dataType":"string","required":true},
+            "imageUrl": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -793,7 +792,7 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "coin": {"dataType":"double","required":true},
-            "equipped": {"ref":"EquippedItemDto","required":true},
+            "equipped": {"dataType":"nestedObjectLiteral","nestedProperties":{"floor":{"ref":"EquippedItemDto","required":true},"wallpaper":{"ref":"EquippedItemDto","required":true},"accessory":{"ref":"EquippedItemDto","required":true},"skin":{"ref":"EquippedItemDto","required":true}},"required":true},
         },
         "additionalProperties": false,
     },
@@ -847,6 +846,35 @@ const models: TsoaRoute.Models = {
     "ItemCategory": {
         "dataType": "refAlias",
         "type": {"ref":"_36_Enums.ItemCategory","validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_void_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"dataType":"void","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PurchaseItemRequestDto": {
+        "dataType": "refObject",
+        "properties": {
+            "itemId": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "EquipItemRequestDto": {
+        "dataType": "refObject",
+        "properties": {
+            "skinId": {"dataType":"double"},
+            "accessoryId": {"dataType":"double"},
+            "wallpaperId": {"dataType":"double"},
+            "floorId": {"dataType":"double"},
+        },
+        "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "RegisterResponseDto": {
@@ -1177,16 +1205,6 @@ const models: TsoaRoute.Models = {
         "properties": {
             "year": {"dataType":"double"},
             "month": {"dataType":"double"},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ApiResponse_void_": {
-        "dataType": "refObject",
-        "properties": {
-            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
-            "error": {"dataType":"enum","enums":[null],"required":true},
-            "data": {"dataType":"void","required":true},
         },
         "additionalProperties": false,
     },
@@ -2719,7 +2737,71 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 response,
                 next,
                 validatedArgs,
-                successStatus: undefined,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCharacterController_purchaseShopItems: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"PurchaseItemRequestDto"},
+        };
+        app.post('/character/purchase',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(CharacterController)),
+            ...(fetchMiddlewares<RequestHandler>(CharacterController.prototype.purchaseShopItems)),
+
+            async function CharacterController_purchaseShopItems(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCharacterController_purchaseShopItems, request, response });
+
+                const controller = new CharacterController();
+
+              await templateService.apiHandler({
+                methodName: 'purchaseShopItems',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCharacterController_equipShopItems: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"EquipItemRequestDto"},
+        };
+        app.patch('/character/equip',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(CharacterController)),
+            ...(fetchMiddlewares<RequestHandler>(CharacterController.prototype.equipShopItems)),
+
+            async function CharacterController_equipShopItems(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCharacterController_equipShopItems, request, response });
+
+                const controller = new CharacterController();
+
+              await templateService.apiHandler({
+                methodName: 'equipShopItems',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
               });
             } catch (err) {
                 return next(err);
