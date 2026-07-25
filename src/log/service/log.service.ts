@@ -667,10 +667,7 @@ export class LogService {
         continue;
       }
 
-      const date =
-        item.updatedAt
-          .toISOString()
-          .split("T")[0];
+      const date = DateUtil.toDate(item.updatedAt)
 
       const product = {
         name: item.product.name,
@@ -703,10 +700,7 @@ export class LogService {
         continue;
       }
 
-      const date =
-        item.updatedAt
-          .toISOString()
-          .split("T")[0];
+      const date = DateUtil.toDate(item.updatedAt)
 
       const product = {
         name: item.name,
