@@ -59,7 +59,7 @@ export class WishlistRepository {
       });
     return this.prisma.addedItemAuto.findUnique({
       where: { id: BigInt(id) },
-      select: args.select,
+      select: args.select
     });
   }
   async findAddedItemManualById(id: string): Promise<AddedItemManual | null>;

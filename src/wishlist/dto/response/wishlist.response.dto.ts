@@ -208,3 +208,9 @@ export class GetWishListAnalyticsResponseDto {
     this.boughtItems = param.boughtItems;
   }
 }
+export class PassThroughWishitemImageStreamResponseDto {
+  url!: string;
+  constructor(args: Partial<PassThroughWishitemImageStreamResponseDto>) {
+    Object.assign(this, args);
+  }
+}
