@@ -373,13 +373,9 @@ export class LogService {
       moneyGoal: Number(goal.moneyGoal),
       current: Number(goal.current),
       status: goal.status,
-      createdAt: goal.createdAt
-        .toISOString()
-        .split("T")[0],
+      createdAt: DateUtil.toDate(goal.createdAt),
       endedAt: goal.endedAt
-        ? goal.endedAt
-          .toISOString()
-          .split("T")[0]
+        ? DateUtil.toDate(goal.endedAt)
         : null,
     };
   }
@@ -476,13 +472,11 @@ export class LogService {
         title: goal.title,
         moneyGoal: Number(goal.moneyGoal),
         state: goal.status,
-        createdAt: goal.createdAt
-          .toISOString()
-          .split("T")[0],
+        createdAt: DateUtil.toDate(goal.createdAt),
         endedAt:
           goal.endedAt
-            ?.toISOString()
-            .split("T")[0] ?? "",
+            ? DateUtil.toDate(goal.endedAt)
+            : "",
       })),
     };
   }
@@ -511,18 +505,6 @@ export class LogService {
         statusCode: 400,
       });
     }
-
-    // const startDate = new Date(
-    //   year,
-    //   month - 1,
-    //   1,
-    // );
-
-    // const endDate = new Date(
-    //   year,
-    //   month,
-    //   1,
-    // );
 
     const { startDate, endDate } = DateUtil.getMonthRange(year, month);
 
@@ -568,7 +550,7 @@ export class LogService {
     >();
 
     for (const history of histories) {
-      const date = DateUtil.formatDate(history.purchasedDate,);
+      const date = DateUtil.toDate(history.purchasedDate,);
 
       let item: CalendarProduct | null =
         null;
