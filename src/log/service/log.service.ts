@@ -5,6 +5,7 @@ import { LOG_CONVERSION } from "../constant/log.constant";
 import { GoalStatus } from '@prisma/client';
 import { CreateGoalRequest, GetCalendarRequest, UpdateGoalStatusRequest } from '../dto/request/log.request.dto';
 import { AppError } from '../../errors/app.error';
+import { DateUtil } from '../util/log.util';
 
 export class LogService {
   constructor(private logRepository: LogRepository) { }
@@ -70,9 +71,7 @@ export class LogService {
         : 0;
 
     return {
-      since: user!.createdAt
-        .toISOString()
-        .split("T")[0],
+      since: DateUtil.toDate(user!.createdAt),
 
       period,
 
@@ -245,18 +244,9 @@ export class LogService {
     dates: Date[],
   ): string {
     if (dates.length === 0) {
-      return "NONE";
+      return "???";
     }
 
-    const dayNames = [
-      "SUN",
-      "MON",
-      "TUE",
-      "WED",
-      "THU",
-      "FRI",
-      "SAT",
-    ];
 
     const stats = new Map<
       string,
@@ -267,7 +257,7 @@ export class LogService {
     >();
 
     dates.forEach((date) => {
-      const day = dayNames[date.getDay()];
+      const day = DateUtil.getDayName(date);
 
       const existing = stats.get(day);
 
@@ -522,30 +512,32 @@ export class LogService {
       });
     }
 
-    const startDate = new Date(
-      year,
-      month - 1,
-      1,
-    );
+    // const startDate = new Date(
+    //   year,
+    //   month - 1,
+    //   1,
+    // );
 
-    const endDate = new Date(
-      year,
-      month,
-      1,
-    );
+    // const endDate = new Date(
+    //   year,
+    //   month,
+    //   1,
+    // );
+
+    const { startDate, endDate } = DateUtil.getMonthRange(year, month);
 
     const calendar =
       type === "BOUGHT"
         ? await this.getBoughtCalendar(
-            userId,
-            startDate,
-            endDate,
-          )
+          userId,
+          startDate,
+          endDate,
+        )
         : await this.getDroppedCalendar(
-            userId,
-            startDate,
-            endDate,
-          );
+          userId,
+          startDate,
+          endDate,
+        );
 
     return {
       year,
@@ -576,10 +568,7 @@ export class LogService {
     >();
 
     for (const history of histories) {
-      const date =
-        history.purchasedDate
-          .toISOString()
-          .split("T")[0];
+      const date = DateUtil.formatDate(history.purchasedDate,);
 
       let item: CalendarProduct | null =
         null;
@@ -678,10 +667,7 @@ export class LogService {
         continue;
       }
 
-      const date =
-        item.updatedAt
-          .toISOString()
-          .split("T")[0];
+      const date = DateUtil.toDate(item.updatedAt)
 
       const product = {
         name: item.product.name,
@@ -714,10 +700,7 @@ export class LogService {
         continue;
       }
 
-      const date =
-        item.updatedAt
-          .toISOString()
-          .split("T")[0];
+      const date = DateUtil.toDate(item.updatedAt)
 
       const product = {
         name: item.name,

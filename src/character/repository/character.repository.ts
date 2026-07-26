@@ -1,8 +1,14 @@
-import { Prisma, PrismaClient, AddedItemStatus } from "@prisma/client";
+import {
+  Prisma,
+  PrismaClient,
+  AddedItemStatus,
+  ItemCategory,
+} from "@prisma/client";
 
 export class CharacterRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  // 햄스터 한마디
   // 일상
   async findUser(userId: string) {
     return this.prisma.user.findUnique({
@@ -154,6 +160,124 @@ export class CharacterRepository {
       data: {
         loginGreetingShown: true,
       },
+    });
+  }
+
+  // 햄꾸
+  async findUserCoin(userId: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        id: BigInt(userId),
+      },
+      select: {
+        coin: true,
+      },
+    });
+  }
+
+  async findHamster(userId: string) {
+    return this.prisma.hamster.findUnique({
+      where: {
+        userId: BigInt(userId),
+      },
+      include: {
+        skin: true,
+        accessory: true,
+        wallpaper: true,
+        floor: true,
+      },
+    });
+  }
+
+  async findShopItems(category: ItemCategory) {
+    return this.prisma.shopItem.findMany({
+      where: {
+        category,
+      },
+      orderBy: {
+        id: "asc",
+      },
+    });
+  }
+
+  async findOwnedItems(userId: string) {
+    return this.prisma.userItem.findMany({
+      where: {
+        userId: BigInt(userId),
+      },
+      select: {
+        itemId: true,
+      },
+    });
+  }
+
+  async findUserItem(itemId: bigint) {
+    return this.prisma.shopItem.findUnique({
+      where: {
+        id: itemId,
+      },
+    });
+  }
+
+  async findOwnedUserItem(userId: bigint, itemId: bigint) {
+    return this.prisma.userItem.findUnique({
+      where: {
+        userId_itemId: {
+          userId,
+          itemId,
+        },
+      },
+    });
+  }
+
+  async purchaseItem(userId: bigint, itemId: bigint, price: number) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          coin: {
+            decrement: price,
+          },
+        },
+      });
+
+      await tx.userItem.create({
+        data: {
+          userId,
+          itemId,
+        },
+      });
+    });
+  }
+
+  async findUserForPurchase(userId: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        id: BigInt(userId),
+      },
+      select: {
+        id: true,
+        coin: true,
+      },
+    });
+  }
+
+  async equipItems(
+    userId: string,
+    updates: {
+      skinId?: bigint;
+      accessoryId?: bigint;
+      wallpaperId?: bigint;
+      floorId?: bigint;
+    },
+  ): Promise<void> {
+    await this.prisma.hamster.update({
+      where: {
+        userId: BigInt(userId),
+      },
+      data: updates,
     });
   }
 }
