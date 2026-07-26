@@ -36,12 +36,6 @@ export class DateUtil {
         ];
     }
 
-    static formatDate(date: Date): string {
-        return dayjs(date)
-            .tz("Asia/Seoul")
-            .format("YYYY-MM-DD");
-    }
-
     static getMonthRange(
         year: number,
         month: number,
