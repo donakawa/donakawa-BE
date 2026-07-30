@@ -23,9 +23,10 @@ export class EquippedItemDto {
   }
 }
 
-export class ShopResponseDto {
+export class HamsterInfoResponseDto {
   coin!: number;
-
+  pooCount!: number;
+  hamsterImageUrl!: string;
   equipped!: {
     skin: EquippedItemDto;
     accessory: EquippedItemDto;
@@ -33,7 +34,7 @@ export class ShopResponseDto {
     floor: EquippedItemDto;
   };
 
-  constructor(partial: Partial<ShopResponseDto>) {
+  constructor(partial: Partial<HamsterInfoResponseDto>) {
     Object.assign(this, partial);
   }
 }
@@ -52,6 +53,16 @@ export class ShopItemsResponseDto {
   items!: ShopItemDto[];
 
   constructor(data: ShopItemsResponseDto) {
+    Object.assign(this, data);
+  }
+}
+
+export class CleanPooResponseDto {
+  rewardCoin!: number;
+  currentCoin!: number;
+  pooCount!: number;
+
+  constructor(data: CleanPooResponseDto) {
     Object.assign(this, data);
   }
 }

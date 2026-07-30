@@ -4,6 +4,7 @@ import {
   AddedItemStatus,
   ItemCategory,
 } from "@prisma/client";
+import { ExpressionKey } from "../enums/expression.enum";
 
 export class CharacterRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -278,6 +279,55 @@ export class CharacterRepository {
         userId: BigInt(userId),
       },
       data: updates,
+    });
+  }
+
+  async updatePooCount(userId: string, pooCount: number) {
+    return this.prisma.hamster.update({
+      where: {
+        userId: BigInt(userId),
+      },
+      data: {
+        pooCount,
+      },
+    });
+  }
+
+  async cleanPoo(userId: string, pooCount: number) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.hamster.update({
+        where: {
+          userId: BigInt(userId),
+        },
+        data: {
+          pooCount,
+        },
+      });
+
+      return tx.user.update({
+        where: {
+          id: BigInt(userId),
+        },
+        data: {
+          coin: {
+            increment: 2,
+          },
+        },
+        select: {
+          coin: true,
+        },
+      });
+    });
+  }
+
+  async findSkinImage(skinId: bigint, expressionKey: ExpressionKey) {
+    return this.prisma.skinImage.findUnique({
+      where: {
+        skinId_expressionKey: {
+          skinId,
+          expressionKey,
+        },
+      },
     });
   }
 }

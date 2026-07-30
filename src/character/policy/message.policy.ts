@@ -1,4 +1,4 @@
-import { MessageId } from "../enums/message-id.enum";
+import { MessageId } from "../enums/message.enum";
 import { TALK_MESSAGES } from "../constants/message.constant";
 import { TalkCandidate } from "../types/message.type";
 import { MessageData } from "../types/message.type";

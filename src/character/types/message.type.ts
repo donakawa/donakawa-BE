@@ -1,4 +1,4 @@
-import { MessageId } from "../enums/message-id.enum";
+import { MessageId } from "../enums/message.enum";
 
 export interface TalkCandidate {
   id: MessageId;
