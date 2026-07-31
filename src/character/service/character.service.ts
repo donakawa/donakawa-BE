@@ -47,7 +47,7 @@ export class CharacterService {
     userId: string,
   ) {
     if (!lastLoginAt) {
-      return;
+      return currentPooCount;
     }
 
     const diffHours = (Date.now() - lastLoginAt.getTime()) / (1000 * 60 * 60);
@@ -59,7 +59,7 @@ export class CharacterService {
     }
 
     if (createCount <= 0) {
-      return;
+      return currentPooCount;
     }
 
     const nextPooCount = Math.min(currentPooCount + createCount, 3);
@@ -67,12 +67,13 @@ export class CharacterService {
     if (nextPooCount !== currentPooCount) {
       await this.characterRepository.updatePooCount(userId, nextPooCount);
     }
+
+    return nextPooCount;
   }
 
   private getExpressionKey(messageId: MessageId): ExpressionKey {
     switch (messageId) {
       case MessageId.TALK_01:
-      case MessageId.TALK_02:
         return ExpressionKey.TALK;
 
       case MessageId.BUD_03:
@@ -144,8 +145,11 @@ export class CharacterService {
     const lastLoginAt = user!.lastLoginAt;
     const showLoginGreeting = !user!.loginGreetingShown;
     const hamster = await this.characterRepository.findHamster(userId);
-
-    await this.createPoo(user!.lastLoginAt, hamster!.pooCount, userId);
+    const pooCount = await this.createPoo(
+      user!.lastLoginAt,
+      hamster!.pooCount,
+      userId,
+    );
 
     const talkData: MessageData = {
       user,
@@ -158,6 +162,7 @@ export class CharacterService {
       showGoalMonthlyWelcome,
       lastLoginAt,
       showLoginGreeting,
+      pooCount,
     };
 
     const talk = MessagePolicy.select(talkData);
@@ -425,6 +430,11 @@ export class CharacterService {
   // 청소 보상
   async cleanPoo(userId: string): Promise<CleanPooResponseDto> {
     const hamster = await this.characterRepository.findHamster(userId);
+
+    if (hamster!.pooCount <= 0) {
+      throw new BadRequestException("P001", "청소할 것이 없습니다.");
+    }
+
     const user = await this.characterRepository.cleanPoo(
       userId,
       hamster!.pooCount - 1,

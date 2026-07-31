@@ -20,4 +20,5 @@ export interface MessageData {
   showGoalMonthlyWelcome: boolean;
   lastLoginAt: Date | null;
   showLoginGreeting: boolean;
+  pooCount: number;
 }

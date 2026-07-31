@@ -14,18 +14,24 @@ export class MessagePolicy {
 
     console.log(candidates);
 
-    if (candidates.length === 0) {
-      return this.create(MessageId.DEFAULT);
+    if (data.showLoginGreeting) {
+      const greeting = candidates.find(
+        (candidate) =>
+          candidate.id === MessageId.TALK_01 ||
+          candidate.id === MessageId.TALK_02,
+      );
+
+      if (greeting) {
+        return greeting;
+      }
     }
 
-    const greeting = candidates.find(
-      (candidate) =>
-        candidate.id === MessageId.TALK_01 ||
-        candidate.id === MessageId.TALK_02,
-    );
+    if (data.pooCount > 0) {
+      return this.create(MessageId.TALK_01);
+    }
 
-    if (greeting) {
-      return greeting;
+    if (candidates.length === 0) {
+      return this.create(MessageId.DEFAULT);
     }
 
     return candidates.sort((a, b) => b.priority - a.priority)[0];
