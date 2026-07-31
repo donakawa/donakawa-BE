@@ -170,6 +170,7 @@ export class CharacterService {
       talk,
       currentYear,
       currentMonth,
+      pooCount,
     };
   }
 
@@ -220,7 +221,7 @@ export class CharacterService {
       this.filesService.generateS3Url(hamster.floor!.imagePath, 60 * 60),
     ]);
 
-    const { talk } = await this.getCurrentCondition(userId);
+    const { talk, pooCount } = await this.getCurrentCondition(userId);
     const expression = this.getExpressionKey(talk.id);
 
     const skinImage = await this.characterRepository.findSkinImage(
@@ -238,7 +239,7 @@ export class CharacterService {
 
     return new HamsterInfoResponseDto({
       coin: user!.coin,
-      pooCount: hamster.pooCount,
+      pooCount,
       hamsterImageUrl,
       equipped: {
         skin: {

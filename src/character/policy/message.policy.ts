@@ -12,8 +12,6 @@ export class MessagePolicy {
     this.addGoal(candidates, data);
     this.addSave(candidates, data);
 
-    console.log(candidates);
-
     if (data.showLoginGreeting) {
       const greeting = candidates.find(
         (candidate) =>
