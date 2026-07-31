@@ -436,6 +436,7 @@ model Hamster {
   floorId       BigInt?  @map("floor_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+  pooCount      Int      @default(0) @map("poo_count")
 
   skin          ShopItem? @relation("EquippedSkin", fields: [skinId], references: [id])
   accessory     ShopItem? @relation("EquippedAccessory", fields: [accessoryId], references: [id])

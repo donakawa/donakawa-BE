@@ -23,8 +23,9 @@ import {
 } from "../dto/request/character.request.dto";
 import {
   HamsterTalkResponseDto,
-  ShopResponseDto,
+  HamsterInfoResponseDto,
   ShopItemsResponseDto,
+  CleanPooResponseDto,
 } from "../dto/response/character.response.dto";
 import { CharacterService } from "../service/character.service";
 import { container } from "../../container";
@@ -58,7 +59,7 @@ export class CharacterController {
   @SuccessResponse("200", "햄꾸 화면 조회 성공")
   public async getHamster(
     @Request() req: ExpressRequest,
-  ): Promise<ApiResponse<ShopResponseDto>> {
+  ): Promise<ApiResponse<HamsterInfoResponseDto>> {
     const userId = req.user!.id;
     const data = await this.characterService.getHamster(userId);
 
@@ -109,6 +110,20 @@ export class CharacterController {
   ): Promise<ApiResponse<void>> {
     const userId = req.user!.id;
     const data = await this.characterService.equipShopItems(userId, body);
+
+    return success(data);
+  }
+
+  /**
+   * @summary 청소 보상 API
+   */
+  @Post("/poo/clean")
+  @SuccessResponse("200", "청소 보상 획득 성공")
+  public async cleanPoo(
+    @Request() req: ExpressRequest,
+  ): Promise<ApiResponse<CleanPooResponseDto>> {
+    const userId = req.user!.id;
+    const data = await this.characterService.cleanPoo(userId);
 
     return success(data);
   }

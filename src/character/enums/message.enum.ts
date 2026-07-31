@@ -16,3 +16,9 @@ export enum MessageId {
   SAVE_02 = "SAVE-02",
   SAVE_03 = "SAVE-03",
 }
+
+export enum MessagePriority {
+  HIGH = 3,
+  MIDDLE = 2,
+  LOW = 1,
+}
