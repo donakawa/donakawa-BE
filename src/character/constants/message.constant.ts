@@ -1,5 +1,5 @@
-import { MessageId } from "../enums/message-id.enum";
-import { MessagePriority } from "../enums/message-priority.enum";
+import { MessageId } from "../enums/message.enum";
+import { MessagePriority } from "../enums/message.enum";
 
 export const TALK_MESSAGES = {
   [MessageId.DEFAULT]: {
@@ -61,4 +61,10 @@ export const TALK_MESSAGES = {
     priority: MessagePriority.LOW,
     message: "방금 최소 일하는 시간 1시간은 아꼈어!",
   },
+} as const;
+
+export const MESSAGE_PRIORITY = {
+  HIGH: MessagePriority.HIGH,
+  MIDDLE: MessagePriority.MIDDLE,
+  LOW: MessagePriority.LOW,
 } as const;

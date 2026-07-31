@@ -4,11 +4,13 @@ import { MessageData } from "../types/message.type";
 import { EquipItemRequestDto } from "../dto/request/character.request.dto";
 import {
   HamsterTalkResponseDto,
-  ShopResponseDto,
+  HamsterInfoResponseDto,
   ShopItemsResponseDto,
+  CleanPooResponseDto,
 } from "../dto/response/character.response.dto";
 import { MessagePolicy } from "../policy/message.policy";
-import { MessageId } from "../enums/message-id.enum";
+import { MessageId } from "../enums/message.enum";
+import { ExpressionKey } from "../enums/expression.enum";
 import { ItemCategory } from "@prisma/client";
 import {
   NotFoundException,
@@ -39,8 +41,55 @@ export class CharacterService {
     return next;
   }
 
-  // 도나햄 한마디 조회
-  async getHamsterTalk(userId: string): Promise<HamsterTalkResponseDto> {
+  private async createPoo(
+    lastLoginAt: Date | null,
+    currentPooCount: number,
+    userId: string,
+  ) {
+    if (!lastLoginAt) {
+      return currentPooCount;
+    }
+
+    const diffHours = (Date.now() - lastLoginAt.getTime()) / (1000 * 60 * 60);
+
+    let createCount = 0;
+
+    if (diffHours >= 72) {
+      createCount = 1 + Math.floor((diffHours - 72) / 48);
+    }
+
+    if (createCount <= 0) {
+      return currentPooCount;
+    }
+
+    const nextPooCount = Math.min(currentPooCount + createCount, 3);
+
+    if (nextPooCount !== currentPooCount) {
+      await this.characterRepository.updatePooCount(userId, nextPooCount);
+    }
+
+    return nextPooCount;
+  }
+
+  private getExpressionKey(messageId: MessageId): ExpressionKey {
+    switch (messageId) {
+      case MessageId.TALK_01:
+        return ExpressionKey.TALK;
+
+      case MessageId.BUD_03:
+        return ExpressionKey.BUD;
+
+      case MessageId.SAVE_01:
+      case MessageId.SAVE_02:
+      case MessageId.SAVE_03:
+        return ExpressionKey.SAVE;
+
+      default:
+        return ExpressionKey.DEFAULT;
+    }
+  }
+
+  private async getCurrentCondition(userId: string) {
     const now = new Date();
     now.setUTCHours(0, 0, 0, 0);
 
@@ -95,6 +144,12 @@ export class CharacterService {
     );
     const lastLoginAt = user!.lastLoginAt;
     const showLoginGreeting = !user!.loginGreetingShown;
+    const hamster = await this.characterRepository.findHamster(userId);
+    const pooCount = await this.createPoo(
+      user!.lastLoginAt,
+      hamster!.pooCount,
+      userId,
+    );
 
     const talkData: MessageData = {
       user,
@@ -107,9 +162,22 @@ export class CharacterService {
       showGoalMonthlyWelcome,
       lastLoginAt,
       showLoginGreeting,
+      pooCount,
     };
 
     const talk = MessagePolicy.select(talkData);
+    return {
+      talk,
+      currentYear,
+      currentMonth,
+      pooCount,
+    };
+  }
+
+  // 도나햄 한마디 조회
+  async getHamsterTalk(userId: string): Promise<HamsterTalkResponseDto> {
+    const { talk, currentYear, currentMonth } =
+      await this.getCurrentCondition(userId);
 
     if (talk.id === MessageId.TALK_01 || talk.id === MessageId.TALK_02) {
       await this.characterRepository.updateLoginGreetingShown(userId);
@@ -136,7 +204,7 @@ export class CharacterService {
   }
 
   // 햄꾸 화면 조회
-  async getHamster(userId: string): Promise<ShopResponseDto> {
+  async getHamster(userId: string): Promise<HamsterInfoResponseDto> {
     const [user, hamster] = await Promise.all([
       this.characterRepository.findUserCoin(userId),
       this.characterRepository.findHamster(userId),
@@ -153,8 +221,26 @@ export class CharacterService {
       this.filesService.generateS3Url(hamster.floor!.imagePath, 60 * 60),
     ]);
 
-    return new ShopResponseDto({
+    const { talk, pooCount } = await this.getCurrentCondition(userId);
+    const expression = this.getExpressionKey(talk.id);
+
+    const skinImage = await this.characterRepository.findSkinImage(
+      hamster.skinId!,
+      expression,
+    );
+    if (!skinImage) {
+      throw new NotFoundException("H002", "햄스터 정보를 찾을 수 없습니다.");
+    }
+
+    const hamsterImageUrl = await this.filesService.generateS3Url(
+      skinImage.imagePath,
+      60 * 60,
+    );
+
+    return new HamsterInfoResponseDto({
       coin: user!.coin,
+      pooCount,
+      hamsterImageUrl,
       equipped: {
         skin: {
           itemId: Number(hamster.skin!.id),
@@ -293,12 +379,12 @@ export class CharacterService {
       const item = await this.characterRepository.findUserItem(BigInt(itemId));
 
       if (!item) {
-        throw new NotFoundException("C001", "존재하지 않는 아이템입니다.");
+        throw new NotFoundException("S001", "아이템을 찾을 수 없습니다.");
       }
 
       if (item.category !== category) {
         throw new BadRequestException(
-          "C002",
+          "S005",
           "카테고리가 일치하지 않는 아이템입니다.",
         );
       }
@@ -310,7 +396,7 @@ export class CharacterService {
         );
 
         if (!owned) {
-          throw new BadRequestException("C003", "보유하지 않은 아이템입니다.");
+          throw new BadRequestException("S006", "보유하지 않은 아이템입니다.");
         }
       }
 
@@ -340,5 +426,25 @@ export class CharacterService {
     }
 
     await this.characterRepository.equipItems(userId, updates);
+  }
+
+  // 청소 보상
+  async cleanPoo(userId: string): Promise<CleanPooResponseDto> {
+    const hamster = await this.characterRepository.findHamster(userId);
+
+    if (hamster!.pooCount <= 0) {
+      throw new BadRequestException("P001", "청소할 것이 없습니다.");
+    }
+
+    const user = await this.characterRepository.cleanPoo(
+      userId,
+      hamster!.pooCount - 1,
+    );
+
+    return new CleanPooResponseDto({
+      rewardCoin: 2,
+      currentCoin: user.coin,
+      pooCount: hamster!.pooCount - 1,
+    });
   }
 }

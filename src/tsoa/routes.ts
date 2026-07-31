@@ -787,21 +787,23 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ShopResponseDto": {
+    "HamsterInfoResponseDto": {
         "dataType": "refObject",
         "properties": {
             "coin": {"dataType":"double","required":true},
+            "pooCount": {"dataType":"double","required":true},
+            "hamsterImageUrl": {"dataType":"string","required":true},
             "equipped": {"dataType":"nestedObjectLiteral","nestedProperties":{"floor":{"ref":"EquippedItemDto","required":true},"wallpaper":{"ref":"EquippedItemDto","required":true},"accessory":{"ref":"EquippedItemDto","required":true},"skin":{"ref":"EquippedItemDto","required":true}},"required":true},
         },
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ApiResponse_ShopResponseDto_": {
+    "ApiResponse_HamsterInfoResponseDto_": {
         "dataType": "refObject",
         "properties": {
             "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
             "error": {"dataType":"enum","enums":[null],"required":true},
-            "data": {"ref":"ShopResponseDto","required":true},
+            "data": {"ref":"HamsterInfoResponseDto","required":true},
         },
         "additionalProperties": false,
     },
@@ -872,6 +874,26 @@ const models: TsoaRoute.Models = {
             "accessoryId": {"dataType":"double"},
             "wallpaperId": {"dataType":"double"},
             "floorId": {"dataType":"double"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CleanPooResponseDto": {
+        "dataType": "refObject",
+        "properties": {
+            "rewardCoin": {"dataType":"double","required":true},
+            "currentCoin": {"dataType":"double","required":true},
+            "pooCount": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_CleanPooResponseDto_": {
+        "dataType": "refObject",
+        "properties": {
+            "resultType": {"dataType":"enum","enums":["SUCCESS"],"required":true},
+            "error": {"dataType":"enum","enums":[null],"required":true},
+            "data": {"ref":"CleanPooResponseDto","required":true},
         },
         "additionalProperties": false,
     },
@@ -2801,7 +2823,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 response,
                 next,
                 validatedArgs,
-                successStatus: 200,
+                successStatus: 201,
               });
             } catch (err) {
                 return next(err);
@@ -2829,6 +2851,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'equipShopItems',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCharacterController_cleanPoo: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.post('/character/poo/clean',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(CharacterController)),
+            ...(fetchMiddlewares<RequestHandler>(CharacterController.prototype.cleanPoo)),
+
+            async function CharacterController_cleanPoo(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCharacterController_cleanPoo, request, response });
+
+                const controller = new CharacterController();
+
+              await templateService.apiHandler({
+                methodName: 'cleanPoo',
                 controller,
                 response,
                 next,

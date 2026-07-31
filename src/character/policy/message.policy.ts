@@ -1,4 +1,4 @@
-import { MessageId } from "../enums/message-id.enum";
+import { MessageId } from "../enums/message.enum";
 import { TALK_MESSAGES } from "../constants/message.constant";
 import { TalkCandidate } from "../types/message.type";
 import { MessageData } from "../types/message.type";
@@ -12,20 +12,24 @@ export class MessagePolicy {
     this.addGoal(candidates, data);
     this.addSave(candidates, data);
 
-    console.log(candidates);
+    if (data.showLoginGreeting) {
+      const greeting = candidates.find(
+        (candidate) =>
+          candidate.id === MessageId.TALK_01 ||
+          candidate.id === MessageId.TALK_02,
+      );
+
+      if (greeting) {
+        return greeting;
+      }
+    }
+
+    if (data.pooCount > 0) {
+      return this.create(MessageId.TALK_01);
+    }
 
     if (candidates.length === 0) {
       return this.create(MessageId.DEFAULT);
-    }
-
-    const greeting = candidates.find(
-      (candidate) =>
-        candidate.id === MessageId.TALK_01 ||
-        candidate.id === MessageId.TALK_02,
-    );
-
-    if (greeting) {
-      return greeting;
     }
 
     return candidates.sort((a, b) => b.priority - a.priority)[0];
