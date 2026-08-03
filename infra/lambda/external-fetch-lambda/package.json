@@ -1,0 +1,10 @@
+{
+  "name": "donakawa-external-fetch-lambda",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "index.mjs",
+  "engines": {
+    "node": ">=20"
+  }
+}
