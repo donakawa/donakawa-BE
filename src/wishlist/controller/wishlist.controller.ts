@@ -53,15 +53,38 @@ import {
   ShowWishitemsInFolderResponseDto,
 } from "../dto/response/wishlist.response.dto";
 import { validateImageFile } from "../policy/upload.policy";
-import { BadRequestException } from "../../errors/error";
+import { BadRequestException, InfrastructureException } from "../../errors/error";
 import { WishitemType } from "../types/wishitem.types";
-import axios from "axios";
+import { Lambda } from "aws-sdk";
+import { Readable } from "stream";
 
 const imageContentTypesByExt: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",
   ".webp": "image/webp",
+};
+
+const externalFetchLambda = new Lambda({
+  region: process.env.AWS_REGION ?? "ap-northeast-2",
+  ...(process.env.AWS_LAMBDA_ACCESS_KEY && process.env.AWS_LAMBDA_SECRET_KEY
+    ? {
+        credentials: {
+          accessKeyId: process.env.AWS_LAMBDA_ACCESS_KEY,
+          secretAccessKey: process.env.AWS_LAMBDA_SECRET_KEY,
+        },
+      }
+    : {}),
+});
+
+const EXTERNAL_FETCH_LAMBDA_NAME =
+  process.env.EXTERNAL_FETCH_LAMBDA_NAME ?? "donakawa-external-fetch-lambda";
+
+type ExternalFetchLambdaResponse = {
+  statusCode?: number;
+  headers?: Record<string, string | string[] | undefined>;
+  body?: string;
+  isBase64Encoded?: boolean;
 };
 
 function resolveImageContentType(contentType: unknown, imageUrl: string) {
@@ -78,6 +101,70 @@ function resolveImageContentType(contentType: unknown, imageUrl: string) {
     pathname.endsWith(key),
   );
   return ext ? imageContentTypesByExt[ext] : "image/jpeg";
+}
+
+function getHeader(
+  headers: ExternalFetchLambdaResponse["headers"],
+  headerName: string,
+) {
+  if (!headers) return undefined;
+
+  const matchedKey = Object.keys(headers).find(
+    (key) => key.toLowerCase() === headerName.toLowerCase(),
+  );
+  const value = matchedKey ? headers[matchedKey] : undefined;
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function parseLambdaPayload(payload: Lambda.InvocationResponse["Payload"]) {
+  if (!payload) {
+    throw new InfrastructureException(
+      "EXTERNAL_FETCH_EMPTY_RESPONSE",
+      "외부 이미지 요청 응답이 비어 있습니다.",
+    );
+  }
+
+  const rawPayload =
+    typeof payload === "string"
+      ? payload
+      : Buffer.from(payload as Buffer | Uint8Array).toString("utf-8");
+
+  return JSON.parse(rawPayload) as ExternalFetchLambdaResponse;
+}
+
+async function getImageStreamFromExternalFetchLambda(imageUrl: string) {
+  const invokeResult = await externalFetchLambda
+    .invoke({
+      FunctionName: EXTERNAL_FETCH_LAMBDA_NAME,
+      InvocationType: "RequestResponse",
+      Payload: JSON.stringify({
+        url: imageUrl,
+        responseType: "base64",
+      }),
+    })
+    .promise();
+
+  if (invokeResult.FunctionError) {
+    throw new InfrastructureException(
+      "EXTERNAL_FETCH_LAMBDA_ERROR",
+      "외부 이미지 요청 Lambda 실행에 실패했습니다.",
+      { functionError: invokeResult.FunctionError },
+    );
+  }
+
+  const lambdaResponse = parseLambdaPayload(invokeResult.Payload);
+  const statusCode = lambdaResponse.statusCode ?? 200;
+  const body = lambdaResponse.body ?? "";
+  const imageBuffer = Buffer.from(
+    body,
+    lambdaResponse.isBase64Encoded ? "base64" : "utf-8",
+  );
+
+  return {
+    statusCode,
+    headers: lambdaResponse.headers,
+    stream: Readable.from(imageBuffer),
+  };
 }
 
 @Route("/wishlist")
@@ -256,20 +343,20 @@ export class WishlistController extends Controller {
       type
     });
     const imageUrl = await this.wishlistService.getImageUrl(reqDto);
-    const upstream = await axios.get(imageUrl!.url, {
-      responseType: "stream",
-      timeout:5000,
-    })
-    res.status(upstream.status);
+    const upstream = await getImageStreamFromExternalFetchLambda(imageUrl!.url);
+    res.status(upstream.statusCode);
     res.setHeader(
       "Content-Type",
-      resolveImageContentType(upstream.headers["content-type"], imageUrl!.url),
+      resolveImageContentType(
+        getHeader(upstream.headers, "content-type"),
+        imageUrl!.url,
+      ),
     );
     res.setHeader("Content-Disposition", "inline");
     res.setHeader("Cache-Control", "private, max-age=3600");
     await new Promise<void>((resolve, reject) => {
-      upstream.data.pipe(res);
-      upstream.data.on("error", (err:Error) => {
+      upstream.stream.pipe(res);
+      upstream.stream.on("error", (err:Error) => {
         if (res.headersSent) {
           res.destroy(err);
           return resolve();
