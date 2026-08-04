@@ -21,7 +21,7 @@ import { compareHash, hashingString } from "../util/encrypt.util";
 import { PasswordUtil } from "../util/password.util";
 import jwt from "jsonwebtoken";
 import { v4 as uuid } from "uuid";
-import nodemailer from "nodemailer";
+import { Lambda } from "aws-sdk";
 import { EmailVerifyTypeEnum } from "../enums/send-email.enum";
 import { LoginRequestDto } from "../dto/request/auth.request.dto";
 import { LoginResult } from "../../types/login-result.type";
@@ -32,6 +32,26 @@ import { VerifyPasswordTypeEnum } from "../enums/verify-password.enum";
 import { KakaoOAuthService } from "./kakao-oauth.service";
 import { RedisKeys, RedisTTL } from "../constants/redis-keys.constant";
 import { Limits } from "../constants/limits.constant";
+
+const emailSendLambda = new Lambda({
+  region: process.env.AWS_REGION ?? "ap-northeast-2",
+  ...(process.env.AWS_LAMBDA_ACCESS_KEY && process.env.AWS_LAMBDA_SECRET_KEY
+    ? {
+        credentials: {
+          accessKeyId: process.env.AWS_LAMBDA_ACCESS_KEY,
+          secretAccessKey: process.env.AWS_LAMBDA_SECRET_KEY,
+        },
+      }
+    : {}),
+});
+
+const EMAIL_SEND_LAMBDA_NAME =
+  process.env.EMAIL_SEND_LAMBDA_NAME ?? "donakawa-email-send-lambda";
+
+type EmailSendLambdaResponse = {
+  statusCode?: number;
+  body?: string;
+};
 
 export class AuthService {
   private readonly ACCESS_TOKEN_EXPIRES_IN = "15m";
@@ -530,56 +550,57 @@ export class AuthService {
     code: string,
     type: EmailVerifyTypeEnum,
   ): Promise<void> {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
+    const invokeResult = await emailSendLambda
+      .invoke({
+        FunctionName: EMAIL_SEND_LAMBDA_NAME,
+        InvocationType: "RequestResponse",
+        Payload: JSON.stringify({
+          to: email,
+          code,
+          type,
+          ttlMinutes: Math.floor(RedisTTL.EMAIL_VERIFICATION_CODE / 60),
+        }),
+      })
+      .promise();
 
-    const emailTemplates = {
-      REGISTER: {
-        subject: "[회원가입] Donakawa 이메일 인증 코드",
-        title: "Donakawa 회원가입 이메일 인증",
-        description: "아래 인증 코드를 입력해 회원가입을 완료해주세요.",
-      },
-      RESET_PASSWORD: {
-        subject: "[비밀번호 재설정] Donakawa 이메일 인증 코드",
-        title: "Donakawa 비밀번호 재설정 인증",
-        description: "아래 인증 코드를 입력해 비밀번호 재설정을 진행해주세요.",
-      },
-    };
+    if (invokeResult.FunctionError) {
+      throw new InfrastructureException(
+        "EMAIL_SEND_LAMBDA_ERROR",
+        "이메일 전송 Lambda 실행에 실패했습니다.",
+        { functionError: invokeResult.FunctionError },
+      );
+    }
 
-    const template = emailTemplates[type];
+    const lambdaResponse = this.parseEmailSendLambdaPayload(
+      invokeResult.Payload,
+    );
+    const statusCode = lambdaResponse.statusCode ?? 200;
 
-    await transporter.sendMail({
-      from: `"Donakawa" <${process.env.SMTP_USER}>`,
-      to: email,
-      subject: template.subject,
-      html: `
-      <div style="font-family: Arial, sans-serif; color: #333;">
-        <h2 style="color: #7A5751;">${template.title}</h2>
-        <p>안녕하세요, Donakawa입니다.</p>
-        <p>${template.description}</p>
-        <div style="
-          font-size: 24px; 
-          font-weight: bold; 
-          margin: 20px 0; 
-          padding: 10px; 
-          background-color: #f0f0f0; 
-          display: inline-block;
-          border-radius: 5px;
-        ">
-          ${code}
-        </div>
-        <p>인증 코드는 <strong>${Math.floor(RedisTTL.EMAIL_VERIFICATION_CODE / 60)}분</strong> 동안 유효합니다.</p>
-        <p style="color: #999; font-size: 12px;">본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>
-      </div>
-    `,
-    });
+    if (statusCode < 200 || statusCode >= 300) {
+      throw new InfrastructureException(
+        "EMAIL_SEND_FAILED",
+        "이메일 전송에 실패했습니다.",
+        { statusCode, body: lambdaResponse.body },
+      );
+    }
+  }
+
+  private parseEmailSendLambdaPayload(
+    payload: Lambda.InvocationResponse["Payload"],
+  ): EmailSendLambdaResponse {
+    if (!payload) {
+      throw new InfrastructureException(
+        "EMAIL_SEND_EMPTY_RESPONSE",
+        "이메일 전송 Lambda 응답이 비어 있습니다.",
+      );
+    }
+
+    const rawPayload =
+      typeof payload === "string"
+        ? payload
+        : Buffer.from(payload as Buffer | Uint8Array).toString("utf-8");
+
+    return JSON.parse(rawPayload) as EmailSendLambdaResponse;
   }
 
   // 비밀번호 재설정
