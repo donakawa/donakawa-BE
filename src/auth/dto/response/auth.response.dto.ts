@@ -31,6 +31,13 @@ export class RefreshResponseDto {
   }
 }
 
+export class OAuthUrlResponseDto {
+  readonly url: string;
+  constructor(url: string) {
+    this.url = url;
+  }
+}
+
 export class OAuthTokenResponseDto {
   readonly accessToken: string;
   readonly refreshToken: string;
