@@ -1,4 +1,6 @@
+import { FilesService } from './../../files/service/files.service';
 import { LogRepository } from './../repository/log.repository';
+import { FilesRepository } from '../../files/repository/files.repository';
 import { ApiResponse } from "../../common/response";
 import { CalendarItem, CalendarProduct, CreateGoalResponse, GetCalendarResponse, GetGoalManagementResponse, GetLogMainResponse } from "../dto/response/log.response.dto";
 import { LOG_CONVERSION } from "../constant/log.constant";
@@ -8,7 +10,7 @@ import { AppError } from '../../errors/app.error';
 import { DateUtil } from '../util/log.util';
 
 export class LogService {
-  constructor(private logRepository: LogRepository) { }
+  constructor(private logRepository: LogRepository, private filesService: FilesService) { }
 
   public async getLogMain(
     userId: string,
@@ -566,6 +568,10 @@ export class LogService {
           shop:
             history.addedItemAuto.product
               .storePlatform.name,
+          imageUrl:
+            history.addedItemAuto.product
+              .imageUrl,
+
         };
       }
 
@@ -578,6 +584,9 @@ export class LogService {
           shop:
             history.addedItemManual
               .storePlatform,
+          imageUrl: await this.getManualImageUrl(
+            history.addedItemManual.photoFileId,
+          ),
         };
       }
 
@@ -657,6 +666,7 @@ export class LogService {
         shop:
           item.product
             .storePlatform.name,
+        imageUrl: item.product.imageUrl,
       };
 
       const existing =
@@ -688,6 +698,9 @@ export class LogService {
         name: item.name,
         price: item.price,
         shop: item.storePlatform,
+        imageUrl: await this.getManualImageUrl(
+          item.photoFileId,
+        ),
       };
 
       const existing =
@@ -718,5 +731,16 @@ export class LogService {
       .sort((a, b) =>
         b.date.localeCompare(b.date),
       );
+  }
+
+  private async getManualImageUrl(
+    photoFileId: bigint | null,
+  ): Promise<string | null> {
+    if (photoFileId === null) return null;
+
+    return this.filesService.generateUrl(
+      photoFileId.toString(),
+      60 * 10,
+    );
   }
 }

@@ -133,7 +133,7 @@ const tournaments = {
 
 // Log 도메인
 const logRepository = new LogRepository(prisma);
-const logService = new LogService(logRepository);
+const logService = new LogService(logRepository, filesService);
 const log = {
   service: logService,
   repository: logRepository,
