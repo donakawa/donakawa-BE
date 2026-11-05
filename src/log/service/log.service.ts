@@ -473,6 +473,7 @@ export class LogService {
         id: goal.id,
         title: goal.title,
         moneyGoal: Number(goal.moneyGoal),
+        current: Number(goal.current),
         state: goal.status,
         createdAt: DateUtil.toDate(goal.createdAt),
         endedAt:
