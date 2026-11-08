@@ -53,7 +53,10 @@ import {
   ShowWishitemsInFolderResponseDto,
 } from "../dto/response/wishlist.response.dto";
 import { validateImageFile } from "../policy/upload.policy";
-import { BadRequestException, InfrastructureException } from "../../errors/error";
+import {
+  BadRequestException,
+  InfrastructureException,
+} from "../../errors/error";
 import { WishitemType } from "../types/wishitem.types";
 import { Lambda } from "aws-sdk";
 import { Readable } from "stream";
@@ -67,6 +70,7 @@ const imageContentTypesByExt: Record<string, string> = {
 
 const externalFetchLambda = new Lambda({
   region: process.env.AWS_REGION ?? "ap-northeast-2",
+  useDualstackEndpoint: true,
   ...(process.env.AWS_LAMBDA_ACCESS_KEY && process.env.AWS_LAMBDA_SECRET_KEY
     ? {
         credentials: {
@@ -323,7 +327,7 @@ export class WishlistController extends Controller {
    * @summary 위시 아이템 이미지 가져오기(위시/구매/포기 아이템 모두 포함)
    * @description 위시/구매/포기 아이템에 대한 이미지를 가져옵니다. (프록시)
    */
-  @Get('/items/:itemId/image')
+  @Get("/items/:itemId/image")
   @Security("jwt")
   public async passThroughWishitemImageStream(
     @Path("itemId") itemId: string,
@@ -340,7 +344,7 @@ export class WishlistController extends Controller {
     const reqDto = new PassThroughWishitemImageStreamRequestDto({
       userId,
       itemId,
-      type
+      type,
     });
     const imageUrl = await this.wishlistService.getImageUrl(reqDto);
     const upstream = await getImageStreamFromExternalFetchLambda(imageUrl!.url);
@@ -356,7 +360,7 @@ export class WishlistController extends Controller {
     res.setHeader("Cache-Control", "private, max-age=3600");
     await new Promise<void>((resolve, reject) => {
       upstream.stream.pipe(res);
-      upstream.stream.on("error", (err:Error) => {
+      upstream.stream.on("error", (err: Error) => {
         if (res.headersSent) {
           res.destroy(err);
           return resolve();
@@ -365,8 +369,7 @@ export class WishlistController extends Controller {
       });
       res.on("finish", resolve);
       res.on("error", reject);
-    })
-
+    });
   }
 
   /**
