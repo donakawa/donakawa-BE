@@ -35,6 +35,7 @@ import { Limits } from "../constants/limits.constant";
 
 const emailSendLambda = new Lambda({
   region: process.env.AWS_REGION ?? "ap-northeast-2",
+  useDualstackEndpoint: true,
   ...(process.env.AWS_LAMBDA_ACCESS_KEY && process.env.AWS_LAMBDA_SECRET_KEY
     ? {
         credentials: {
@@ -364,21 +365,27 @@ export class AuthService {
   }
 
   // 토큰 갱신
-  async issueOAuthTokenCode(tokens: { accessToken: string; refreshToken: string }): Promise<string> {
+  async issueOAuthTokenCode(tokens: {
+    accessToken: string;
+    refreshToken: string;
+  }): Promise<string> {
     const code = randomBytes(32).toString("hex");
-    await redis.set(
-      RedisKeys.oauthTokenCode(code),
-      JSON.stringify(tokens),
-      { EX: RedisTTL.OAUTH_TOKEN_CODE },
-    );
+    await redis.set(RedisKeys.oauthTokenCode(code), JSON.stringify(tokens), {
+      EX: RedisTTL.OAUTH_TOKEN_CODE,
+    });
     return code;
   }
 
-  async exchangeOAuthTokenCode(code: string): Promise<{ accessToken: string; refreshToken: string }> {
+  async exchangeOAuthTokenCode(
+    code: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const key = RedisKeys.oauthTokenCode(code);
     const value = await redis.getDel(key);
     if (!value) {
-      throw new UnauthorizedException("A008", "유효하지 않거나 만료된 코드입니다.");
+      throw new UnauthorizedException(
+        "A008",
+        "유효하지 않거나 만료된 코드입니다.",
+      );
     }
     return JSON.parse(value);
   }
