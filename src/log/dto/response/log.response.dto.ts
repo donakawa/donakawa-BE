@@ -80,4 +80,5 @@ export interface CalendarProduct {
   name: string;
   price: number;
   shop: string;
+  imageUrl: string | null;
 }

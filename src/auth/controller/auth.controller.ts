@@ -23,6 +23,7 @@ import {
   UpdatePasswordResponseDto,
   RefreshResponseDto,
   OAuthTokenResponseDto,
+  OAuthUrlResponseDto,
 } from "../dto/response/auth.response.dto";
 import { AuthService } from "../service/auth.service";
 import { container } from "../../container";
@@ -374,15 +375,17 @@ export class AuthController {
     return success(result);
   }
   /**
-   * @summary 구글 재인증 (회원 탈퇴용)
+   * @summary 구글 재인증 URL 발급 (회원 탈퇴용)
+   * @description 앱은 Bearer 토큰으로 이 API를 호출해 URL을 받은 뒤, 해당 URL을 브라우저로 엽니다.
+   * (브라우저 이동에는 Authorization 헤더를 실을 수 없으므로 리다이렉트 대신 URL을 반환)
    */
   //추후 확장 시 query로 purpose 받아서 용도에 따라 다르게 처리 가능
   @Get("/google/reauth")
   @Security("jwt")
-  @SuccessResponse("302", "구글 재인증 페이지로 리다이렉트")
+  @SuccessResponse("200", "구글 재인증 URL 발급 성공")
   public async reauthGoogleForDelete(
     @Request() req: ExpressRequest,
-  ): Promise<void> {
+  ): Promise<ApiResponse<OAuthUrlResponseDto>> {
     const user = req.user;
 
     if (!user?.id) {
@@ -390,18 +393,19 @@ export class AuthController {
     }
 
     const authUrl = await this.authService.getGoogleReauthUrl(BigInt(user.id));
-    req.res!.redirect(authUrl);
+    return success(new OAuthUrlResponseDto(authUrl));
   }
 
   /**
-   * @summary 카카오 재인증 (회원 탈퇴용)
+   * @summary 카카오 재인증 URL 발급 (회원 탈퇴용)
+   * @description 앱은 Bearer 토큰으로 이 API를 호출해 URL을 받은 뒤, 해당 URL을 브라우저로 엽니다.
    */
   @Get("/kakao/reauth")
   @Security("jwt")
-  @SuccessResponse("302", "카카오 재인증 페이지로 리다이렉트")
+  @SuccessResponse("200", "카카오 재인증 URL 발급 성공")
   public async reauthKakaoForDelete(
     @Request() req: ExpressRequest,
-  ): Promise<void> {
+  ): Promise<ApiResponse<OAuthUrlResponseDto>> {
     const user = req.user;
 
     if (!user?.id) {
@@ -409,7 +413,7 @@ export class AuthController {
     }
 
     const authUrl = await this.authService.getKakaoReauthUrl(BigInt(user.id));
-    req.res!.redirect(authUrl);
+    return success(new OAuthUrlResponseDto(authUrl));
   }
 
   private async handleOAuthCallback(
@@ -426,7 +430,7 @@ export class AuthController {
     } = params;
 
     const appScheme = process.env.APP_SCHEME || "donakawa";
-    const frontendUrl = `${appScheme}://`;
+    const appRedirectUrl = `${appScheme}://`;
 
     try {
       // 계정 연동 처리 추가
@@ -435,26 +439,26 @@ export class AuthController {
           const connectResult = await connectHandler(state, code);
           if (connectResult) {
             req.res!.redirect(
-              `${frontendUrl}/mypage/setting?connect=success&provider=${provider}`,
+              `${appRedirectUrl}mypage/setting?connect=success&provider=${provider}`,
             );
             return;
           }
           // connect 플로우에서 false 반환 시에도 실패 리다이렉트
           req.res!.redirect(
-            `${frontendUrl}/mypage/setting?connect=failed&error=unknown`,
+            `${appRedirectUrl}mypage/setting?connect=failed&error=unknown`,
           );
           return;
         } catch (connectError: any) {
           console.error("Connect error:", connectError);
           if (connectError instanceof InfrastructureException) {
             req.res!.redirect(
-              `${frontendUrl}/mypage/setting?system_error=true`,
+              `${appRedirectUrl}mypage/setting?system_error=true`,
             );
             return;
           }
           const errorCode = connectError.errorCode || "unknown";
           req.res!.redirect(
-            `${frontendUrl}/mypage/setting?connect=failed&error=${errorCode}`,
+            `${appRedirectUrl}mypage/setting?connect=failed&error=${errorCode}`,
           );
           return;
         }
@@ -465,7 +469,7 @@ export class AuthController {
 
         if (reauthResult) {
           req.res!.redirect(
-            `${frontendUrl}/mypage/setting/withdrawal?reauth=success`,
+            `${appRedirectUrl}mypage/setting/withdrawal?reauth=success`,
           );
           return;
         }
@@ -475,13 +479,13 @@ export class AuthController {
         // 인스턴스 체크로 개선
         if (reauthError instanceof InfrastructureException) {
           req.res!.redirect(
-            `${frontendUrl}/mypage/setting/withdrawal?system_error=true`,
+            `${appRedirectUrl}mypage/setting/withdrawal?system_error=true`,
           );
           return;
         }
 
         req.res!.redirect(
-          `${frontendUrl}/mypage/setting/withdrawal?reauth=failed`,
+          `${appRedirectUrl}mypage/setting/withdrawal?reauth=failed`,
         );
         return;
       }
@@ -491,14 +495,14 @@ export class AuthController {
       const tokenCode = await this.authService.issueOAuthTokenCode(tokens);
 
       if (isNewUser) {
-        req.res!.redirect(`${frontendUrl}/social/goal?code=${tokenCode}`);
+        req.res!.redirect(`${appRedirectUrl}social/goal?code=${tokenCode}`);
       } else {
-        req.res!.redirect(`${frontendUrl}/auth/callback?code=${tokenCode}`);
+        req.res!.redirect(`${appRedirectUrl}auth/callback?code=${tokenCode}`);
       }
     } catch (error) {
       console.error(`${provider} Login Error:`, error);
       req.res!.redirect(
-        `${frontendUrl}/auth/callback?success=false&error=${provider}_login_failed`,
+        `${appRedirectUrl}auth/callback?success=false&error=${provider}_login_failed`,
       );
     }
   }
@@ -517,32 +521,36 @@ export class AuthController {
   }
 
   /**
-   * @summary 구글 계정 연동 API
+   * @summary 구글 계정 연동 URL 발급
+   * @description 앱은 Bearer 토큰으로 이 API를 호출해 URL을 받은 뒤, 해당 URL을 브라우저로 엽니다.
    */
   @Get("/connect/google")
   @Security("jwt")
+  @SuccessResponse("200", "구글 연동 URL 발급 성공")
   public async connectGoogleAccount(
     @Request() req: ExpressRequest,
-  ): Promise<void> {
+  ): Promise<ApiResponse<OAuthUrlResponseDto>> {
     const user = req.user;
     if (!user?.id)
       throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
     const authUrl = await this.authService.getGoogleConnectUrl(BigInt(user.id));
-    req.res!.redirect(authUrl);
+    return success(new OAuthUrlResponseDto(authUrl));
   }
   /**
-   * @summary 카카오 계정 연동 API
+   * @summary 카카오 계정 연동 URL 발급
+   * @description 앱은 Bearer 토큰으로 이 API를 호출해 URL을 받은 뒤, 해당 URL을 브라우저로 엽니다.
    */
   @Get("/connect/kakao")
   @Security("jwt")
+  @SuccessResponse("200", "카카오 연동 URL 발급 성공")
   public async connectKakaoAccount(
     @Request() req: ExpressRequest,
-  ): Promise<void> {
+  ): Promise<ApiResponse<OAuthUrlResponseDto>> {
     const user = req.user;
     if (!user?.id)
       throw new UnauthorizedException("A004", "인증 정보가 없습니다.");
     const authUrl = await this.authService.getKakaoConnectUrl(BigInt(user.id));
-    req.res!.redirect(authUrl);
+    return success(new OAuthUrlResponseDto(authUrl));
   }
 }
 interface OAuthCallbackParams {

@@ -39,6 +39,7 @@ export type KakaoOAuthUserInfo = {
 
 const oauthLambda = new Lambda({
   region: process.env.AWS_REGION ?? "ap-northeast-2",
+  useDualstackEndpoint: true,
   ...(process.env.AWS_LAMBDA_ACCESS_KEY && process.env.AWS_LAMBDA_SECRET_KEY
     ? {
         credentials: {

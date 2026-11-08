@@ -16,7 +16,9 @@ import { CreateGoalRequest, GetCalendarRequest, UpdateGoalStatusRequest } from "
 export class LogController extends Controller {
   private readonly logService: LogService = container.log.service;
 
-
+  /**
+   * @summary 로그 메인 조회
+   */
   @Get("/")
   @Security("jwt")
   public async getLogMain(
@@ -27,6 +29,9 @@ export class LogController extends Controller {
     return success(result);
   }
 
+  /**
+   * @summary 새 목표 설정
+   */
   @Post("/goal")
   @Security("jwt")
   public async createGoal(
@@ -44,6 +49,10 @@ export class LogController extends Controller {
     return success(result);
   }
 
+  /**
+   * @summary 목표 중단/달성
+   * @description 진행 중인 목표를 중단하거나 달성 상태로 바꿉니다.
+   */
   @Patch("/goal")
   @Security("jwt")
   @SuccessResponse(204, "No Content")
@@ -60,6 +69,10 @@ export class LogController extends Controller {
     this.setStatus(204);
   }
 
+  /**
+   * @summary 목표 관리 조회
+   * @description 사용자의 모든 목표를 가져옵니다.
+   */
   @Get("/goal")
   @Security("jwt")
   public async getGoalManagement(
@@ -75,6 +88,9 @@ export class LogController extends Controller {
     return success(result);
   }
 
+  /**
+   * @summary 로그 캘린더 조회
+   */
   @Get("/calendar")
   @Security("jwt")
   public async getCalendar(
