@@ -35,7 +35,8 @@ const kakaoOAuthService = new KakaoOAuthService();
 // AWS Infra
 const sqsClient = new SQSClient({
   region: process.env.AWS_REGION!,
-  useDualstackEndpoint: true,
+  endpoint: "https://sqs.ap-northeast-2.api.aws",
+  useQueueUrlAsEndpoint: false,
   credentials: {
     accessKeyId: process.env.AWS_SQS_ACCESS_KEY!,
     secretAccessKey: process.env.AWS_SQS_SECRET_KEY!,
